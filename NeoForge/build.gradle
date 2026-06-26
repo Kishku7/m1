@@ -1,0 +1,29 @@
+plugins {
+    id 'java-library'
+    id 'net.neoforged.moddev' version "${moddevgradle_version}"
+}
+
+repositories { mavenLocal(); maven { url = 'https://maven.neoforged.net/releases' }; mavenCentral() }
+
+version = "${mod_version}+${minecraft_version}-neoforge"
+group = 'com.kishku7'
+base { archivesName = 'm1' }
+
+java.toolchain.languageVersion = JavaLanguageVersion.of(25)
+
+// Shared MC-coupled core (single source of truth).
+sourceSets.main.java.srcDir "../shared_minecraft/src/main/java"
+
+neoForge {
+    version = project.neo_version
+    runs { client { client() } }
+    mods { m1 { sourceSet(sourceSets.main) } }
+}
+
+processResources {
+    def ep = [mod_version: mod_version, neoforgeRange: project.neoforge_range, mcRange: project.mc_range]
+    inputs.properties(ep)
+    filesMatching('META-INF/neoforge.mods.toml') { expand(ep) }
+}
+
+tasks.withType(JavaCompile).configureEach { options.encoding = 'UTF-8' }

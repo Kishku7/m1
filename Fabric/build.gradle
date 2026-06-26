@@ -1,0 +1,30 @@
+plugins {
+    id 'net.fabricmc.fabric-loom' version '1.16-SNAPSHOT'
+}
+
+version = "${project.mod_version}+${project.minecraft_version}-fabric"
+group = project.maven_group
+
+base { archivesName = project.archives_base_name }
+
+// Shared MC-coupled core (single source of truth).
+sourceSets.main.java.srcDir "../shared_minecraft/src/main/java"
+
+dependencies {
+    minecraft "com.mojang:minecraft:${project.minecraft_version}"
+    compileOnly localRuntime("net.fabricmc:fabric-loader:${project.loader_version}")
+    compileOnly localRuntime("net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}")
+}
+
+processResources {
+    inputs.properties(["version": project.version])
+    filesMatching("fabric.mod.json") { expand "version": project.version, "mcDep": project.mc_dep }
+}
+
+tasks.withType(JavaCompile).configureEach { it.options.encoding = "UTF-8"; it.options.release = 25 }
+
+java {
+    withSourcesJar()
+    sourceCompatibility = JavaVersion.VERSION_25
+    targetCompatibility = JavaVersion.VERSION_25
+}
