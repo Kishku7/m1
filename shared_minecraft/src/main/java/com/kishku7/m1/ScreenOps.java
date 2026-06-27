@@ -720,9 +720,9 @@ public final class ScreenOps {
         mc.execute(() -> {
             try {
                 if (forceName == null) {
-                    Screenshot.grab(mc.gameDirectory, mc.getMainRenderTarget(), cb);
+                    Screenshot.grab(mc.gameDirectory, M1Compat.mainRenderTarget(mc), cb);
                 } else {
-                    Screenshot.grab(mc.gameDirectory, forceName, mc.getMainRenderTarget(), 1, cb);
+                    Screenshot.grab(mc.gameDirectory, forceName, M1Compat.mainRenderTarget(mc), 1, cb);
                 }
             } catch (Throwable t) {
                 captured[0] = "GRAB-ERR " + t.getClass().getSimpleName() + ": " + t.getMessage();

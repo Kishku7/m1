@@ -4,6 +4,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.resources.ResourceKey;
+import com.mojang.blaze3d.pipeline.RenderTarget;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -76,6 +77,27 @@ public final class M1Compat {
             throw new RuntimeException("M1Compat.zombie: no getValue(ResourceKey)");
         } catch (Exception e) {
             throw new RuntimeException("M1Compat.zombie registry failed", e);
+        }
+    }
+
+    // 26.1: Minecraft.getMainRenderTarget(). 26.2+: render target moved to
+    // GameRenderer -> Minecraft.gameRenderer.mainRenderTarget(). Try the
+    // direct Minecraft accessor first, then the GameRenderer accessor.
+    public static RenderTarget mainRenderTarget(Minecraft mc) {
+        try {
+            Method m = Minecraft.class.getMethod("getMainRenderTarget");
+            return (RenderTarget) m.invoke(mc);
+        } catch (NoSuchMethodException ignored) {
+        } catch (Exception e) {
+            throw new RuntimeException("M1Compat.mainRenderTarget direct failed", e);
+        }
+        try {
+            Field grF = Minecraft.class.getField("gameRenderer");
+            Object gr = grF.get(mc);
+            Method m = gr.getClass().getMethod("mainRenderTarget");
+            return (RenderTarget) m.invoke(gr);
+        } catch (Exception e) {
+            throw new RuntimeException("M1Compat.mainRenderTarget via gameRenderer failed", e);
         }
     }
 }
