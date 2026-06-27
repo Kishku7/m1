@@ -1,6 +1,7 @@
 package com.kishku7.m1;
 
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.Screenshot;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.components.events.GuiEventListener;
@@ -66,6 +67,7 @@ public final class ScreenOps {
         "  place                use/place held item on the block you are looking at\n" +
         "  slot <id> [btn] [pickup|quick|swap]   raw slot click\n" +
         "  openpack             open your worn Travelers Backpack (triggers its keybind)\n" +
+        "  screenshot [name]    save a PNG of the current frame to screenshots/ (vanilla writer)\n" +
         "  upgrades             show pending auto-armor-upgrade messages\n" +
         "  autoupgrade on|off   toggle auto armor upgrading (default on)\n" +
         "  help                 this list";
@@ -108,6 +110,8 @@ public final class ScreenOps {
             case "place":     return Crafting.place(mc);
             case "craft":     return Crafting.craft(mc, rest);
             case "openpack":  return openpack(mc);
+            case "screenshot":
+            case "shot":      return screenshot(mc, rest);
             case "autoupgrade": return autoupgrade(rest);
             case "upgrades":  return upgrades();
             default:          return "ERR unknown command: " + cmd + " (try help)";
@@ -686,6 +690,91 @@ public final class ScreenOps {
             if (!used.contains(k.getName())) return k;
         }
         return com.mojang.blaze3d.platform.InputConstants.Type.KEYSYM.getOrCreate(313);
+    }
+
+    // Trigger Minecraft's OWN screenshot writer. IMPORTANT: this MUST NOT run on / block the
+    // render-main thread. Screenshot.grab's GPU readback completes via the command-encoder flush
+    // that happens on the main thread DURING the render loop, and the PNG encode is queued on
+    // Util.ioPool(); if we blocked the main thread waiting for that, the flush could never run
+    // (deadlock -> 0-byte file, no callback). So M1Server dispatches this verb on the CONNECTION
+    // thread, and here we only marshal the grab() call itself onto the main thread via mc.execute(),
+    // then wait OFF-thread for the success/failure callback. No mixin, compositor-independent --
+    // the frame comes straight from the game's framebuffer.
+    static String screenshot(Minecraft mc, String rest) {
+        String name = rest.trim();
+        final String forceName;
+        if (name.isEmpty()) {
+            forceName = null;
+        } else {
+            forceName = name.toLowerCase().endsWith(".png") ? name : name + ".png";
+        }
+        java.io.File picDir = new java.io.File(mc.gameDirectory, Screenshot.SCREENSHOT_DIR);
+        long before = newestPngMtime(picDir);
+        final String[] captured = new String[1];
+        final java.util.concurrent.CountDownLatch latch = new java.util.concurrent.CountDownLatch(1);
+        java.util.function.Consumer<net.minecraft.network.chat.Component> cb = msg -> {
+            try { captured[0] = msg != null ? msg.getString() : null; } finally { latch.countDown(); }
+        };
+        // Marshal ONLY the grab onto the main thread; return control immediately so the render
+        // loop keeps flushing GPU commands and the ioPool write can complete.
+        mc.execute(() -> {
+            try {
+                if (forceName == null) {
+                    Screenshot.grab(mc.gameDirectory, mc.getMainRenderTarget(), cb);
+                } else {
+                    Screenshot.grab(mc.gameDirectory, forceName, mc.getMainRenderTarget(), 1, cb);
+                }
+            } catch (Throwable t) {
+                captured[0] = "GRAB-ERR " + t.getClass().getSimpleName() + ": " + t.getMessage();
+                latch.countDown();
+            }
+        });
+        boolean done = false;
+        try { done = latch.await(10, java.util.concurrent.TimeUnit.SECONDS); }
+        catch (InterruptedException ignored) { Thread.currentThread().interrupt(); }
+        // Resolve the newest PNG that postdates our pre-grab snapshot (ground truth).
+        java.io.File newest = newestPngNewerThan(picDir, before);
+        if (newest == null) newest = newestPng(picDir);
+        StringBuilder b = new StringBuilder();
+        if (newest != null && newest.length() > 0 && newest.lastModified() >= before) {
+            b.append("OK screenshot ").append(newest.getName())
+             .append(" (").append(newest.length()).append(" bytes) path=").append(newest.getAbsolutePath());
+        } else if (newest != null) {
+            b.append("ERR screenshot: file ").append(newest.getName())
+             .append(" is ").append(newest.length()).append(" bytes (callback=").append(captured[0])
+             .append(" done=").append(done).append(")");
+        } else {
+            b.append("ERR screenshot: no PNG written (callback=").append(captured[0]).append(" done=").append(done).append(")");
+        }
+        return b.toString();
+    }
+
+    private static long newestPngMtime(java.io.File dir) {
+        java.io.File f = newestPng(dir);
+        return f != null ? f.lastModified() : 0L;
+    }
+
+    private static java.io.File newestPngNewerThan(java.io.File dir, long after) {
+        if (dir == null || !dir.isDirectory()) return null;
+        java.io.File[] files = dir.listFiles((d, n) -> n.toLowerCase().endsWith(".png"));
+        if (files == null) return null;
+        java.io.File best = null;
+        for (java.io.File f : files) {
+            if (f.lastModified() < after) continue;
+            if (best == null || f.lastModified() > best.lastModified()) best = f;
+        }
+        return best;
+    }
+
+    private static java.io.File newestPng(java.io.File dir) {
+        if (dir == null || !dir.isDirectory()) return null;
+        java.io.File[] files = dir.listFiles((d, n) -> n.toLowerCase().endsWith(".png"));
+        if (files == null || files.length == 0) return null;
+        java.io.File best = null;
+        for (java.io.File f : files) {
+            if (best == null || f.lastModified() > best.lastModified()) best = f;
+        }
+        return best;
     }
 
     private static String autoupgrade(String rest) {

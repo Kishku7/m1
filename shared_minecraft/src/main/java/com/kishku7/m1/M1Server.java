@@ -75,7 +75,7 @@ public final class M1Server {
                 if (line.isEmpty()) continue;
                 if (line.equalsIgnoreCase("quit") || line.equalsIgnoreCase("exit")) break;
 
-                String resp = dispatchOnMainThread(line);
+                String resp = dispatch(line);
                 String ups = PickupUpgrade.drainReports();
                 if (!ups.isEmpty()) { out.write(ups); out.write("\n"); }
                 out.write(resp);
@@ -103,6 +103,23 @@ public final class M1Server {
     private static boolean isAction(String line) {
         String verb = line.split("\\s+", 2)[0].toLowerCase();
         return verb.equals("click") || verb.equals("type");
+    }
+
+    // Route a command. Most verbs run on the render-main thread (Minecraft is not thread-safe).
+    // The screenshot verb is the exception: it MUST run on this (connection) thread and only
+    // marshal its grab() onto the main thread internally -- blocking the main thread waiting on
+    // the async GPU readback + PNG encode would deadlock the very flush it depends on.
+    private static String dispatch(String line) {
+        String verb = line.split("\\s+", 2)[0].toLowerCase();
+        if (verb.equals("screenshot") || verb.equals("shot")) {
+            String rest = line.length() > verb.length() ? line.substring(verb.length()).trim() : "";
+            try {
+                return ScreenOps.screenshot(Minecraft.getInstance(), rest);
+            } catch (Throwable t) {
+                return "ERR screenshot: " + t.getClass().getSimpleName() + ": " + t.getMessage();
+            }
+        }
+        return dispatchOnMainThread(line);
     }
 
     private static String dispatchOnMainThread(String line) {
