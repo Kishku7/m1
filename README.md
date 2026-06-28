@@ -45,7 +45,7 @@ one Minecraft version -- just plain text into the real game.
 
 ---
 
-## 2. How the mod is used: connect to the text interface
+## 2. Connecting
 
 When the modded client starts, M1 opens a TCP server on **`127.0.0.1:26000`** on the machine
 running the client. It binds loopback only -- there is **no new inbound network surface**; only
@@ -55,7 +55,7 @@ the same port).
 The channel is the same whether a person types it or an AI sends it -- one grammar, one code path.
 Anything an AI does is reproducible by hand and vice versa.
 
-### The wire protocol (read this before writing a client)
+### Wire protocol
 
 * **Newline-delimited.** Send one command per line (`<command>\n`). The reply is one or more lines
   of text, terminated by a single sentinel line: **`<<END`**.
@@ -78,7 +78,7 @@ Anything an AI does is reproducible by hand and vice versa.
 * Each command runs on the client's main thread, so the game stays consistent.
 * `quit` / `exit` closes your connection (it does **not** stop the client).
 
-### Suggestions for interfacing with the socket
+### Interfacing tips
 
 **For a quick manual poke** (a human at a shell on the client machine): any line-oriented TCP tool
 works -- `telnet 127.0.0.1 26000`, `nc 127.0.0.1 26000`, or PowerShell's `TcpClient`. Type `help`,
@@ -160,7 +160,7 @@ outputs, **how the instruction file tells an agent to read them.**
 
 ---
 
-## 4. Command reference (with example outputs)
+## 4. Command reference
 
 Send any verb on its own line. `help` prints the live list. Aliases are shown in parentheses.
 Bracketed `[...]` args are optional. Coordinates are absolute world coordinates.
@@ -315,7 +315,7 @@ items:
 cmd time set 6000   ->   OK sent: /time set 6000
 ```
 
-### Movement (asynchronous -- returns immediately, then poll `where`)
+### Movement
 
 | Command | What it does |
 |---|---|
@@ -350,7 +350,7 @@ face 15 71 -8     ->   OK looking at (15.0,71.0,-8.0) yaw=-12.3 pitch=8.7
 > Compass mapping in this engine: **yaw 0 = south**, and dirs are
 > `north/south/east/west/ne/nw/se/sw`. Resting view is `face 0 0` (level, facing south).
 
-### Mining (asynchronous -- poll `inv` / `look`)
+### Mining
 
 | Command | What it does |
 |---|---|
@@ -432,7 +432,7 @@ screenshot scene1 -> OK screenshot scene1.png (148213 bytes) path=<gameDir>/scre
 
 ---
 
-## 5. The two slot-numbering systems (read before any slot work)
+## 5. Slot numbering
 
 There are **two** numbering schemes and mixing them up is the most common slot bug.
 
