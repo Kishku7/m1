@@ -15,7 +15,37 @@ tooling, all rights reserved.
 
 ---
 
-## 1. How the mod is used: connect to the text interface
+## 1. Popular Uses for M1
+
+Most "AI plays Minecraft" projects never actually run Minecraft. They are protocol bots that speak
+the server's network protocol from the outside (Mineflayer, and LLM agents built on it like
+Voyager), or research stacks pinned to ancient versions (Malmo, MineRL). Because they never load
+the real client, **they are blind to anything the client draws -- mod GUIs simply do not exist to
+them**, and a version or mod mismatch breaks them.
+
+M1 *is* the real client. It loads as an ordinary Fabric/NeoForge mod, reads every real screen, and
+drives the game the way you would. That unlocks what the protocol bots cannot touch:
+
+1. **Mod development & real-client testing.** Test your mod the way a player actually experiences
+   it -- open its screens, click its buttons, read its inventories, drive its menus, grab
+   screenshots -- all by text. M1 has served as the live test harness across **20+ release builds
+   spanning many Minecraft versions and both loaders**, so you validate a mod across the whole
+   range, not one pinned version.
+2. **AI agents that genuinely play.** Point any LLM at a text socket and let it go -- proven
+   end-to-end: spawn, find a tree, mine, craft, and build a wooden axe, entirely over the wire --
+   and because it is the real client, your agent can operate *mod* GUIs too, not just vanilla
+   movement.
+3. **Hands-free / accessible play.** Run the whole game -- menus, worlds, inventory, crafting -- by
+   typing. Nothing on screen needs to be looked at.
+4. **Automation & scripting.** Repeatable command sequences for the tedious stuff (gather, craft,
+   navigate, set up a world), from any language, in plain text -- with auto armor-upgrade built in.
+
+No protocol reverse-engineering, no pixel pipeline, no RL training, no lock-in to one AI model or
+one Minecraft version -- just plain text into the real game.
+
+---
+
+## 2. How the mod is used: connect to the text interface
 
 When the modded client starts, M1 opens a TCP server on **`127.0.0.1:26000`** on the machine
 running the client. It binds loopback only -- there is **no new inbound network surface**; only
@@ -98,7 +128,7 @@ loopback-only by design.
 
 ---
 
-## 2. The AI instruction file
+## 3. The AI instruction file
 
 [`AI_INSTRUCTIONS.md`](AI_INSTRUCTIONS.md) (in this branch) is the **standing brief an AI reads in
 before a session.** It is deliberately on `main` so it travels with every branch and version, and
@@ -122,7 +152,7 @@ It covers:
   * *Use what you know* -- apply given context (e.g. "trees are to the southeast") to choose a
     direction.
 * **The command quick-reference**, plus **how to read a `scan`** and **how to read the two slot
-  numbering systems** -- the parts an agent gets wrong without guidance (detailed in section 3).
+  numbering systems** -- the parts an agent gets wrong without guidance (detailed in section 4).
 * **Recording** -- how/when to append to a session log (on request only).
 
 The interpretive glue matters as much as the raw commands: section 3 marks, for the non-obvious
@@ -130,7 +160,7 @@ outputs, **how the instruction file tells an agent to read them.**
 
 ---
 
-## 3. Command reference (with example outputs)
+## 4. Command reference (with example outputs)
 
 Send any verb on its own line. `help` prints the live list. Aliases are shown in parentheses.
 Bracketed `[...]` args are optional. Coordinates are absolute world coordinates.
@@ -402,7 +432,7 @@ screenshot scene1 -> OK screenshot scene1.png (148213 bytes) path=<gameDir>/scre
 
 ---
 
-## 4. The two slot-numbering systems (read before any slot work)
+## 5. The two slot-numbering systems (read before any slot work)
 
 There are **two** numbering schemes and mixing them up is the most common slot bug.
 
@@ -430,7 +460,7 @@ craft grids exist only while a screen is open, so they appear in `slots`, never 
 
 ---
 
-## 5. Operating notes & safety
+## 6. Operating notes & safety
 
 * **Client-only.** M1 never runs server-side logic. `cmd` is just sending a normal client-to-server
   command, exactly like a player typing `/time`.
@@ -444,7 +474,7 @@ craft grids exist only while a screen is open, so they appear in `slots`, never 
 
 ---
 
-## 6. Repo layout
+## 7. Repo layout
 
 `main` is this entry point (README + `AI_INSTRUCTIONS.md`). The buildable source lives on the
 version branches:
