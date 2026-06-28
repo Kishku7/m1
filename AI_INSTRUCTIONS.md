@@ -30,7 +30,11 @@ The wire protocol -- get this right or every reply desyncs:
 * After a `click` / `type`, the reply also has a `--- now ---` block: a fresh `describe` of the
   resulting screen. Read it -- that is your confirmation of where you landed.
 * Lines prefixed `[auto-upgrade]` arrive unsolicited on your next reply (see armor, below).
-* Commands are capped at 10 s server-side; set your socket timeout higher (~15 s).
+* Each command has a 10-second execution cap -- the time M1 waits for that command's handler
+  to return a reply on the game's main thread (overrun -> `ERR exec: ... TimeoutException`). It is
+  NOT a limit on async actions: `move`/`moveto`/`goto`/`mine`/`craft` return immediately and run
+  in the background, so a long walk or mine never hits it. Set your socket read timeout above 10 s
+  (~15 s) so you outlast the cap and receive the reply.
 
 ## 3. Starting a session
 

@@ -36,8 +36,15 @@ Anything an AI does is reproducible by hand and vice versa.
   transition/fade to settle, then auto-describes). So every action tells you the new situation.
 * **Auto-upgrade notices** (see the armor section) arrive **unsolicited**, prefixed
   `[auto-upgrade]`, prepended to the next reply you receive.
-* **Commands are capped at 10 s** on the server side -- set your socket read timeout higher
-  (e.g. 15 s).
+* **Each command has a 10-second execution cap.** This is how long M1 waits for a command's
+  handler to finish **on the game's main thread** and hand back a reply. If a handler overruns,
+  M1 returns `ERR exec: ... TimeoutException` rather than leaving your connection hanging. **The
+  cap is on the handler returning a reply -- it is NOT a limit on how long an in-world action
+  takes.** The asynchronous commands (`move` / `moveto` / `goto` / `mine` / `craft`) return almost
+  instantly with `OK ... poll 'where'` and then run in the background, so a two-minute walk or a
+  long mine never hits the cap -- only a genuinely stalled or hitched client would. Practical
+  consequence: set your socket read timeout **above** 10 s (e.g. 15 s) so your reader outlasts the
+  server's own cap and actually receives that `ERR` line instead of tripping its own timeout first.
 * Each command runs on the client's main thread, so the game stays consistent.
 * `quit` / `exit` closes your connection (it does **not** stop the client).
 
