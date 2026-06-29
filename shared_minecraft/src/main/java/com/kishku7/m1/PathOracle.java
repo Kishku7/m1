@@ -2,7 +2,6 @@ package com.kishku7.m1;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
-import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.ai.navigation.PathNavigation;
@@ -30,12 +29,12 @@ public final class PathOracle {
         if (lvl == null) return null;
         if (proxy == null || proxyLevel != lvl) {
             try {
-                Mob m = (Mob) M1Compat.zombie().create(lvl, EntitySpawnReason.NATURAL);
+                Mob m = (Mob) SpawnCompat.createNatural(M1Compat.zombie(), lvl);
                 if (m == null) return null;
                 PathNavigation nav = m.getNavigation();
                 PathNavCompat.setCanOpenDoors(nav, true);
                 nav.setCanFloat(true);
-                nav.setRequiredPathLength(48.0f);
+                PathNavCompat.setRequiredPathLength(nav, 48.0f);
                 proxy = m;
                 proxyLevel = lvl;
             } catch (Throwable t) {
