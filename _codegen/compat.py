@@ -28,13 +28,13 @@ def mouse_event(v):     return v[0] == 26            # MouseButtonEvent record +
 def container_input(v): return v[0] == 26            # handleContainerInput+ContainerInput @26 vs handleInventoryMouseClick+ClickType
 def shot_int_arg(v):    return v[0] == 26            # 26 named grab has the extra int (downscale) arg
 def spawn_reason_enum(v):
-    # MobSpawnType (pre) -> EntitySpawnReason. 1.20 = MobSpawnType; 1.21.2 = EntitySpawnReason (probed).
-    # TODO confirm exact boundary in 1.21.x (1.21 / 1.21.1) against the deobf before locking.
+    # MobSpawnType -> EntitySpawnReason. CONFIRMED via deobf: MobSpawnType through 1.21.1; EntitySpawnReason
+    # from 1.21.2 (the 1.21.2 API-churn version). 26.x all use EntitySpawnReason.
     return v >= (1, 21, 2)
 def has_required_path_length(v):
-    # PathNavigation.setRequiredPathLength absent on 1.20 (probed); present later.
-    # TODO confirm exact lower boundary (1.20.6? 1.21?) before locking.
-    return v >= (1, 20, 6)
+    # PathNavigation.setRequiredPathLength CONFIRMED via deobf: absent through 1.21.1; present from 1.21.2.
+    # (Same 1.21.2 boundary as the spawn-reason rename.) On older versions, omit -> default path length.
+    return v >= (1, 21, 2)
 
 # ---- imports the shared *Compat files need, by version (emitted into a cog imports block) ----
 def imports(loader, ver):
