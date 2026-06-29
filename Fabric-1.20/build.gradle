@@ -32,4 +32,4 @@ java {
     targetCompatibility = JavaVersion.VERSION_17
 }
 
-sourceSets.main.java.srcDir "../shared_minecraft/src/main/java"
+sourceSets.main.java.srcDir "gen"

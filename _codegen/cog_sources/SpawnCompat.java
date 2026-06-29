@@ -6,15 +6,14 @@ import net.minecraft.world.level.Level;
 //import sys; sys.path.insert(0, codegen); import compat
 //if compat.spawn_reason_enum(compat.V(mcver)):
 //    cog.outl("import net.minecraft.world.entity.EntitySpawnReason;")
-//else:
-//    cog.outl("import net.minecraft.world.entity.MobSpawnType;")
 //]]]
 //[[[end]]]
 
 /**
- * Cross-version proxy-mob spawn facade (Cog). The spawn-reason enum was renamed MobSpawnType ->
- * EntitySpawnReason at 1.21.2; EntityType.create(Level, <reason>) takes whichever exists. Caller casts
- * the result to Mob. DIRECT per version. _codegen/compat.py.
+ * Cross-version proxy-mob spawn facade (Cog). pre-1.21.2 the only Level-create is the 1-arg
+ * create(Level) (no spawn-reason); 1.21.2+ adds create(Level, EntitySpawnReason). The un-ticked path
+ * proxy doesn't care about the reason, so pre-1.21.2 just calls create(level). Caller casts to Mob.
+ * DIRECT per version. _codegen/compat.py.
  */
 public final class SpawnCompat {
     private SpawnCompat() {}

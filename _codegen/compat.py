@@ -24,9 +24,9 @@ def gui_screen(v):      return v >= (26, 2)          # 26.2 moved screen/setScre
 def gameRenderer_rt(v): return v >= (26, 2)          # 26.2 moved the render target onto GameRenderer
 def zombie_registry(v): return v >= (26, 2)          # 26.2 dropped EntityType.ZOMBIE field for registry getValue
 def selected_accessor(v): return v >= (1, 21, 5)     # 1.21.5 made Inventory.selected private -> get/setSelectedSlot()
-def mouse_event(v):     return v[0] == 26            # MouseButtonEvent record + mouseClicked(ev,bool) is 26+
+def mouse_event(v):     return v >= (1, 21, 9)       # MouseButtonEvent record + mouseClicked(ev,bool): 1.21.9+ (re-intermediation) THROUGH 26
 def container_input(v): return v[0] == 26            # handleContainerInput+ContainerInput @26 vs handleInventoryMouseClick+ClickType
-def shot_int_arg(v):    return v[0] == 26            # 26 named grab has the extra int (downscale) arg
+def shot_int_arg(v):    return v >= (1, 21, 8)       # 5-arg grab(...,int downscale,...): 1.21.8+ THROUGH 26
 def spawn_reason_enum(v):
     # MobSpawnType -> EntitySpawnReason. CONFIRMED via deobf: MobSpawnType through 1.21.1; EntitySpawnReason
     # from 1.21.2 (the 1.21.2 API-churn version). 26.x all use EntitySpawnReason.
@@ -93,8 +93,12 @@ def screen_click(ver):        # ScreenClickCompat.clickAt(Screen s, double x, do
             "return handled;"]
 
 def spawn_natural(ver):       # SpawnCompat.createNatural(EntityType<?> type, Level level) -> Object (cast Mob by caller)
-    reason = "EntitySpawnReason" if spawn_reason_enum(V(ver)) else "MobSpawnType"
-    return ["return type.create(level, %s.NATURAL);" % reason]
+    # Spawn-create signature (deobf-confirmed): pre-1.21.2 the only create-with-Level is the 1-arg
+    # create(Level) (NO spawn-reason param); 1.21.2+ adds create(Level, EntitySpawnReason). For an
+    # un-ticked path-proxy mob the reason is irrelevant, so pre-1.21.2 just calls create(level).
+    if spawn_reason_enum(V(ver)):
+        return ["return type.create(level, EntitySpawnReason.NATURAL);"]
+    return ["return type.create(level);"]
 
 def required_path_length(ver):  # PathNavCompat.setRequiredPathLength(PathNavigation nav, float value)
     return ["nav.setRequiredPathLength(value);"] if has_required_path_length(V(ver)) \
