@@ -6,7 +6,6 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.inventory.AbstractContainerMenu;
-import net.minecraft.world.inventory.ContainerInput;
 import net.minecraft.world.inventory.CraftingMenu;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
@@ -39,8 +38,8 @@ public final class Crafting {
 
     static int containerId(Minecraft mc) { return menu(mc).containerId; }
 
-    static void click(Minecraft mc, int slot, int button, ContainerInput mode) {
-        mc.gameMode.handleContainerInput(containerId(mc), slot, button, mode, mc.player);
+    static void click(Minecraft mc, int slot, int button, ContainerCompat.Mode mode) {
+        ContainerCompat.click(mc, containerId(mc), slot, button, mode);
     }
 
     static String itemId(ItemStack it) {
@@ -93,7 +92,7 @@ public final class Crafting {
         if (path.isEmpty()) return "ERR usage: equip <item>";
         int src = findSlot(mc, path, 1);
         if (src < 0) return "equip: no " + path + " found";
-        click(mc, src, 0, ContainerInput.SWAP); // hotbar slot 0 == swap button 0
+        click(mc, src, 0, ContainerCompat.Mode.SWAP); // hotbar slot 0 == swap button 0
         mc.player.getInventory().setSelectedSlot(0);
         return "OK equipped " + path + " to hotbar 0";
     }
@@ -104,11 +103,11 @@ public final class Crafting {
         try {
             int slot = Integer.parseInt(t[0]);
             int btn = t.length > 1 ? Integer.parseInt(t[1]) : 0;
-            ContainerInput mode = ContainerInput.PICKUP;
+            ContainerCompat.Mode mode = ContainerCompat.Mode.PICKUP;
             if (t.length > 2) {
                 String m = t[2].toLowerCase();
-                if (m.startsWith("q")) mode = ContainerInput.QUICK_MOVE;
-                else if (m.startsWith("sw")) mode = ContainerInput.SWAP;
+                if (m.startsWith("q")) mode = ContainerCompat.Mode.QUICK_MOVE;
+                else if (m.startsWith("sw")) mode = ContainerCompat.Mode.SWAP;
             }
             click(mc, slot, btn, mode);
             return "OK slot " + slot + " btn " + btn + " " + mode;
@@ -142,8 +141,8 @@ public final class Crafting {
     static String planks(Minecraft mc) {
         int log = findSlot(mc, "_log", 1);
         if (log < 0) return "craft planks: no logs in inventory";
-        click(mc, log, 0, ContainerInput.PICKUP); // cursor = logs
-        click(mc, 1, 0, ContainerInput.PICKUP);    // whole stack into grid slot 1 (cursor now empty)
+        click(mc, log, 0, ContainerCompat.Mode.PICKUP); // cursor = logs
+        click(mc, 1, 0, ContainerCompat.Mode.PICKUP);    // whole stack into grid slot 1 (cursor now empty)
         CraftHarvest.start();
         return "OK crafting planks (poll 'inv')";
     }
@@ -153,9 +152,9 @@ public final class Crafting {
         int w = gridWidth(mc);
         int p = findSlot(mc, "_planks", invStart(w));
         if (p < 0) return "craft table: no planks";
-        click(mc, p, 0, ContainerInput.PICKUP);
-        for (int c : new int[]{1, 2, 1 + w, 2 + w}) click(mc, c, 1, ContainerInput.PICKUP);
-        click(mc, p, 0, ContainerInput.PICKUP); // deposit leftover cursor (empty hand for harvest)
+        click(mc, p, 0, ContainerCompat.Mode.PICKUP);
+        for (int c : new int[]{1, 2, 1 + w, 2 + w}) click(mc, c, 1, ContainerCompat.Mode.PICKUP);
+        click(mc, p, 0, ContainerCompat.Mode.PICKUP); // deposit leftover cursor (empty hand for harvest)
         CraftHarvest.start();
         return "OK crafting crafting_table (poll 'inv')";
     }
@@ -165,10 +164,10 @@ public final class Crafting {
         int w = gridWidth(mc);
         int p = findSlot(mc, "_planks", invStart(w));
         if (p < 0) return "craft sticks: no planks";
-        click(mc, p, 0, ContainerInput.PICKUP);
-        click(mc, 1, 1, ContainerInput.PICKUP);
-        click(mc, 1 + w, 1, ContainerInput.PICKUP);
-        click(mc, p, 0, ContainerInput.PICKUP); // deposit leftover
+        click(mc, p, 0, ContainerCompat.Mode.PICKUP);
+        click(mc, 1, 1, ContainerCompat.Mode.PICKUP);
+        click(mc, 1 + w, 1, ContainerCompat.Mode.PICKUP);
+        click(mc, p, 0, ContainerCompat.Mode.PICKUP); // deposit leftover
         CraftHarvest.start();
         return "OK crafting sticks (poll 'inv')";
     }
@@ -179,15 +178,15 @@ public final class Crafting {
         int p = findSlot(mc, "_planks", 10);
         int st = findSlot(mc, "stick", 10);
         if (p < 0 || st < 0) return "craft axe: need planks + sticks in inventory";
-        click(mc, p, 0, ContainerInput.PICKUP);
-        click(mc, 1, 1, ContainerInput.PICKUP);
-        click(mc, 2, 1, ContainerInput.PICKUP);
-        click(mc, 4, 1, ContainerInput.PICKUP);
-        click(mc, p, 0, ContainerInput.PICKUP); // deposit leftover planks
-        click(mc, st, 0, ContainerInput.PICKUP);
-        click(mc, 5, 1, ContainerInput.PICKUP);
-        click(mc, 8, 1, ContainerInput.PICKUP);
-        click(mc, st, 0, ContainerInput.PICKUP); // deposit leftover sticks
+        click(mc, p, 0, ContainerCompat.Mode.PICKUP);
+        click(mc, 1, 1, ContainerCompat.Mode.PICKUP);
+        click(mc, 2, 1, ContainerCompat.Mode.PICKUP);
+        click(mc, 4, 1, ContainerCompat.Mode.PICKUP);
+        click(mc, p, 0, ContainerCompat.Mode.PICKUP); // deposit leftover planks
+        click(mc, st, 0, ContainerCompat.Mode.PICKUP);
+        click(mc, 5, 1, ContainerCompat.Mode.PICKUP);
+        click(mc, 8, 1, ContainerCompat.Mode.PICKUP);
+        click(mc, st, 0, ContainerCompat.Mode.PICKUP); // deposit leftover sticks
         CraftHarvest.start();
         return "OK crafting wooden_axe (poll 'inv')";
     }

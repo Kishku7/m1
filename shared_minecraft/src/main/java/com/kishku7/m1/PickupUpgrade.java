@@ -4,7 +4,6 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.entity.player.Inventory;
-import net.minecraft.world.inventory.ContainerInput;
 import net.minecraft.world.item.ItemStack;
 
 import java.util.ArrayList;
@@ -82,14 +81,14 @@ public final class PickupUpgrade {
         int cid = p.containerMenu.containerId;    // 0 = player inventory menu (always open)
         String newId = itemPath(bestStack);
         String oldId = current.isEmpty() ? "nothing" : itemPath(current);
-        click(mc, cid, srcMenu, 0, ContainerInput.PICKUP);          // cursor = new piece
-        click(mc, cid, MENU_ARMOR[s], 0, ContainerInput.PICKUP);    // new -> armor slot, cursor = old
-        click(mc, cid, srcMenu, 0, ContainerInput.PICKUP);          // old -> src (no-op if slot was bare)
+        click(mc, cid, srcMenu, 0, ContainerCompat.Mode.PICKUP);          // cursor = new piece
+        click(mc, cid, MENU_ARMOR[s], 0, ContainerCompat.Mode.PICKUP);    // new -> armor slot, cursor = old
+        click(mc, cid, srcMenu, 0, ContainerCompat.Mode.PICKUP);          // old -> src (no-op if slot was bare)
         reports.add(SLOT_NAME[s] + ": " + oldId + " -> " + newId);
     }
 
-    private static void click(Minecraft mc, int cid, int slot, int btn, ContainerInput mode) {
-        mc.gameMode.handleContainerInput(cid, slot, btn, mode, mc.player);
+    private static void click(Minecraft mc, int cid, int slot, int btn, ContainerCompat.Mode mode) {
+        ContainerCompat.click(mc, cid, slot, btn, mode);
     }
 
     // value: nothing 0; gold 0.5; leather 1; copper 2; chainmail 3; iron 4; diamond 5; netherite 6.
