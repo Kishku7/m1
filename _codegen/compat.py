@@ -117,3 +117,12 @@ if __name__ == "__main__":
         print("  mouse    :", screen_click(ver)[0])
         print("  spawn    :", spawn_natural(ver)[0])
         print("  shot      :", screenshot_grab(ver)[-1])
+
+def m1compat_imports(ver):
+    """Extra imports M1Compat needs that do NOT exist on all versions (so must be version-gated by Cog).
+    The 26.2 zombie registry form references EntityTypeIds/BuiltInRegistries which are absent pre-26."""
+    v = V(ver); out = []
+    if zombie_registry(v):
+        out += ["net.minecraft.core.registries.BuiltInRegistries",
+                "net.minecraft.world.entity.EntityTypeIds"]
+    return sorted(set(out))
