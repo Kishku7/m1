@@ -271,5 +271,239 @@
     "1.20.2-1.20.5: no cell between the 1.20 and 1.20.6 Fabric ranges -- confirm whether these need coverage.",
     "26.3 NeoForge: NeoForge not released for 26.3 yet -- legitimate loader-floor gap (Fabric 26.3 only for now).",
     "1.21 vs 1.21.1: Fabric+NeoForge ranges overlap ([1.21,1.21.2)) -- collapse to one cell each in the unified source."
+  ],
+  "scope": "EVERY supportable release 1.20.0-26.3, each boot-smoketested per claimed loader BEFORE Raider live testing. A compat claim REQUIRES a smoketest demonstrating the effort. (Master 2026-06-28)",
+  "reuseStrategy": "Stages 2-3 mine the existing per-version 1.20.x/1.21.x project code -- the API-drift answers are already solved there; lift them into the single source via Cog/facade rather than re-deriving.",
+  "claimedVersions": [
+    {
+      "mc": "1.20",
+      "loaders": {
+        "fabric": "dedicated-cell",
+        "forge": "needs-build+smoketest",
+        "neoforge": "n/a"
+      },
+      "smoketest": "pending"
+    },
+    {
+      "mc": "1.20.1",
+      "loaders": {
+        "fabric": "needs-build+smoketest",
+        "forge": "dedicated-cell",
+        "neoforge": "needs-build+smoketest"
+      },
+      "smoketest": "pending"
+    },
+    {
+      "mc": "1.20.2",
+      "loaders": {
+        "fabric": "needs-build+smoketest",
+        "forge": "needs-build+smoketest",
+        "neoforge": "needs-build+smoketest"
+      },
+      "smoketest": "pending"
+    },
+    {
+      "mc": "1.20.3",
+      "loaders": {
+        "fabric": "needs-build+smoketest",
+        "forge": "needs-build+smoketest",
+        "neoforge": "needs-build+smoketest"
+      },
+      "smoketest": "pending"
+    },
+    {
+      "mc": "1.20.4",
+      "loaders": {
+        "fabric": "needs-build+smoketest",
+        "forge": "needs-build+smoketest",
+        "neoforge": "needs-build+smoketest"
+      },
+      "smoketest": "pending"
+    },
+    {
+      "mc": "1.20.5",
+      "loaders": {
+        "fabric": "needs-build+smoketest",
+        "forge": "needs-build+smoketest",
+        "neoforge": "needs-build+smoketest"
+      },
+      "smoketest": "pending"
+    },
+    {
+      "mc": "1.20.6",
+      "loaders": {
+        "fabric": "dedicated-cell",
+        "forge": "dedicated-cell",
+        "neoforge": "dedicated-cell"
+      },
+      "smoketest": "pending"
+    },
+    {
+      "mc": "1.21",
+      "loaders": {
+        "fabric": "dedicated-cell",
+        "forge": "dedicated-cell",
+        "neoforge": "dedicated-cell"
+      },
+      "smoketest": "pending"
+    },
+    {
+      "mc": "1.21.1",
+      "loaders": {
+        "fabric": "dedicated-cell",
+        "forge": "dedicated-cell",
+        "neoforge": "dedicated-cell"
+      },
+      "smoketest": "pending"
+    },
+    {
+      "mc": "1.21.2",
+      "loaders": {
+        "fabric": "dedicated-cell",
+        "forge": "needs-build+smoketest",
+        "neoforge": "dedicated-cell"
+      },
+      "smoketest": "pending"
+    },
+    {
+      "mc": "1.21.3",
+      "loaders": {
+        "fabric": "needs-build+smoketest",
+        "forge": "needs-build+smoketest",
+        "neoforge": "needs-build+smoketest"
+      },
+      "smoketest": "pending"
+    },
+    {
+      "mc": "1.21.4",
+      "loaders": {
+        "fabric": "needs-build+smoketest",
+        "forge": "needs-build+smoketest",
+        "neoforge": "needs-build+smoketest"
+      },
+      "smoketest": "pending"
+    },
+    {
+      "mc": "1.21.5",
+      "loaders": {
+        "fabric": "dedicated-cell",
+        "forge": "dedicated-cell",
+        "neoforge": "dedicated-cell"
+      },
+      "smoketest": "pending"
+    },
+    {
+      "mc": "1.21.6",
+      "loaders": {
+        "fabric": "needs-build+smoketest",
+        "forge": "needs-build+smoketest",
+        "neoforge": "needs-build+smoketest"
+      },
+      "smoketest": "pending"
+    },
+    {
+      "mc": "1.21.7",
+      "loaders": {
+        "fabric": "needs-build+smoketest",
+        "forge": "needs-build+smoketest",
+        "neoforge": "needs-build+smoketest"
+      },
+      "smoketest": "pending"
+    },
+    {
+      "mc": "1.21.8",
+      "loaders": {
+        "fabric": "dedicated-cell",
+        "forge": "dedicated-cell",
+        "neoforge": "dedicated-cell"
+      },
+      "smoketest": "pending"
+    },
+    {
+      "mc": "1.21.9",
+      "loaders": {
+        "fabric": "needs-build+smoketest",
+        "forge": "needs-build+smoketest",
+        "neoforge": "needs-build+smoketest"
+      },
+      "smoketest": "pending"
+    },
+    {
+      "mc": "1.21.10",
+      "loaders": {
+        "fabric": "needs-build+smoketest",
+        "forge": "needs-build+smoketest",
+        "neoforge": "needs-build+smoketest"
+      },
+      "smoketest": "pending"
+    },
+    {
+      "mc": "1.21.11",
+      "loaders": {
+        "fabric": "dedicated-cell",
+        "forge": "needs-build+smoketest",
+        "neoforge": "dedicated-cell"
+      },
+      "smoketest": "pending"
+    },
+    {
+      "mc": "26.1",
+      "loaders": {
+        "fabric": "needs-build+smoketest",
+        "forge": "needs-build+smoketest",
+        "neoforge": "needs-build+smoketest"
+      },
+      "smoketest": "pending"
+    },
+    {
+      "mc": "26.1.1",
+      "loaders": {
+        "fabric": "needs-build+smoketest",
+        "forge": "needs-build+smoketest",
+        "neoforge": "needs-build+smoketest"
+      },
+      "smoketest": "pending"
+    },
+    {
+      "mc": "26.1.2",
+      "loaders": {
+        "fabric": "dedicated-cell",
+        "forge": "needs-build+smoketest",
+        "neoforge": "dedicated-cell"
+      },
+      "smoketest": "pending"
+    },
+    {
+      "mc": "26.2",
+      "loaders": {
+        "fabric": "dedicated-cell",
+        "forge": "needs-build+smoketest",
+        "neoforge": "dedicated-cell"
+      },
+      "smoketest": "pending"
+    },
+    {
+      "mc": "26.3",
+      "loaders": {
+        "fabric": "dedicated-cell",
+        "forge": "needs-build+smoketest",
+        "neoforge": "needs-build+smoketest"
+      },
+      "smoketest": "pending"
+    }
+  ],
+  "versionsWithNoDedicatedCellYet": [
+    "1.20.2",
+    "1.20.3",
+    "1.20.4",
+    "1.20.5",
+    "1.21.3",
+    "1.21.4",
+    "1.21.6",
+    "1.21.7",
+    "1.21.9",
+    "1.21.10",
+    "26.1",
+    "26.1.1"
   ]
 }

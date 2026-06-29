@@ -1,8 +1,12 @@
 # M1 cross-version target matrix -- Minecraft 1.20 - 26.3
 
-Single-source goal: one branch builds every cell below from shared folders + Cog + facades.
-Status: coords are legacy-proven (built+smoketested in the old per-version projects); `unified` build wiring
-is added per cell in Stages 1-3. Target mod version on cutover: **0.5**.
+ONE source builds every supportable MC 1.20.0-26.3 for all applicable loaders via shared folders + Cog + reflection facades.
+
+**Scope:** EVERY supportable release 1.20.0-26.3, each boot-smoketested per claimed loader BEFORE Raider live testing. A compat claim REQUIRES a smoketest demonstrating the effort. (Master 2026-06-28)
+
+Target mod version on cutover: **0.5**. Loader rule: Fabric on every version; Forge where NeoForge has no release (<=1.20.0); NeoForge from 1.20.1+. Never Architectury.
+
+## Build cells (legacy-proven coords; `unified` build wiring added per cell in Stages 1-3)
 
 | MC | Loader | JDK | Key coords | Range |
 |---|---|---|---|---|
@@ -23,15 +27,48 @@ is added per cell in Stages 1-3. Target mod version on cutover: **0.5**.
 | 1.21.1 | forge | 21 | forge 1.21.1-52.1.14 | (forge mcversion) |
 | 1.21.5 | forge | 21 | forge 1.21.5-55.1.10 | (forge mcversion) |
 | 1.21.8 | forge | 21 | forge 1.21.8-58.1.18 | (forge mcversion) |
-| 1.20.6 | neoforge | 21 | neo 20.6.139, mdg 2.0.141 | [1.20.5,1.20.7) |
-| 1.21 | neoforge | 21 | neo 21.0.167, mdg 2.0.141 | [1.21,1.21.2) |
-| 1.21.1 | neoforge | 21 | neo 21.1.234, mdg 2.0.141 | [1.21,1.21.2) |
-| 1.21.2 | neoforge | 21 | neo 21.2.1-beta, mdg 2.0.141 | [1.21.2,1.21.3) |
-| 1.21.5 | neoforge | 21 | neo 21.5.97, mdg 2.0.141 | [1.21.5,1.21.6) |
-| 1.21.8 | neoforge | 21 | neo 21.8.53, mdg 2.0.141 | [1.21.8,1.21.9) |
-| 1.21.11 | neoforge | 21 | neo 21.11.42, mdg 2.0.141 | [1.21.11,1.21.12) |
-| 26.1.2 | neoforge | 25 | neo 26.1.2.30-beta, mdg 2.0.141 | [26.1,26.2) |
-| 26.2 | neoforge | 25 | neo 26.2.0.1-beta, mdg 2.0.141 | [26.2,26.3) |
+| 1.20.6 | neoforge | 21 | neo 20.6.139 | [1.20.5,1.20.7) |
+| 1.21 | neoforge | 21 | neo 21.0.167 | [1.21,1.21.2) |
+| 1.21.1 | neoforge | 21 | neo 21.1.234 | [1.21,1.21.2) |
+| 1.21.2 | neoforge | 21 | neo 21.2.1-beta | [1.21.2,1.21.3) |
+| 1.21.5 | neoforge | 21 | neo 21.5.97 | [1.21.5,1.21.6) |
+| 1.21.8 | neoforge | 21 | neo 21.8.53 | [1.21.8,1.21.9) |
+| 1.21.11 | neoforge | 21 | neo 21.11.42 | [1.21.11,1.21.12) |
+| 26.1.2 | neoforge | 25 | neo 26.1.2.30-beta | [26.1,26.2) |
+| 26.2 | neoforge | 25 | neo 26.2.0.1-beta | [26.2,26.3) |
+
+## Claimed versions -- EVERY one boot-smoketested before Raider live testing
+
+Legend: `cell` = dedicated build cell exists; `build+st` = needs a covering build + smoketest; `n/a` = loader has no release for that MC.
+
+| MC | Fabric | Forge | NeoForge | Smoketest |
+|---|---|---|---|---|
+| 1.20 | cell | build+st | n/a | pending |
+| 1.20.1 | build+st | cell | build+st | pending |
+| 1.20.2 | build+st | build+st | build+st | pending |
+| 1.20.3 | build+st | build+st | build+st | pending |
+| 1.20.4 | build+st | build+st | build+st | pending |
+| 1.20.5 | build+st | build+st | build+st | pending |
+| 1.20.6 | cell | cell | cell | pending |
+| 1.21 | cell | cell | cell | pending |
+| 1.21.1 | cell | cell | cell | pending |
+| 1.21.2 | cell | build+st | cell | pending |
+| 1.21.3 | build+st | build+st | build+st | pending |
+| 1.21.4 | build+st | build+st | build+st | pending |
+| 1.21.5 | cell | cell | cell | pending |
+| 1.21.6 | build+st | build+st | build+st | pending |
+| 1.21.7 | build+st | build+st | build+st | pending |
+| 1.21.8 | cell | cell | cell | pending |
+| 1.21.9 | build+st | build+st | build+st | pending |
+| 1.21.10 | build+st | build+st | build+st | pending |
+| 1.21.11 | cell | build+st | cell | pending |
+| 26.1 | build+st | build+st | build+st | pending |
+| 26.1.1 | build+st | build+st | build+st | pending |
+| 26.1.2 | cell | build+st | cell | pending |
+| 26.2 | cell | build+st | cell | pending |
+| 26.3 | cell | build+st | build+st | pending |
+
+**Versions with no dedicated cell on any loader yet:** 1.20.2, 1.20.3, 1.20.4, 1.20.5, 1.21.3, 1.21.4, 1.21.6, 1.21.7, 1.21.9, 1.21.10, 26.1, 26.1.1
 
 ## Open gaps / decisions
 
