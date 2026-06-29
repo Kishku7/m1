@@ -3,6 +3,10 @@ package com.kishku7.m1;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.Screenshot;
 import net.minecraft.client.gui.components.AbstractWidget;
+import net.minecraft.client.gui.components.AbstractButton;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.CycleButton;
+import net.minecraft.client.gui.components.StringWidget;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.components.AbstractSelectionList;
@@ -157,6 +161,13 @@ public final class ScreenOps {
              .append(" size=").append(w.getWidth()).append("x").append(w.getHeight())
              .append(" ").append(w.visible ? "V" : "-").append(w.active ? "A" : "-").append(w.isFocused() ? "F" : "-");
             if (w instanceof EditBox eb) b.append(" value=\"").append(eb.getValue()).append("\"");
+            // Associate a descriptive label so a controller can act on ambiguous controls without a
+            // hard-coded layout: a control's PURPOSE is usually the text to its LEFT (same row), else
+            // directly ABOVE. e.g. an "ON"/"OFF" toggle whose meaning lives in a neighbouring label.
+            if (!isLabelWidget(w)) {
+                String lbl = nearestLabel(w, ws);
+                if (lbl != null && !lbl.isEmpty() && !msg.equalsIgnoreCase(lbl)) b.append(" label=\"").append(lbl).append("\"");
+            }
             b.append("\n");
         }
         return trim(b);
@@ -647,10 +658,49 @@ public final class ScreenOps {
 
     private static String widgetType(AbstractWidget w) {
         String t = w.getClass().getSimpleName();
-        if (!t.isEmpty()) return t;
+        // mojmap runtimes (26+/NeoForge/Forge) report real names; keep them verbatim.
+        if (!t.isEmpty() && !t.startsWith("class_")) return t;
+        // pre-26 Fabric reports intermediary names (class_5676 ...) -> classify by instanceof, which
+        // Loom remaps, so the controller still sees a readable type.
         if (w instanceof EditBox) return "EditBox";
-        Class<?> sup = w.getClass().getSuperclass();
-        return sup != null ? sup.getSimpleName() : "Widget";
+        if (w instanceof CycleButton) return "CycleButton";
+        if (w instanceof StringWidget) return "StringWidget";
+        if (w instanceof AbstractButton) return "Button";
+        return t.isEmpty() ? "Widget" : t;
+    }
+
+    // A display-only text widget (its string is a label for a neighbouring control, not a control).
+    // Uses instanceof (Loom remaps the class reference to the runtime mapping) -- a getSimpleName()
+    // string compare would FAIL on pre-26 Fabric where the runtime name is intermediary (class_7842).
+    private static boolean isLabelWidget(AbstractWidget w) {
+        return w instanceof StringWidget;
+    }
+
+    // The label that describes a control: nearest label-widget on the SAME ROW to its LEFT, else the
+    // nearest label DIRECTLY ABOVE. Uses only stable geometry (no version-specific API) so it works on
+    // every loader/version. Returns null when nothing plausible is adjacent.
+    private static String nearestLabel(AbstractWidget w, List<AbstractWidget> all) {
+        int wcy = w.getY() + w.getHeight() / 2;
+        AbstractWidget best = null;
+        int bestGap = Integer.MAX_VALUE;
+        for (AbstractWidget c : all) {
+            if (c == w || !isLabelWidget(c)) continue;
+            int ccy = c.getY() + c.getHeight() / 2;
+            if (Math.abs(ccy - wcy) <= 10 && (c.getX() + c.getWidth()) <= w.getX() + 2) {
+                int gap = w.getX() - (c.getX() + c.getWidth());
+                if (gap >= 0 && gap < bestGap) { bestGap = gap; best = c; }
+            }
+        }
+        if (best == null) {
+            int bestDy = Integer.MAX_VALUE;
+            for (AbstractWidget c : all) {
+                if (c == w || !isLabelWidget(c)) continue;
+                boolean xOverlap = c.getX() < w.getX() + w.getWidth() && (c.getX() + c.getWidth()) > w.getX();
+                int dy = w.getY() - (c.getY() + c.getHeight());
+                if (xOverlap && dy >= 0 && dy < 16 && dy < bestDy) { bestDy = dy; best = c; }
+            }
+        }
+        return (best != null && best.getMessage() != null) ? best.getMessage().getString() : null;
     }
 
     private static String openpack(Minecraft mc) {
