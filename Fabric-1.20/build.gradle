@@ -20,7 +20,7 @@ dependencies {
 }
 
 processResources {
-    inputs.properties(["version": project.version])
+    inputs.properties(["version": project.version, "mcDep": project.mc_dep])
     filesMatching("fabric.mod.json") { expand "version": project.version, "mcDep": project.mc_dep }
 }
 
