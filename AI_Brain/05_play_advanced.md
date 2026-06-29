@@ -21,10 +21,10 @@ M1-specific; assumes you have early-game basics (`04_play_basics.md`) handled.
 - Approach the stronghold by throwing/reading Eyes of Ender direction (the user can guide this), then
   `goto` toward it in legs. Locate and fill the End portal frames.
 - Going to the Nether/End is a big, semi-irreversible step -- confirm with the user first
-  (`ask_the_user.md`), and stage supplies before you go.
+  (`20_ask_the_user.md`), and stage supplies before you go.
 
 ## M1 limits that shape strategy
 - No fly: no aerial scouting or fast vertical travel -- plan ground routes and staircases.
 - Line-of-sight `scan` + async moves: explore in legs, re-scanning; do not assume what is past a wall.
 - One client, one block/leg at a time: large builds are incremental -- pace them and verify as you go.
-- When stuck, `recovery.md`; for anything touching shared worlds or destructive `cmd`, `safety_etiquette.md`.
+- When stuck, `40_recovery.md`; for anything touching shared worlds or destructive `cmd`, `50_safety_etiquette.md`.

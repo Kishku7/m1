@@ -7,7 +7,7 @@ You already know how to drive a menu (`01_drive_m1.md` section 5): read `describ
 its message/label, `click`/`type`, then read the `--- now ---` block. This file is the recipe.
 
 ## Before you touch a menu
-Load `ask_the_user.md` and collect the choices you cannot safely assume:
+Load `20_ask_the_user.md` and collect the choices you cannot safely assume:
 - world name, seed (blank = random), game mode (Survival/Creative/Hardcore), difficulty,
   cheats/Allow Commands on or off.
 Confirm them back in one line, then proceed.
@@ -29,13 +29,13 @@ Confirm them back in one line, then proceed.
    - **Seed / World type:** on the World/More-Options tab -> `type` the seed into its box; cycle the
      world type if asked. Blank seed = random.
 4. Click **Create New World**. Then verify: send `where`. A `pos=(...)` means you are in. If still on a
-   menu, `describe` and see `recovery.md`.
+   menu, `describe` and see `40_recovery.md`.
 
 ## Notes
 - cheats != game mode. Allow Commands lets you run `cmd <...>`; it is independent of Survival/Creative.
 - If the user wants you to fly for a vantage, that needs Creative AND fly is engaged in-world; M1 has
-  no fly command yet (see `capabilities_limits.md`).
-- Anything destructive or about the user's EXISTING saves: see `safety_etiquette.md`. Prefer a fresh
+  no fly command yet (see `30_capabilities_limits.md`).
+- Anything destructive or about the user's EXISTING saves: see `50_safety_etiquette.md`. Prefer a fresh
   world for experiments; never overwrite or delete an existing save without explicit go-ahead.
 
 ## Version differences

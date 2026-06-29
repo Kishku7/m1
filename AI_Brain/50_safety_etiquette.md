@@ -11,7 +11,7 @@
 ## Destructive commands
 - Before anything irreversible -- `cmd fill`, `cmd setblock` over builds, `cmd kill`, `cmd time`/
   `weather` on a shared server, clearing inventories, dropping valuables -- confirm with the user first
-  (see `ask_the_user.md`).
+  (see `20_ask_the_user.md`).
 - One careful action, then check; never batch-run destructive commands blindly.
 
 ## Shared / multiplayer servers

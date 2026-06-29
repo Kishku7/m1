@@ -25,8 +25,8 @@ open sky, and from `VISIBLE` where the trees / water / animals are. Set one conc
 ## M1-specific gotchas (these shape every plan)
 - `scan` is line-of-sight only -- you cannot path to ore/trees behind walls; re-scan as you move.
 - Async actions: fire one `mine`/`moveto`, then POLL -- do not stack commands.
-- No fly: everything is ground-level traversal (`capabilities_limits.md`).
+- No fly: everything is ground-level traversal (`30_capabilities_limits.md`).
 - Armor auto-upgrades itself -- do not waste turns equipping it.
-- One block / one leg at a time; on `blocked`/`timeout` re-scan and pick a new target (`recovery.md`).
+- One block / one leg at a time; on `blocked`/`timeout` re-scan and pick a new target (`40_recovery.md`).
 
 When you have stable food, stone/iron tools, and a safe base, move to `05_play_advanced.md`.

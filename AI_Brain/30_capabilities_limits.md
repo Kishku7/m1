@@ -26,4 +26,4 @@
 - Movement is one step/leg at a time; do not fire a new move while one is running -- poll `where` first.
 
 Keep this file in sync with the command set: when a capability is added (e.g. a future `fly on/off`),
-move it from CANNOT to CAN here and update `command_card.md` in the same pass.
+move it from CANNOT to CAN here and update `10_command_card.md` in the same pass.

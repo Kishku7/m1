@@ -54,7 +54,7 @@ flags (V visible / A active / F focused). M1 also associates a **label** with co
 sits in neighbouring text (e.g. an "ON/OFF" toggle next to an "Allow Commands" label). To act:
 read `describe` -> find the control by its message or label -> `click <id>` or `type <id> <text>`
 -> read the `--- now ---` block to confirm where you landed. Drive by label, never by guessed
-coordinates. Exact syntax: `command_card.md`. When stuck or on an unexpected screen: `recovery.md`.
+coordinates. Exact syntax: `10_command_card.md`. When stuck or on an unexpected screen: `40_recovery.md`.
 
 ## 6. Reading `scan` (line-of-sight only)
 `scan` ray-casts in all directions out to `r` (default and max 32) and reports the FIRST surface each

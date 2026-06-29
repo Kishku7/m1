@@ -38,4 +38,4 @@ toward `BOUNDS ... open`.
 ## When to stop and ask the user
 After two genuine, different attempts at the same goal have failed, stop and report what you tried and
 what you saw -- do not grind. Connection failures, version mismatches, and anything destructive are
-immediate stop-and-ask (see `ask_the_user.md`).
+immediate stop-and-ask (see `20_ask_the_user.md`).
