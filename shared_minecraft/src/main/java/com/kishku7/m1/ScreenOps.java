@@ -10,8 +10,6 @@ import net.minecraft.client.gui.components.ObjectSelectionList;
 import net.minecraft.client.gui.components.events.ContainerEventHandler;
 import net.minecraft.client.gui.screens.worldselection.WorldSelectionList;
 import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.client.input.MouseButtonEvent;
-import net.minecraft.client.input.MouseButtonInfo;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -173,9 +171,7 @@ public final class ScreenOps {
         if (id < 0 || id >= ws.size()) return "ERR no widget " + id + " (have 0.." + (ws.size() - 1) + ")";
         AbstractWidget w = ws.get(id);
         double cx = w.getX() + w.getWidth() / 2.0, cy = w.getY() + w.getHeight() / 2.0;
-        MouseButtonEvent ev = new MouseButtonEvent(cx, cy, new MouseButtonInfo(0, 0));
-        boolean handled = s.mouseClicked(ev, false);
-        s.mouseReleased(ev);
+        boolean handled = ScreenClickCompat.clickAt(s, cx, cy);
         String msg = w.getMessage() != null ? w.getMessage().getString() : "";
         return "OK click " + id + " \"" + msg + "\" handled=" + handled;
     }

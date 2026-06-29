@@ -1,7 +1,6 @@
 package com.kishku7.m1;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.world.inventory.ContainerInput;
 
 /**
  * Collects a crafting result over the next ticks. A crafting result is computed server-side and
@@ -28,7 +27,7 @@ public final class CraftHarvest {
         ticks++;
         boolean empty = mc.player.containerMenu.getSlot(0).getItem().isEmpty();
         if (!empty) {
-            mc.gameMode.handleContainerInput(mc.player.containerMenu.containerId, 0, 0, ContainerInput.QUICK_MOVE, mc.player);
+            ContainerCompat.click(mc, mc.player.containerMenu.containerId, 0, 0, ContainerCompat.Mode.QUICK_MOVE);
             emptyTicks = 0;
         } else {
             emptyTicks++;
