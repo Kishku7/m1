@@ -80,7 +80,7 @@ public final class Crafting {
         try {
             int n = Integer.parseInt(rest.trim());
             if (n < 0 || n > 8) return "ERR hold 0..8";
-            mc.player.getInventory().setSelectedSlot(n);
+            InventoryCompat.setSelected(mc.player.getInventory(), n);
             return "OK hold hotbar " + n + " = " + describeItem(mc.player.getInventory().getItem(n));
         } catch (Exception e) { return "ERR usage: hold <0-8>"; }
     }
@@ -93,7 +93,7 @@ public final class Crafting {
         int src = findSlot(mc, path, 1);
         if (src < 0) return "equip: no " + path + " found";
         click(mc, src, 0, ContainerCompat.Mode.SWAP); // hotbar slot 0 == swap button 0
-        mc.player.getInventory().setSelectedSlot(0);
+        InventoryCompat.setSelected(mc.player.getInventory(), 0);
         return "OK equipped " + path + " to hotbar 0";
     }
 

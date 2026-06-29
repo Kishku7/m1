@@ -33,7 +33,7 @@ public final class PathOracle {
                 Mob m = (Mob) M1Compat.zombie().create(lvl, EntitySpawnReason.NATURAL);
                 if (m == null) return null;
                 PathNavigation nav = m.getNavigation();
-                nav.setCanOpenDoors(true);
+                PathNavCompat.setCanOpenDoors(nav, true);
                 nav.setCanFloat(true);
                 nav.setRequiredPathLength(48.0f);
                 proxy = m;

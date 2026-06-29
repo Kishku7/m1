@@ -468,7 +468,7 @@ public final class ScreenOps {
         if (p == null) return "inv: not in world";
         Inventory in = p.getInventory();
         StringBuilder b = new StringBuilder();
-        int held = in.getSelectedSlot();
+        int held = InventoryCompat.getSelected(in);
         b.append("held: hotbar[").append(held).append("] = ").append(itemStr(in.getItem(held))).append("\n");
         b.append("items:\n");
         boolean any = false;
@@ -716,9 +716,9 @@ public final class ScreenOps {
         mc.execute(() -> {
             try {
                 if (forceName == null) {
-                    Screenshot.grab(mc.gameDirectory, M1Compat.mainRenderTarget(mc), cb);
+                    ScreenshotCompat.grab(mc.gameDirectory, null, M1Compat.mainRenderTarget(mc), cb);
                 } else {
-                    Screenshot.grab(mc.gameDirectory, forceName, M1Compat.mainRenderTarget(mc), 1, cb);
+                    ScreenshotCompat.grab(mc.gameDirectory, forceName, M1Compat.mainRenderTarget(mc), cb);
                 }
             } catch (Throwable t) {
                 captured[0] = "GRAB-ERR " + t.getClass().getSimpleName() + ": " + t.getMessage();
