@@ -3,7 +3,7 @@ $ErrorActionPreference="Stop"
 $repo=Split-Path -Parent $MyInvocation.MyCommand.Path; $nf=Join-Path $repo "NeoForge"; $dist=Join-Path $repo "dist"
 New-Item -ItemType Directory -Force -Path $dist|Out-Null
 $matrix=[ordered]@{
-  "26.1"=@{mc="26.1.2"; neo="26.1.2.30-beta"; mcRange="[26.1,26.2)"; neoRange="[26.1.2.0-beta,)"}
+  "26.1"=@{mc="26.1.2"; neo="26.1.2.30-beta"; mcRange="[26.1,26.2)"; neoRange="[26.1.0-alpha,)"}
   "26.2"=@{mc="26.2";   neo="26.2.0.1-beta";  mcRange="[26.2,26.3)"; neoRange="[26.2.0-alpha,)"}
 }
 if(-not $Versions -or $Versions.Count -eq 0){$Versions=@($matrix.Keys)}
