@@ -26,7 +26,7 @@ def zombie_registry(v): return v >= (26, 2)          # 26.2 dropped EntityType.Z
 def selected_accessor(v): return v >= (1, 21, 5)     # 1.21.5 made Inventory.selected private -> get/setSelectedSlot()
 def mouse_event(v):     return v >= (1, 21, 9)       # MouseButtonEvent record + mouseClicked(ev,bool): 1.21.9+ (re-intermediation) THROUGH 26
 def container_input(v): return v[0] == 26            # handleContainerInput+ContainerInput @26 vs handleInventoryMouseClick+ClickType
-def shot_int_arg(v):    return v >= (1, 21, 8)       # 5-arg grab(...,int downscale,...): 1.21.8+ THROUGH 26
+def shot_int_arg(v):    return v >= (1, 21, 6)       # 5-arg grab(...,int downscale,...): 1.21.6+ THROUGH 26 (deobf-confirmed; 1.21.5 is the last 4-arg)
 def spawn_reason_enum(v):
     # MobSpawnType -> EntitySpawnReason. CONFIRMED via deobf: MobSpawnType through 1.21.1; EntitySpawnReason
     # from 1.21.2 (the 1.21.2 API-churn version). 26.x all use EntitySpawnReason.
