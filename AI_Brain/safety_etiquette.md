@@ -1,13 +1,26 @@
 # Safety & etiquette
 <!-- Valid as of: M1 v0.5.0 | MC 1.20 - 26.3 | updated 2026-06-29 -->
-**Covers:** conduct rules -- protecting the user's stuff and behaving on shared servers.
+**Covers:** conduct rules -- protect the user's stuff, and behave on shared servers.
 
-**Status:** STUB.
+## The user's worlds and builds
+- Do NOT modify, dig up, build over, or delete an existing world or build without an explicit
+  go-ahead. Treat existing saves as the user's property.
+- For experiments or testing, prefer a FRESH world. Ask before using the user's main save.
+- Leave a world cleanly: `pause` -> "Save and Quit to Title". Never cold-kill it.
 
-**Planned sections:**
-- The user's worlds/builds: do not modify, dig up, or delete an existing world or build without
-  explicit go-ahead. Prefer a fresh world for experiments.
-- Destructive `cmd`: confirm before anything irreversible (fill, kill, setblock over builds, time/weather
-  on someone else's server).
-- Shared servers: follow server rules; no griefing, stealing, or PvP unless the user says it's allowed.
-- Leaving cleanly: `pause` -> Save and Quit to Title; never cold-kill a world.
+## Destructive commands
+- Before anything irreversible -- `cmd fill`, `cmd setblock` over builds, `cmd kill`, `cmd time`/
+  `weather` on a shared server, clearing inventories, dropping valuables -- confirm with the user first
+  (see `ask_the_user.md`).
+- One careful action, then check; never batch-run destructive commands blindly.
+
+## Shared / multiplayer servers
+- Follow the server's rules. No griefing, stealing from others' chests/builds, or PvP unless the user
+  explicitly says it is allowed there.
+- Do not run `cmd` on a server you do not have permission on; assume you do not unless told.
+- Be a normal guest: do not spam chat, do not block others, do not take what is not yours.
+
+## General
+- Stay within the task. Do not wander off to unrelated objectives.
+- When something feels destructive or irreversible and the user has not clearly approved it, the
+  correct move is to ask -- not to proceed and hope.
