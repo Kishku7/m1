@@ -29,10 +29,11 @@ import java.util.Locale;
  * {@code agent} socket command.
  *
  * <p>Phase 1 basics wired here as queue actions: movement (goto/moveto/patrol), aim ({@link
- * LookAction}), break ({@link MineAction}), and the inventory verbs hold/equip/use that wrap the
- * proven {@link Crafting} path. The reflex {@link InterruptSource} is still an empty stub (sensors
- * are a later phase) and the {@link ServiceLocator} resolves just the {@link Minecraft} instance;
- * the real registry, sensors, perception and navigation register here as later phases land.
+ * LookAction}), break ({@link MineAction}), inventory verbs hold/equip/use ({@link Crafting}), and
+ * combat ({@link AttackAction} cooldown-gated jump-crit, {@link ShieldAction} block). The reflex
+ * {@link InterruptSource} is still an empty stub (a sensor-driven combat reflex is a later phase) and
+ * the {@link ServiceLocator} resolves just the {@link Minecraft} instance; the real registry,
+ * sensors, perception and navigation register here as later phases land.
  */
 public final class AgentRuntime {
 
@@ -124,6 +125,11 @@ public final class AgentRuntime {
             case "place":
                 QUEUE.append(new UseAction());
                 return "queued use/place (acts on the crosshair block next in-world tick)";
+            case "attack":
+                return enqueueAttack(args);
+            case "shield":
+            case "block":
+                return enqueueShield(args);
             case "stop":
                 QUEUE.replace(Collections.<MinecraftAction>emptyList());
                 MoveControl.stop();
@@ -132,7 +138,8 @@ public final class AgentRuntime {
             default:
                 return "agent: unknown subcommand '" + sub + "' (try: status | ping | "
                         + "goto <x y z> | moveto <x z> | patrol <x z ...> | look <x y z|yaw [pitch]> | "
-                        + "mine <x y z> | hold <0-8> | equip <item> | use | stop)";
+                        + "mine <x y z> | hold <0-8> | equip <item> | use | "
+                        + "attack [nearest|<id>|crosshair] [crit|normal] | shield [ticks] | stop)";
         }
     }
 
@@ -238,6 +245,43 @@ public final class AgentRuntime {
         }
         QUEUE.append(new EquipAction(args));
         return "queued equip " + args;
+    }
+
+    /** {@code attack [nearest|<id>|crosshair] [crit|normal|sweep]}. Defaults: nearest, crit. */
+    private static String enqueueAttack(String args) {
+        String spec = "nearest";
+        boolean crit = true;
+        if (!args.isEmpty()) {
+            for (String tok : args.split("\\s+")) {
+                String low = tok.toLowerCase(Locale.ROOT);
+                if (low.equals("crit")) {
+                    crit = true;
+                } else if (low.equals("normal") || low.equals("nocrit") || low.equals("sweep")) {
+                    crit = false;
+                } else {
+                    spec = tok;
+                }
+            }
+        }
+        if (spec.equalsIgnoreCase("crosshair")) {
+            spec = "";
+        }
+        QUEUE.append(new AttackAction(spec, crit));
+        return "queued attack (target=" + (spec.isEmpty() ? "crosshair" : spec) + ", crit=" + crit + ")";
+    }
+
+    /** {@code shield [holdTicks]} (default 40t = 2s). */
+    private static String enqueueShield(String args) {
+        int ticks = 40;
+        if (!args.isEmpty()) {
+            try {
+                ticks = Integer.parseInt(args.trim());
+            } catch (NumberFormatException e) {
+                return "usage: agent shield [holdTicks]";
+            }
+        }
+        QUEUE.append(new ShieldAction(ticks));
+        return "queued shield (hold " + ticks + "t)";
     }
 
     /** One-line engine status. */
