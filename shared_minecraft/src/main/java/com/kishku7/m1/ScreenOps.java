@@ -72,7 +72,7 @@ public final class ScreenOps {
         "  screenshot [name]    save a PNG of the current frame to screenshots/ (vanilla writer)\n" +
         "  upgrades             show pending auto-armor-upgrade messages\n" +
         "  autoupgrade on|off   toggle auto armor upgrading (default on)\n" +
-        "  agent [status|ping]  agentic-player engine status / probe (experimental)\n" +
+        "  agent <sub>          agent engine: status|ping|goto|moveto|patrol|stop (experimental)\n" +
         "  help                 this list\n" +
         "AI agents: type START for the AI_Brain index path (config/M1_AI_Brain/<ver>/00_Index.md); full command syntax is in 10_command_card.md.";
 
@@ -568,7 +568,7 @@ public final class ScreenOps {
         } catch (Exception e) { return "ERR usage: goto <x> <y> <z>"; }
     }
 
-    private static String startMove(Minecraft mc, LocalPlayer p, double tx, double ty, double tz, double stop, String label) {
+    static String startMove(Minecraft mc, LocalPlayer p, double tx, double ty, double tz, double stop, String label) {
         Path path = PathOracle.compute(mc, tx, ty, tz, 1);
         if (path == null || path.getNodeCount() == 0)
             return String.format("no path to (%.1f,%.1f) -- re-scan and pick a closer/clearer point", tx, tz);

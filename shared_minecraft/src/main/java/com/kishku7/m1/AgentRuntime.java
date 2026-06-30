@@ -91,15 +91,81 @@ public final class AgentRuntime {
 
     /** Handle the {@code agent} socket command. {@code rest} is the text after the verb. */
     public static String command(String rest) {
-        String arg = (rest == null) ? "" : rest.trim().toLowerCase(Locale.ROOT);
-        if (arg.isEmpty() || arg.equals("status")) {
+        String s = (rest == null) ? "" : rest.trim();
+        if (s.isEmpty()) {
             return status();
         }
-        if (arg.equals("ping")) {
-            QUEUE.append(new PingAction());
-            return "queued ping (runs next in-world tick; reports drain onto a later reply)";
+        String[] parts = s.split("\\s+", 2);
+        String sub = parts[0].toLowerCase(Locale.ROOT);
+        String args = (parts.length > 1) ? parts[1].trim() : "";
+        switch (sub) {
+            case "status":
+                return status();
+            case "ping":
+                QUEUE.append(new PingAction());
+                return "queued ping (runs next in-world tick; reports drain onto a later reply)";
+            case "goto":
+                return enqueueGoto(args);
+            case "moveto":
+                return enqueueMoveto(args);
+            case "patrol":
+                return enqueuePatrol(args);
+            case "stop":
+                QUEUE.replace(Collections.<MinecraftAction>emptyList());
+                MoveControl.stop();
+                return "agent: plan cleared and movement stopped";
+            default:
+                return "agent: unknown subcommand '" + sub
+                        + "' (try: status | ping | goto <x y z> | moveto <x z> | patrol <x z ...> | stop)";
         }
-        return "agent: unknown subcommand '" + arg + "' (try: status | ping)";
+    }
+
+    private static String enqueueGoto(String args) {
+        String[] t = args.split("\\s+");
+        if (t.length < 3) {
+            return "usage: agent goto <x> <y> <z>";
+        }
+        try {
+            double x = Double.parseDouble(t[0]);
+            double y = Double.parseDouble(t[1]);
+            double z = Double.parseDouble(t[2]);
+            QUEUE.append(new MoveAction(x, y, z, 1.0, "agent goto"));
+            return "queued goto (" + x + ", " + y + ", " + z + ")";
+        } catch (NumberFormatException e) {
+            return "usage: agent goto <x> <y> <z>";
+        }
+    }
+
+    private static String enqueueMoveto(String args) {
+        String[] t = args.split("\\s+");
+        if (t.length < 2) {
+            return "usage: agent moveto <x> <z>";
+        }
+        try {
+            double x = Double.parseDouble(t[0]);
+            double z = Double.parseDouble(t[1]);
+            QUEUE.append(new MoveAction(x, Double.NaN, z, 1.0, "agent moveto"));
+            return "queued moveto (" + x + ", " + z + ")";
+        } catch (NumberFormatException e) {
+            return "usage: agent moveto <x> <z>";
+        }
+    }
+
+    private static String enqueuePatrol(String args) {
+        String[] t = args.split("\\s+");
+        if (t.length < 2 || (t.length % 2) != 0) {
+            return "usage: agent patrol <x1> <z1> [<x2> <z2> ...]";
+        }
+        try {
+            double[][] pts = new double[t.length / 2][];
+            for (int k = 0; k < pts.length; k++) {
+                pts[k] = new double[] {Double.parseDouble(t[2 * k]), Double.parseDouble(t[2 * k + 1])};
+            }
+            QUEUE.append(new PatrolAction(pts));
+            return "queued patrol (" + pts.length + " waypoints)";
+        } catch (NumberFormatException e) {
+            return "usage: agent patrol <x1> <z1> [<x2> <z2> ...]";
+        }
     }
 
     /** One-line engine status. */
