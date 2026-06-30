@@ -17,7 +17,7 @@ the client tells you how to reach a shell on that machine; from there open a TCP
 
 ## 2. Wire protocol -- get this right or every reply desyncs
 - One command per line (`<command>\n`). The reply is text lines ended by a sentinel line `<<END`.
-- On connect a greeting arrives (`M1 ready...` then `<<END`) -- read and discard it first.
+- On connect a greeting arrives (`Connected to Machine One (M1)...` then `<<END`) -- read and discard it. Send `START` to (re)fetch this brief's file path; `HELP` lists commands. You are a machine client: keep RAW ON -- the `<<END` marker is for you. `RAW OFF` is a human convenience that hides it.
 - **Read until `<<END`, and keep any bytes that arrive after it** for the next read. A single read
   can straddle two replies; if you drop the leftover you desync.
 - After a `click` / `type`, the reply also has a `--- now ---` block: a fresh `describe` of the
