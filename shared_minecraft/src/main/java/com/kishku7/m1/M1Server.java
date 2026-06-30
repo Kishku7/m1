@@ -20,6 +20,10 @@ import java.util.concurrent.TimeUnit;
  * No MCP, no WebSocket. Reads one command per line; replies with N lines
  * of text terminated by a "&lt;&lt;END" sentinel line.
  *
+ * Binds BOTH loopback stacks (127.0.0.1 and ::1) on PORT, so `telnet localhost 26000` connects
+ * regardless of whether the client resolves localhost to IPv4 or IPv6. Both binds are loopback
+ * addresses -- never externally reachable. If one stack is unavailable it is logged and skipped.
+ *
  * Dual-audience connect protocol (friendly to a telnet human AND an AI):
  *   greeting -&gt; "Connected to Machine One (M1). Type START to begin, or HELP for commands."
  *   START    -&gt; the AI's brain index-file path + the human's HELP/RAW tip (see AiBrain.startBrief()).
@@ -44,16 +48,21 @@ public final class M1Server {
         if (running) return;
         running = true;
         AiBrain.install();   // extract/refresh the shipped AI_Brain docs into the user's config
-        Thread t = new Thread(M1Server::run, "m1-server");
+        listen("127.0.0.1"); // IPv4 loopback
+        listen("::1");       // IPv6 loopback -- both so `telnet localhost 26000` works either way
+    }
+
+    private static void listen(String host) {
+        Thread t = new Thread(() -> accept(host), "m1-server-" + host);
         t.setDaemon(true);
         t.start();
     }
 
-    private static void run() {
+    private static void accept(String host) {
         try (ServerSocket ss = new ServerSocket()) {
             ss.setReuseAddress(true);
-            ss.bind(new InetSocketAddress(InetAddress.getLoopbackAddress(), PORT));
-            log("listening on 127.0.0.1:" + PORT);
+            ss.bind(new InetSocketAddress(InetAddress.getByName(host), PORT));
+            log("listening on " + host + ":" + PORT);
             while (running) {
                 Socket c = ss.accept();
                 Thread h = new Thread(() -> handle(c), "m1-conn");
@@ -61,7 +70,7 @@ public final class M1Server {
                 h.start();
             }
         } catch (IOException e) {
-            log("server error: " + e);
+            log("listener " + host + " unavailable: " + e);
         }
     }
 

@@ -11,7 +11,7 @@ first-class job when the user asks for it (see `02_create_world.md` / `03_join_m
 Do not run developer/build tooling and do not edit the mod. Play and operate; nothing else.
 
 ## 1. Connect
-M1 listens on **`127.0.0.1:26000`** (loopback only) on the machine running the client. Whoever runs
+M1 listens on **`localhost:26000`** -- both `127.0.0.1` and `::1`, loopback only -- on the machine running the client. Whoever runs
 the client tells you how to reach a shell on that machine; from there open a TCP socket to the port.
 **One client at a time** -- only one M1 socket exists.
 
