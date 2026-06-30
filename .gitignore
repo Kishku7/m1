@@ -23,3 +23,6 @@ docs/
 .idea/
 .vscode/
 *.iml
+
+# Local tooling (machine-specific paths, e.g. the sync-aibrain mirror dest); not for the repo
+scripts/

@@ -1,5 +1,5 @@
 # Capabilities & limits (what M1 can and cannot do)
-<!-- Valid as of: M1 v0.5.0 | MC 1.20 - 26.3 | updated 2026-06-29 -->
+<!-- Valid as of: M1 v0.5.0 | MC 1.20 - 26.3 | updated 2026-06-30 -->
 **Covers:** an honest boundary list so you do not attempt impossible things or loop on them.
 
 ## CAN
@@ -9,6 +9,7 @@
 - Move with pathfinding (`moveto` / `goto`), `mine`, `place`, `hold`, `equip`, basic `craft`.
 - Run slash-commands via `cmd <...>` when cheats/permission are present.
 - `screenshot` a frame; armor auto-equips itself to the best you carry.
+- Queue **autonomous actions** via the `agent` layer (goto/moveto/patrol/look/mine/hold/equip/use/attack/shield); they run in-world and report back async (`10_command_card.md`, AGENT).
 
 ## CANNOT (current)
 - **Fly.** There is no fly command. In Creative a vantage from the air is not reachable through M1

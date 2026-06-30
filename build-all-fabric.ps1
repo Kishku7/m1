@@ -21,3 +21,8 @@ foreach($v in $Versions){
   Write-Host "  -> $v done"
 }
 Write-Host "M1 Fabric builds complete."
+
+# Refresh the AI_Brain memory mirror (local tooling; scripts/ is gitignored, absent in public clones)
+$syncScript=Join-Path $repo "scripts\sync-aibrain.ps1"
+if(Test-Path $syncScript){ try{ & $syncScript }catch{ Write-Warning "sync-aibrain failed: $_" } }
+

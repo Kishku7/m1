@@ -1,5 +1,5 @@
 # 01 -- Drive the M1 interface (LAW)
-<!-- Valid as of: M1 v0.5.0 | MC 1.20 - 26.3 | updated 2026-06-29 -->
+<!-- Valid as of: M1 v0.5.0 | MC 1.20 - 26.3 | updated 2026-06-30 -->
 **Covers:** how to talk to M1 -- connect, wire protocol, the observe -> act discipline, and how to
 read M1's core outputs. This is exact reference. Follow it literally; everything else assumes it.
 
@@ -108,3 +108,12 @@ re-shows pending notes; `autoupgrade off` disables it for a task. `openpack` ope
 Do not auto-read or auto-load any session log. Read it only when asked to recall past runs. When asked
 to record, or at end of a task, APPEND a short dated entry (task, what you learned, what worked, what
 to change). Append -- never overwrite.
+
+## 11. The agent layer (autonomous, queued -- optional higher level)
+Alongside the direct verbs, M1 has an `agent` action layer: you QUEUE a high-level action and the
+engine runs it across later in-world ticks, reporting back asynchronously. Every `agent` subcommand
+returns at once with `queued ...`; the outcome arrives later as a drained line `[agent] <seq> <CLASS>: <text>` on a subsequent reply (same channel as `[auto-upgrade]`). Poll
+`agent status` for tick/idle/backlog; `agent stop` clears the plan and halts movement + mining. It
+only runs while in a world. Full subcommand list: `10_command_card.md` (AGENT). Use the agent layer
+for fire-and-poll autonomy (goto/patrol/mine/attack/shield); use the direct verbs (sections 4-9) for
+immediate step-by-step control -- do not drive both at the same target at once.

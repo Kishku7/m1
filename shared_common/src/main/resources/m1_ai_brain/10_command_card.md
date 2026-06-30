@@ -1,5 +1,5 @@
 # Command card (exact syntax cheat-sheet)
-<!-- Valid as of: M1 v0.5.0 | MC 1.20 - 26.3 | updated 2026-06-29 -->
+<!-- Valid as of: M1 v0.5.0 | MC 1.20 - 26.3 | updated 2026-06-30 -->
 **Covers:** every M1 command with syntax + a one-line note, so you can reload just the syntax cheaply.
 Concepts behind these live in `01_drive_m1.md`.
 
@@ -49,6 +49,21 @@ UTIL
   screenshot [name]    capture a frame (saved on the client machine)
   help                 M1's own command help
   quit                 disconnect this M1 session
+
+AGENT (autonomous action layer -- queue an action; it runs in-world and reports back async)
+  agent status                        engine status: tick, idle, backlog, interrupt, lastSeq, budgetMs
+  agent ping                          end-to-end probe -> a "pong" report
+  agent goto <x> <y> <z>              queue a pathfind to a full coordinate
+  agent moveto <x> <z>                queue a pathfind to x,z (Y follows terrain)
+  agent patrol <x1> <z1> [x2 z2 ...]  queue a multi-leg patrol
+  agent look <x y z> | <yaw [pitch]>  queue aim at a point, or at yaw[/pitch]
+  agent mine <x> <y> <z>              queue breaking the block at x,y,z
+  agent hold <0-8>                    queue selecting a hotbar slot
+  agent equip <item>                  queue moving a named item to hand (needs an open container)
+  agent use | agent place             queue use/place on the crosshair block
+  agent attack [nearest|<id>|crosshair] [crit|normal]   queue an attack (default: nearest, crit)
+  agent shield [ticks]                queue raising the shield (default 40t = 2s; alias: agent block)
+  agent stop                          clear the queued plan and stop movement + mining
 ```
 
 Notes:
@@ -59,3 +74,4 @@ Notes:
 - `worlds`/`joinworld` load an EXISTING world. CREATING a new world is menu-driving with
   `describe`+`click`+`type` (see `02_create_world.md`).
 - This card tracks the code. If `help` shows a command not listed here, trust `help` and flag the drift.
+- **`agent ...`** is the queued autonomous layer: each subcommand returns at once with `queued ...`, runs on later in-world ticks, and its result arrives as a drained `[agent] <seq> <CLASS>: <text>` line on a subsequent reply. Poll `agent status`. Only runs while in a world.
