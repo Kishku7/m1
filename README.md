@@ -7,10 +7,10 @@ operate Minecraft entirely by typing. No GUI mouse/keyboard is required and noth
 "looked at" on screen; the window is there purely for observability.
 
 Loaders / versions: Fabric + NeoForge, MC 26.x (this `main` branch is the entry point; the unified
-source tree lives on branch `26`, the pre-26 client-test builds on `1.20.x` / `1.21.x`). Internal
+source tree (MC 1.20 - 26.x, Fabric + NeoForge) lives on branch `minecraft-1.20-26.3`). Internal
 tooling, all rights reserved.
 
-> **New here? Read [`AI_INSTRUCTIONS.md`](AI_INSTRUCTIONS.md) first.** That is the file an AI agent
+> **New here? Read [the AI_Brain (`00_Index.md`)](https://github.com/Kishku7/m1/tree/minecraft-1.20-26.3/shared_common/src/main/resources/m1_ai_brain) first.** That is the file an AI agent
 > is expected to load before a play session. This README is the reference manual behind it.
 
 ---
@@ -59,7 +59,7 @@ Anything an AI does is reproducible by hand and vice versa.
 
 * **Newline-delimited.** Send one command per line (`<command>\n`). The reply is one or more lines
   of text, terminated by a single sentinel line: **`<<END`**.
-* **A greeting is sent on connect** -- `M1 ready. Type 'help'.` followed by a `<<END`. Read and
+* **A greeting is sent on connect** -- `Connected to Machine One (M1). Type START to begin, or HELP for commands.` followed by a `<<END`. Read and
   discard it before sending your first command.
 * **After an action command (`click` / `type`)** the reply also contains a `--- now ---` marker
   followed by a fresh `describe` of the resulting screen (the mod waits ~150 ms for any
@@ -128,9 +128,9 @@ loopback-only by design.
 
 ---
 
-## 3. The AI instruction file
+## 3. The AI_Brain
 
-[`AI_INSTRUCTIONS.md`](AI_INSTRUCTIONS.md) (in this branch) is the **standing brief an AI reads in
+[the AI_Brain (`00_Index.md`)](https://github.com/Kishku7/m1/tree/minecraft-1.20-26.3/shared_common/src/main/resources/m1_ai_brain) (in this branch) is the **standing brief an AI reads in
 before a session.** It is deliberately on `main` so it travels with every branch and version, and
 so any operator can read it. It is portable -- it contains the transferable rules, not any one
 machine's launch/control specifics (those stay in internal infra docs).
@@ -476,14 +476,13 @@ craft grids exist only while a screen is open, so they appear in `slots`, never 
 
 ## 7. Repo layout
 
-`main` is this entry point (README + `AI_INSTRUCTIONS.md`). The buildable source lives on the
-version branches:
+`main` is the entry point (this README). The unified buildable source -- one tree spanning MC
+1.20 - 26.x for Fabric + NeoForge -- lives on branch
+[`minecraft-1.20-26.3`](https://github.com/Kishku7/m1/tree/minecraft-1.20-26.3):
 
-* `26` -- the unified MC 26.x source. `shared_minecraft/` is the single source of truth (the
-  observe+actuate engine), `srcDir`'d into the per-loader `Fabric/` and `NeoForge/` projects.
-  Build with `build-all-fabric.ps1` / `build-all-neoforge.ps1`; jars land in `dist/`.
-* `1.20.x`, `1.21.x` -- pre-26 client-test builds (core: socket / introspection / menu + world
-  actuation / perception / screenshot).
-
-Deeper engineering detail (how each capability maps to the MC API, the path-oracle, the wire
-protocol internals) lives in the dev docs on branch `26`.
+* `shared_minecraft/` -- the MC-coupled observe+actuate engine (single source of truth), `srcDir`'d
+  into the per-loader `Fabric*/` and `NeoForge*/` cells.
+* `shared_common/` -- MC-agnostic code + resources, including the **AI_Brain** operating brief that
+  ships inside every jar and extracts to `config/M1_AI_Brain/<version>/` at runtime:
+  https://github.com/Kishku7/m1/tree/minecraft-1.20-26.3/shared_common/src/main/resources/m1_ai_brain
+* Build with `build-all-fabric.ps1` / `build-all-neoforge.ps1`; jars land in `dist/`.
