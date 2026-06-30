@@ -116,6 +116,8 @@ public final class M1Server {
 
                 String ups = PickupUpgrade.drainReports();
                 if (!ups.isEmpty()) { out.write(ups); out.write("\n"); }
+                String agentReports = AgentRuntime.drainReports();
+                if (!agentReports.isEmpty()) { out.write(agentReports); out.write("\n"); }
                 out.write(resp);
                 if (!resp.endsWith("\n")) out.write("\n");
 
