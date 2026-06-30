@@ -72,7 +72,8 @@ public final class ScreenOps {
         "  screenshot [name]    save a PNG of the current frame to screenshots/ (vanilla writer)\n" +
         "  upgrades             show pending auto-armor-upgrade messages\n" +
         "  autoupgrade on|off   toggle auto armor upgrading (default on)\n" +
-        "  help                 this list";
+        "  help                 this list\n" +
+        "AI agents: type START for the AI_Brain index path (config/M1_AI_Brain/<ver>/00_Index.md); full command syntax is in 10_command_card.md.";
 
     private ScreenOps() {}
 

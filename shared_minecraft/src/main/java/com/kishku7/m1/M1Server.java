@@ -110,8 +110,7 @@ public final class M1Server {
                 } else {
                     resp = dispatch(line);
                     if (verb.equals("help")) {
-                        resp = resp + "\nTip: humans -> type RAW OFF for cleaner output. "
-                             + "AI agents -> full syntax is in 10_command_card.md (type START for the brain path).";
+                        resp = resp + "\nTip: humans -> type RAW OFF for cleaner output.";
                     }
                 }
 
