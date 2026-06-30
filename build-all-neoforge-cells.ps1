@@ -27,6 +27,8 @@ foreach ($cell in $cells) {
     $jar = Get-ChildItem "$dir\build\libs\m1-*-neoforge.jar" -EA SilentlyContinue | Where-Object { $_.Name -notmatch 'sources|slim' } | Select-Object -First 1
     $sw.Stop()
     if ($ok -and $jar) {
+      $null = New-Item -ItemType Directory -Force -Path (Join-Path $root 'dist')
+      Copy-Item $jar.FullName (Join-Path $root 'dist' $jar.Name) -Force -EA SilentlyContinue
       "PASS  $name (mc=$mv)  $($sw.Elapsed.ToString('mm\:ss'))  $($jar.Name)" | Add-Content $status
     } else {
       $err = (Get-Content $blog -EA SilentlyContinue | Where-Object { $_ -match 'error:|\.java:\d+:' } | Select-Object -First 3) -join ' || '

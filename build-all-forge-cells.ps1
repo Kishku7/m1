@@ -28,6 +28,8 @@ foreach ($cell in $cells) {
     $w   = (Get-Content $blog -EA SilentlyContinue | Select-String -Pattern '\.java:\d+:\s*warning:').Count
     $sw.Stop()
     if ($ok -and $jar) {
+      $null = New-Item -ItemType Directory -Force -Path (Join-Path $root 'dist')
+      Copy-Item $jar.FullName (Join-Path $root 'dist' $jar.Name) -Force -EA SilentlyContinue
       "PASS  $name (mc=$mv)  $($sw.Elapsed.ToString('mm\:ss'))  warn=$w  $($jar.Name)" | Add-Content $status
     } else {
       $err = (Get-Content $blog -EA SilentlyContinue | Where-Object { $_ -match 'error:|\.java:\d+:' } | Select-Object -First 3) -join ' || '
