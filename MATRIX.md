@@ -4,7 +4,7 @@ ONE source builds every supportable MC 1.20.0-26.3 for all applicable loaders vi
 
 **Scope:** EVERY supportable release 1.20.0-26.3, each boot-smoketested per claimed loader BEFORE Raider live testing. A compat claim REQUIRES a smoketest demonstrating the effort. (Master 2026-06-28)
 
-Target mod version on cutover: **0.5**. Loader rule: Fabric on every version; Forge where NeoForge has no release (<=1.20.0); NeoForge from 1.20.1+. Never Architectury.
+Target mod version on cutover: **0.5**. Loader rule: Fabric on every version; Forge for every MC 1.20.1-1.21.8 that has a supported Forge loader (FG6 ceiling = 1.21.8, no Forge for 1.20.0); NeoForge from 1.20.1+; 26.x is Fabric+NeoForge only. Never Architectury.
 
 ## Build cells (legacy-proven coords; `unified` build wiring added per cell in Stages 1-3)
 

@@ -3,7 +3,7 @@
   "branch": "minecraft-1.20-26.3",
   "modVersionTarget": "0.5",
   "goal": "ONE source builds every supportable MC 1.20.0-26.3 for all applicable loaders via shared folders + Cog + reflection facades.",
-  "loaderRule": "Fabric on every version; Forge where NeoForge has no release (<=1.20.0); NeoForge from 1.20.1+. Never Architectury.",
+  "loaderRule": "Fabric on every version; Forge for every MC 1.20.1-1.21.8 that has a supported Forge loader (FG6 ceiling = 1.21.8, no Forge for 1.20.0); NeoForge from 1.20.1+; 26.x is Fabric+NeoForge only. Never Architectury.",
   "jdk_note": "1.20 = JDK17; 1.20.5+ and 1.21.x = JDK21; 26.x = JDK25 (verify 26.2/26.3).",
   "cellStatus": "All cells coords are legacy-proven in the old per-version projects. 'unified:false' = not yet building from the single source (Stages 1-3 wire each in via Cog/facade).",
   "cells": [
