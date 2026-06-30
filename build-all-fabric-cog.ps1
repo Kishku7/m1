@@ -12,7 +12,7 @@ $root = $PSScriptRoot
 $status = Join-Path $env:TEMP 'm1_fabric_cog_status.txt'
 "=== m1 pre-26 Fabric cog build  $(Get-Date -Format s) ===" | Set-Content $status
 
-$cells = Get-ChildItem $root -Directory -Filter 'Fabric-*' | Sort-Object Name
+$cells = Get-ChildItem (Join-Path $root 'Fabric') -Directory | Where-Object { $_.Name -ne '26' } | Sort-Object Name
 if ($Only) { $cells = $cells | Where-Object { $Only -contains $_.Name } }
 
 foreach ($cell in $cells) {
@@ -31,7 +31,7 @@ foreach ($cell in $cells) {
       Add-Content "$dir\.gitignore" 'gen/'
     }
     # 3) cog-gen
-    & "$root\cog-gen.ps1" -Cell $name -McVer $mv -Loader 'fabric' | Out-Null
+    & "$root\cog-gen.ps1" -Cell "Fabric\$name" -McVer $mv -Loader 'fabric' | Out-Null
     # 4) build
     $blog = Join-Path $env:TEMP "m1_build_$name.log"
     Push-Location $dir
