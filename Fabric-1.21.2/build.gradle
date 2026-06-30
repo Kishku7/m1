@@ -33,3 +33,7 @@ java {
 }
 
 sourceSets.main.java.srcDir "gen"
+
+// AI_Brain (MC-agnostic resources, shipped in jar)
+sourceSets.main.resources.srcDir "../shared_common/src/main/resources"
+

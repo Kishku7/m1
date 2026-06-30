@@ -28,3 +28,10 @@ java {
     sourceCompatibility = JavaVersion.VERSION_25
     targetCompatibility = JavaVersion.VERSION_25
 }
+
+// AI_Brain (MC-agnostic resources, shipped in jar)
+sourceSets.main.resources.srcDir "../shared_common/src/main/resources"
+
+
+sourceSets.main.java.srcDir "../shared_common/src/main/java"
+

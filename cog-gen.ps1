@@ -2,8 +2,9 @@
 #
 # Reflection-by-mojmap *Compat facades work where the RUNTIME is mojmap (26+, NeoForge, Forge 1.20.1+),
 # but NOT on pre-26 Fabric (intermediary). For those cells we fall through to Cog (direct compilation):
-# this builds <Cell>/gen = shared_minecraft business logic + the cog-instrumented *Compat (from
-# _codegen/cog_sources) generated for the cell's MC version. The cell's build.gradle srcDir's "gen".
+# this builds <Cell>/gen = shared_minecraft business logic + shared_common (MC-agnostic) + the
+# cog-instrumented *Compat (from _codegen/cog_sources) generated for the cell's MC version. The cell's
+# build.gradle srcDir's "gen".
 #
 #   ./cog-gen.ps1 -Cell Fabric-1.20.6 -McVer 1.20.6 -Loader fabric
 param(
@@ -18,6 +19,10 @@ $gen  = Join-Path $root "$Cell\gen"
 
 Remove-Item $gen -Recurse -Force -ErrorAction SilentlyContinue
 robocopy "$root\shared_minecraft\src\main\java" $gen /E /NFL /NDL /NJH /NJS /NP | Out-Null
+# shared_common = MC-agnostic Java (e.g. AiBrain); plain copy, no cog needed -- so Fabric cells bundle it too
+if (Test-Path "$root\shared_common\src\main\java") {
+  robocopy "$root\shared_common\src\main\java" $gen /E /NFL /NDL /NJH /NJS /NP | Out-Null
+}
 
 # overwrite the reflection *Compat with the cog-instrumented versions, then generate for this MC version
 Get-ChildItem "$root\_codegen\cog_sources" -Filter *.java | ForEach-Object {

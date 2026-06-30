@@ -38,6 +38,7 @@ public final class M1Server {
     public static synchronized void start() {
         if (running) return;
         running = true;
+        AiBrain.install();   // extract/refresh the shipped AI_Brain docs into the user's config
         Thread t = new Thread(M1Server::run, "m1-server");
         t.setDaemon(true);
         t.start();
@@ -66,6 +67,8 @@ public final class M1Server {
              BufferedWriter out = new BufferedWriter(new OutputStreamWriter(s.getOutputStream(), StandardCharsets.UTF_8))) {
 
             out.write("M1 ready. Type 'help'.\n");
+            String brief = AiBrain.greeting();
+            if (!brief.isEmpty()) { out.write(brief); out.write("\n"); }
             out.write(END);
             out.flush();
 
@@ -143,4 +146,3 @@ public final class M1Server {
         System.out.println("[M1] " + m);
     }
 }
-
