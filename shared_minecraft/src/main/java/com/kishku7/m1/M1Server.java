@@ -20,10 +20,15 @@ import java.util.concurrent.TimeUnit;
  * No MCP, no WebSocket. Reads one command per line; replies with N lines
  * of text terminated by a "&lt;&lt;END" sentinel line.
  *
- * Commands run on the client main thread (Minecraft is not thread-safe) via
- * Minecraft.execute(), bridged back with a CompletableFuture. After an action
- * command (click/type) the server waits a brief settle and auto-appends a fresh
- * describe of the resulting screen, so every action reports the new situation.
+ * Dual-audience connect protocol (friendly to a telnet human AND an AI):
+ *   greeting -&gt; "Connected to Machine One (M1). Type START to begin, or HELP for commands."
+ *   START    -&gt; the AI's brain index-file path + the human's HELP/RAW tip (see AiBrain.startBrief()).
+ *   HELP     -&gt; the command list (+ a tip line). RAW OFF hides the &lt;&lt;END marker for humans.
+ * START is optional discovery, NOT a gate -- commands work immediately for clients that know them.
+ *
+ * Commands run on the client main thread (Minecraft is not thread-safe) via Minecraft.execute(),
+ * bridged back with a CompletableFuture. After an action command (click/type) the server waits a
+ * brief settle and auto-appends a fresh describe of the resulting screen.
  */
 public final class M1Server {
 
@@ -62,13 +67,13 @@ public final class M1Server {
 
     private static void handle(Socket c) {
         log("connection from " + c.getRemoteSocketAddress());
+        boolean raw = true;   // per-connection: emit the <<END sentinel (machine clients). RAW OFF for humans.
         try (Socket s = c;
              BufferedReader in = new BufferedReader(new InputStreamReader(s.getInputStream(), StandardCharsets.UTF_8));
              BufferedWriter out = new BufferedWriter(new OutputStreamWriter(s.getOutputStream(), StandardCharsets.UTF_8))) {
 
-            out.write("M1 ready. Type 'help'.\n");
-            String brief = AiBrain.greeting();
-            if (!brief.isEmpty()) { out.write(brief); out.write("\n"); }
+            out.write("Connected to Machine One (M1). Type START to begin, or HELP for commands.\n");
+            if (!AiBrain.warning.isEmpty()) out.write("(!) brain warning -- type START to view it.\n");
             out.write(END);
             out.flush();
 
@@ -76,16 +81,37 @@ public final class M1Server {
             while ((line = in.readLine()) != null) {
                 line = line.trim();
                 if (line.isEmpty()) continue;
-                if (line.equalsIgnoreCase("quit") || line.equalsIgnoreCase("exit")) break;
+                String verb = line.split("\\s+", 2)[0].toLowerCase();
+                if (verb.equals("quit") || verb.equals("exit")) break;
 
-                String resp = dispatch(line);
+                String resp;
+                if (verb.equals("start")) {
+                    resp = AiBrain.startBrief();
+                } else if (verb.equals("raw")) {
+                    String arg = line.length() > verb.length() ? line.substring(verb.length()).trim().toLowerCase() : "";
+                    if (arg.equals("off")) {
+                        raw = false;
+                        resp = "Raw mode OFF -- the <<END end-of-reply marker is now hidden (friendlier for humans). Type RAW ON to restore it.";
+                    } else if (arg.equals("on")) {
+                        raw = true;
+                        resp = "Raw mode ON -- replies end with the <<END marker.";
+                    } else {
+                        resp = "Usage: RAW ON | RAW OFF. OFF hides the <<END end-of-reply marker -- use it if you are a human on a terminal.";
+                    }
+                } else {
+                    resp = dispatch(line);
+                    if (verb.equals("help")) {
+                        resp = resp + "\nTip: humans -> type RAW OFF for cleaner output. "
+                             + "AI agents -> full syntax is in 10_command_card.md (type START for the brain path).";
+                    }
+                }
+
                 String ups = PickupUpgrade.drainReports();
                 if (!ups.isEmpty()) { out.write(ups); out.write("\n"); }
                 out.write(resp);
                 if (!resp.endsWith("\n")) out.write("\n");
 
-                // Auto-confirm + auto-describe: after an action, let the screen settle
-                // (button presses can trigger a fade/transition) then report the new state.
+                // Auto-confirm + auto-describe: after an action, let the screen settle then report state.
                 if (isAction(line)) {
                     try { Thread.sleep(SETTLE_MS); } catch (InterruptedException ignored) {}
                     String now = dispatchOnMainThread("describe");
@@ -94,7 +120,7 @@ public final class M1Server {
                     if (!now.endsWith("\n")) out.write("\n");
                 }
 
-                out.write(END);
+                if (raw) out.write(END);
                 out.flush();
             }
         } catch (IOException e) {

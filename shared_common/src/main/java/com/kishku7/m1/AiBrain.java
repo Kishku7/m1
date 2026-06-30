@@ -75,11 +75,15 @@ public final class AiBrain {
         }
     }
 
-    /** Greeting line(s): the index path, plus any modified-default warning. */
-    public static String greeting() {
-        StringBuilder b = new StringBuilder();
-        if (!indexPath.isEmpty()) b.append("AI brief: read ").append(indexPath).append(" first.");
-        if (!warning.isEmpty()) { if (b.length() > 0) b.append('\n'); b.append(warning); }
+    /** START handshake: a dual-audience brief -- the AI's index-file path + the human's HELP/RAW tip. */
+    public static String startBrief() {
+        StringBuilder b = new StringBuilder("M1 operating brief:\n");
+        if (!indexPath.isEmpty())
+            b.append("  AI agents: read this file first -> ").append(indexPath).append("\n");
+        else
+            b.append("  AI agents: operating brief not available (extraction skipped)\n");
+        b.append("  Humans: type HELP for the command list, and RAW OFF for cleaner output.");
+        if (!warning.isEmpty()) b.append("\n").append(warning);
         return b.toString();
     }
 
