@@ -42,6 +42,7 @@ public final class Crafting {
         ContainerCompat.click(mc, containerId(mc), slot, button, mode);
     }
 
+    @SuppressWarnings("deprecation") // Forge 1.20.1-only: BuiltInRegistries access deprecated there (ForgeRegistries); vanilla registry is correct + cross-loader
     static String itemId(ItemStack it) {
         return it.isEmpty() ? "" : BuiltInRegistries.ITEM.getKey(it.getItem()).getPath();
     }

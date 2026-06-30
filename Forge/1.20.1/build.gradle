@@ -23,6 +23,7 @@ dependencies {
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
     options.release = 17
+    options.compilerArgs += ['-Xlint:all']
 }
 
 // No mixins, no access transformer (Minecraft.screen / setScreen are public on 1.20.1), so no
@@ -33,9 +34,9 @@ jar {
     }
 }
 
-sourceSets.main.java.srcDir "../shared_minecraft/src/main/java"
+sourceSets.main.java.srcDir "../../shared_minecraft/src/main/java"
 
 // AI_Brain (MC-agnostic java + resources, shipped in jar)
-sourceSets.main.java.srcDir "../shared_common/src/main/java"
-sourceSets.main.resources.srcDir "../shared_common/src/main/resources"
+sourceSets.main.java.srcDir "../../shared_common/src/main/java"
+sourceSets.main.resources.srcDir "../../shared_common/src/main/resources"
 

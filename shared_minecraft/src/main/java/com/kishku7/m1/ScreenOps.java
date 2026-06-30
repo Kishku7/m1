@@ -452,14 +452,17 @@ public final class ScreenOps {
         return "scan " + needle + ":\n" + trim(b);
     }
 
+    @SuppressWarnings("deprecation") // Forge 1.20.1-only: BuiltInRegistries access deprecated there (ForgeRegistries); vanilla registry is correct + cross-loader
     private static String entPath(Entity e) {
         return BuiltInRegistries.ENTITY_TYPE.getKey(e.getType()).getPath();
     }
 
+    @SuppressWarnings("deprecation") // Forge 1.20.1-only: BuiltInRegistries access deprecated there (ForgeRegistries); vanilla registry is correct + cross-loader
     private static String itemPath(ItemEntity ie) {
         return BuiltInRegistries.ITEM.getKey(ie.getItem().getItem()).getPath();
     }
 
+    @SuppressWarnings("deprecation") // Forge 1.20.1-only: BuiltInRegistries access deprecated there (ForgeRegistries); vanilla registry is correct + cross-loader
     private static String blockShort(BlockState st) {
         return BuiltInRegistries.BLOCK.getKey(st.getBlock()).getPath();
     }
@@ -844,6 +847,7 @@ public final class ScreenOps {
         return it.isEmpty() ? "empty" : (it.getCount() + "x " + it.getHoverName().getString());
     }
 
+    @SuppressWarnings("deprecation") // Forge 1.20.1-only: BuiltInRegistries access deprecated there (ForgeRegistries); vanilla registry is correct + cross-loader
     private static String blockId(BlockState st) {
         return BuiltInRegistries.BLOCK.getKey(st.getBlock()).toString();
     }

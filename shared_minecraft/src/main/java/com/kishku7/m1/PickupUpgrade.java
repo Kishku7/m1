@@ -113,6 +113,7 @@ public final class PickupUpgrade {
         return it.getMaxDamage() - it.getDamageValue();
     }
 
+    @SuppressWarnings("deprecation") // Forge 1.20.1-only: BuiltInRegistries access deprecated there (ForgeRegistries); vanilla registry is correct + cross-loader
     private static String itemPath(ItemStack it) {
         return BuiltInRegistries.ITEM.getKey(it.getItem()).getPath();
     }

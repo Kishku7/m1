@@ -38,6 +38,7 @@ public final class MineAction implements MinecraftAction {
     }
 
     @Override
+    @SuppressWarnings("deprecation") // Forge 1.20.1-only: BuiltInRegistries access deprecated there (ForgeRegistries); vanilla registry is correct + cross-loader
     public StepResult step(ActionContext ctx) {
         Minecraft mc = ctx.service(Minecraft.class);
         if (mc == null || mc.player == null || mc.level == null) {
