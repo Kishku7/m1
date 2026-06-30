@@ -28,9 +28,11 @@ import java.util.Locale;
  * existing socket reply stream (mirroring {@link PickupUpgrade#drainReports}), and exposes the
  * {@code agent} socket command.
  *
- * <p>Phase 2 scope: wiring only. The reflex {@link InterruptSource} is an empty stub (sensors are a
- * later phase) and the {@link ServiceLocator} resolves just the {@link Minecraft} instance for now;
- * the real action registry, sensors, perception, and navigation register here as later phases land.
+ * <p>Phase 1 basics wired here as queue actions: movement (goto/moveto/patrol), aim ({@link
+ * LookAction}), break ({@link MineAction}), and the inventory verbs hold/equip/use that wrap the
+ * proven {@link Crafting} path. The reflex {@link InterruptSource} is still an empty stub (sensors
+ * are a later phase) and the {@link ServiceLocator} resolves just the {@link Minecraft} instance;
+ * the real registry, sensors, perception and navigation register here as later phases land.
  */
 public final class AgentRuntime {
 
@@ -110,13 +112,27 @@ public final class AgentRuntime {
                 return enqueueMoveto(args);
             case "patrol":
                 return enqueuePatrol(args);
+            case "look":
+                return enqueueLook(args);
+            case "mine":
+                return enqueueMine(args);
+            case "hold":
+                return enqueueHold(args);
+            case "equip":
+                return enqueueEquip(args);
+            case "use":
+            case "place":
+                QUEUE.append(new UseAction());
+                return "queued use/place (acts on the crosshair block next in-world tick)";
             case "stop":
                 QUEUE.replace(Collections.<MinecraftAction>emptyList());
                 MoveControl.stop();
-                return "agent: plan cleared and movement stopped";
+                MineControl.stop();
+                return "agent: plan cleared and movement/mining stopped";
             default:
-                return "agent: unknown subcommand '" + sub
-                        + "' (try: status | ping | goto <x y z> | moveto <x z> | patrol <x z ...> | stop)";
+                return "agent: unknown subcommand '" + sub + "' (try: status | ping | "
+                        + "goto <x y z> | moveto <x z> | patrol <x z ...> | look <x y z|yaw [pitch]> | "
+                        + "mine <x y z> | hold <0-8> | equip <item> | use | stop)";
         }
     }
 
@@ -166,6 +182,62 @@ public final class AgentRuntime {
         } catch (NumberFormatException e) {
             return "usage: agent patrol <x1> <z1> [<x2> <z2> ...]";
         }
+    }
+
+    private static String enqueueLook(String args) {
+        String[] t = args.split("\\s+");
+        if (args.isEmpty() || t[0].isEmpty()) {
+            return "usage: agent look <x y z> | <yaw [pitch]>";
+        }
+        try {
+            if (t.length >= 3) {
+                double x = Double.parseDouble(t[0]);
+                double y = Double.parseDouble(t[1]);
+                double z = Double.parseDouble(t[2]);
+                QUEUE.append(LookAction.atPoint(x, y, z));
+                return "queued look at (" + x + ", " + y + ", " + z + ")";
+            }
+            float yaw = Float.parseFloat(t[0]);
+            Float pitch = (t.length >= 2) ? Float.valueOf(Float.parseFloat(t[1])) : null;
+            QUEUE.append(LookAction.atAngles(yaw, pitch));
+            return "queued look yaw=" + yaw + (pitch != null ? " pitch=" + pitch : "");
+        } catch (NumberFormatException e) {
+            return "usage: agent look <x y z> | <yaw [pitch]>";
+        }
+    }
+
+    private static String enqueueMine(String args) {
+        String[] t = args.split("\\s+");
+        if (t.length < 3) {
+            return "usage: agent mine <x> <y> <z>";
+        }
+        try {
+            int x = Integer.parseInt(t[0]);
+            int y = Integer.parseInt(t[1]);
+            int z = Integer.parseInt(t[2]);
+            QUEUE.append(new MineAction(x, y, z));
+            return "queued mine (" + x + ", " + y + ", " + z + ")";
+        } catch (NumberFormatException e) {
+            return "usage: agent mine <x> <y> <z>";
+        }
+    }
+
+    private static String enqueueHold(String args) {
+        try {
+            int n = Integer.parseInt(args.trim());
+            QUEUE.append(new HoldAction(n));
+            return "queued hold hotbar " + n;
+        } catch (NumberFormatException e) {
+            return "usage: agent hold <0-8>";
+        }
+    }
+
+    private static String enqueueEquip(String args) {
+        if (args.isEmpty()) {
+            return "usage: agent equip <item> (requires an open container)";
+        }
+        QUEUE.append(new EquipAction(args));
+        return "queued equip " + args;
     }
 
     /** One-line engine status. */
