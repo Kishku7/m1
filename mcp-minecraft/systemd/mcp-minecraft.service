@@ -1,0 +1,21 @@
+# Example systemd unit for MCP-Minecraft.
+# Copy the built project to /opt/mcp-minecraft (or edit the paths below),
+# then: sudo cp systemd/mcp-minecraft.service /etc/systemd/system/
+#       sudo systemctl daemon-reload && sudo systemctl enable --now mcp-minecraft
+[Unit]
+Description=MCP-Minecraft socket-to-MCP bridge
+After=network.target
+
+[Service]
+Type=simple
+# Uncomment and set to run as a non-root user:
+# User=youruser
+WorkingDirectory=/opt/mcp-minecraft
+# Optional environment overrides (KEY=VALUE per line); "-" makes it optional.
+EnvironmentFile=-/opt/mcp-minecraft/.env
+ExecStart=/usr/bin/node /opt/mcp-minecraft/dist/index.js
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

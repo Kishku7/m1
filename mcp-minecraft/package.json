@@ -1,0 +1,34 @@
+{
+  "name": "mcp-minecraft",
+  "version": "0.1.0",
+  "description": "A generic MCP server that bridges a newline-delimited TCP/telnet socket to Claude over a persistent MCP connection. Auto-connects when the target port opens, auto-reconnects when it drops.",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "mcp-minecraft": "dist/index.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    ".env.example"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "tsc && node dist/index.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.0",
+    "express": "^5.1.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.0",
+    "@types/node": "^22.0.0",
+    "typescript": "^5.6.0"
+  }
+}
