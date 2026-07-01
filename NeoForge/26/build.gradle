@@ -21,9 +21,14 @@ neoForge {
 }
 
 processResources {
+    def packFormat = (System.getenv("PACK_FORMAT") ?: "88")
     def ep = [mod_version: mod_version, neoforgeRange: project.neoforge_range, mcRange: project.mc_range]
-    inputs.properties(ep)
+    inputs.properties(ep + [packFormat: packFormat])
     filesMatching('META-INF/neoforge.mods.toml') { expand(ep) }
+    // 26.x resource pack_format is > 81, so the strict datapack codec DEMANDS min_format/max_format;
+    // a plain int FATALs NeoForge dedicated-server datapack load. Ship the exact-single range form,
+    // value injected per 26.X by build-all (PACK_FORMAT env). See Memory/knowledge/pack-formats.md.
+    filesMatching('pack.mcmeta') { expand "packFormat": packFormat }
 }
 
 tasks.withType(JavaCompile).configureEach { options.encoding = 'UTF-8'; options.compilerArgs += ['-Xlint:all'] }
