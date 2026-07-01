@@ -26,8 +26,10 @@ public class M1Client implements ClientModInitializer {
         });
         ClientReceiveMessageEvents.CHAT.register((message, signedMessage, sender, params, receptionTimestamp) -> {
             String nm = (sender != null) ? sender.name() : null;
-            String tx = (message != null) ? message.getString() : "";
-            ChatWatch.onChat(nm, tx);
+            // Use the player's signed (raw) content -- the `message` component is decorated ("<name> ...").
+            String content = (signedMessage != null) ? signedMessage.signedContent()
+                    : ((message != null) ? message.getString() : "");
+            ChatWatch.onChat(nm, content);
         });
     }
 }

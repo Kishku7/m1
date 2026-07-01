@@ -36,6 +36,7 @@ public final class ChatWatch {
         if (master == null) {
             if (msg.equals(HANDSHAKE) && name != null && !name.isEmpty()) {
                 master = name;
+                M1Server.log("ChatWatch MASTER set to " + name);
                 reports.add("[master] " + name + " is now master. Obey Minecraft commands from "
                         + name + " only; reply with `say Ok`.");
             }
