@@ -42,6 +42,7 @@ CRAFT
 
 WORLD
   cmd <server command> run a slash-command (e.g. cmd time set day) -- needs cheats/permission
+  say <text>           send an in-game CHAT message (use to acknowledge your master, e.g. say Ok)
   pause                open the pause menu (then click "Save and Quit to Title" to leave)
 
 GEAR

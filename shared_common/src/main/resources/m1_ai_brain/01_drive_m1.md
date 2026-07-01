@@ -123,3 +123,16 @@ returns at once with `queued ...`; the outcome arrives later as a drained line `
 only runs while in a world. Full subcommand list: `10_command_card.md` (AGENT). Use the agent layer
 for fire-and-poll autonomy (goto/patrol/mine/attack/follow/shield); use the direct verbs (sections 4-9) for
 immediate step-by-step control -- do not drive both at the same target at once.
+
+## 12. Master & chat control (take orders from a player)
+M1 watches in-game chat. You have NO master until a player says the EXACT phrase `Who is your daddy`
+(trimmed -- nothing before or after) in chat; when they do, a `[master] <name> is now master ...`
+line is pushed to you and that player becomes your master.
+- After a master is set, ONLY that player's chat is forwarded to you, as pushed `[chat] <master>:
+  <text>` lines (poll `listen`). Everyone else's chat is ignored by M1.
+- Each `[chat]` line is a natural-language request. YOU interpret it into M1 commands and execute
+  them. Keep STRICTLY to in-game Minecraft actions (move/follow/attack/mine/craft/scan/place/etc.).
+  If the master asks for anything outside the game, briefly decline with `say` -- do not act on it.
+- Acknowledge tersely in-game: `say Ok`, then do the action. Use `say` again only when a result is
+  worth reporting; keep chatter minimal.
+- You cannot self-appoint. Until a `[master]` line arrives, take no chat orders from anyone.

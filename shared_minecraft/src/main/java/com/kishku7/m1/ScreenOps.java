@@ -54,6 +54,7 @@ public final class ScreenOps {
         "  scan [r|<name>]      what you SEE: bounds + notable blocks + mobs + items (LOS, r<=32)\n" +
         "  inv                  inventory contents + held item\n" +
         "  cmd <command>        run a server command (needs cheats), no slash\n" +
+        "  say <text>           send an in-game CHAT message (e.g. acknowledge your master)\n" +
         "  pause                open pause menu (then click Save and Quit to Title)\n" +
         "  face <dir|yaw [pitch]|x y z>  set facing\n" +
         "  moveto <x> <z>       pathfind + walk to x,z (routes around walls)\n" +
@@ -98,6 +99,7 @@ public final class ScreenOps {
             case "inv":
             case "inventory": return inv(mc);
             case "cmd":       return runCmd(mc, rest);
+            case "say":       return say(mc, rest);
             case "pause":     return pause(mc);
             case "face":      return face(mc, rest);
             case "move":      return move(mc, rest);
@@ -507,6 +509,15 @@ public final class ScreenOps {
         String c = rest.startsWith("/") ? rest.substring(1) : rest;
         mc.getConnection().sendCommand(c);
         return "OK sent: /" + c;
+    }
+
+    private static String say(Minecraft mc, String rest) {
+        if (mc.player == null || mc.getConnection() == null) return "say: not in world";
+        String t = rest.trim();
+        if (t.isEmpty()) return "ERR usage: say <text>";
+        if (t.length() > 256) t = t.substring(0, 256);
+        mc.getConnection().sendChat(t);
+        return "OK said: " + t;
     }
 
     private static String pause(Minecraft mc) {

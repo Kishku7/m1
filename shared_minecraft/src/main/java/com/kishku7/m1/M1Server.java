@@ -131,6 +131,8 @@ public final class M1Server {
                 if (!agentReports.isEmpty()) { out.write(agentReports); out.write("\n"); }
                 String alerts = DamageWatch.drainReports();
                 if (!alerts.isEmpty()) { out.write(alerts); out.write("\n"); }
+                String chat = ChatWatch.drainReports();
+                if (!chat.isEmpty()) { out.write(chat); out.write("\n"); }
                 out.write(resp);
                 if (!resp.endsWith("\n")) out.write("\n");
 
@@ -162,6 +164,8 @@ public final class M1Server {
         if (!ag.isEmpty()) { out.write(ag); out.write("\n"); any = true; }
         String al = DamageWatch.drainReports();
         if (!al.isEmpty()) { out.write(al); out.write("\n"); any = true; }
+        String ch = ChatWatch.drainReports();
+        if (!ch.isEmpty()) { out.write(ch); out.write("\n"); any = true; }
         if (any) out.flush();
     }
 
