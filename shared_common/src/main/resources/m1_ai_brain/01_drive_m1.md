@@ -1,5 +1,5 @@
 # 01 -- Drive the M1 interface (LAW)
-<!-- Valid as of: M1 v0.5.0 | MC 1.20 - 26.3 | updated 2026-06-30 -->
+<!-- Valid as of: M1 v0.5.1 | MC 1.20 - 26.3 | updated 2026-07-01 -->
 **Covers:** how to talk to M1 -- connect, wire protocol, the observe -> act discipline, and how to
 read M1's core outputs. This is exact reference. Follow it literally; everything else assumes it.
 
@@ -22,7 +22,7 @@ the client tells you how to reach a shell on that machine; from there open a TCP
   can straddle two replies; if you drop the leftover you desync.
 - After a `click` / `type`, the reply also has a `--- now ---` block: a fresh `describe` of the
   screen you landed on. Read it -- that is your confirmation of where you are.
-- Lines prefixed `[auto-upgrade]` arrive unsolicited on a later reply (armor, see section 7).
+- Unsolicited event lines are PUSHED even with no command pending (the server flushes within ~200 ms, so a bare `listen`/read receives them): `[alert] ...` (you took damage -- section 8a), `[agent] ...` (agent progress), `[auto-upgrade] ...` (armor, section 8). They may also ride on a later command reply.
 - Each command has a **10-second execution cap** (time M1 waits for that command's handler on the
   game's main thread; overrun -> `ERR exec: ... TimeoutException`). It is NOT a limit on async
   actions: `move`/`moveto`/`goto`/`mine`/`craft` return immediately and run in the background.
@@ -97,6 +97,12 @@ Every ~5 s, with no menu open, M1 auto-equips the best armor you carry per slot:
 `[auto-upgrade] CHEST: leather_chestplate -> iron_chestplate` on your next reply. `upgrades`
 re-shows pending notes; `autoupgrade off` disables it for a task. `openpack` opens a worn Travelers Backpack.
 
+## 8a. Combat, follow, and damage awareness
+- **Attack is one command:** `attack [nearest|<id>|crosshair] [crit|normal]`. It WALKS to the target itself, then strikes with cooldown-timed crits -- you do NOT approach first. It runs on the agent engine, so progress arrives as `[agent] ...` lines; the mob is dead only when a `scan` no longer lists it. `attack normal` = no crit.
+- **Follow is mod-managed lock-on:** `follow <player> [dist]` (default 3). Issue it ONCE -- the mod discovers the player, locks on, and keeps re-pathing to their LIVE position as they move (do NOT re-issue when they walk off). Runs until you `stop`.
+- **You are told when you are hit:** an `[alert] took X damage (health A -> B); nearest hostile <mob> Nm` line is pushed to you. Poll `listen` during a fight. Do NOT declare a threat resolved on ambiguous evidence -- confirm with a `scan` and a stable `where` health reading.
+- **`stop` ends everything:** movement, mining, and any queued/looping agent plan (attack/follow).
+
 ## 9. Camera, interacting, leaving
 - **Camera:** resting view is `face 0 0`. When examining or fighting, `face <its x y z>`, then return
   to `face 0 0`. Compass: yaw 0 = south; dirs `north/south/east/west/ne/nw/se/sw`.
@@ -115,5 +121,5 @@ engine runs it across later in-world ticks, reporting back asynchronously. Every
 returns at once with `queued ...`; the outcome arrives later as a drained line `[agent] <seq> <CLASS>: <text>` on a subsequent reply (same channel as `[auto-upgrade]`). Poll
 `agent status` for tick/idle/backlog; `agent stop` clears the plan and halts movement + mining. It
 only runs while in a world. Full subcommand list: `10_command_card.md` (AGENT). Use the agent layer
-for fire-and-poll autonomy (goto/patrol/mine/attack/shield); use the direct verbs (sections 4-9) for
+for fire-and-poll autonomy (goto/patrol/mine/attack/follow/shield); use the direct verbs (sections 4-9) for
 immediate step-by-step control -- do not drive both at the same target at once.

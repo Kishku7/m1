@@ -1,5 +1,5 @@
 # Command card (exact syntax cheat-sheet)
-<!-- Valid as of: M1 v0.5.0 | MC 1.20 - 26.3 | updated 2026-06-30 -->
+<!-- Valid as of: M1 v0.5.1 | MC 1.20 - 26.3 | updated 2026-07-01 -->
 **Covers:** every M1 command with syntax + a one-line note, so you can reload just the syntax cheaply.
 Concepts behind these live in `01_drive_m1.md`.
 
@@ -23,13 +23,17 @@ MOVE (async -- returns at once, poll `where`)
   goto <x> <y> <z>     pathfind to a full coordinate
   move <dir> <n>       move n blocks in a compass dir (north/south/east/west/ne/nw/se/sw)
   face <dir | x y z>   aim the camera (resting view = face 0 0; yaw 0 = south)
-  stop                 cancel the current move
+  stop                 cancel movement, mining, AND any queued agent plan (attack/follow)
 
 ACT (async -- poll inv/look)
   mine [x y z]         mine the block you face, or the one at x y z
   place                place/use/interact the held item or the block you face
   hold <0-8>           select hotbar slot 0-8 (= in-game 1-9)
   equip <item>         equip a named item from inventory
+
+COMBAT / FOLLOW (top-level; run on the agent engine, progress arrives as [agent] lines)
+  attack [nearest|<id>|crosshair] [crit|normal]   engage a mob: WALKS to it then hits (auto-approach + timed crits). Default nearest, crit
+  follow <player> [dist]   lock onto a player, keep within dist (default 3); the mod re-tracks them as they move -- issue ONCE, ends on stop
 
 CRAFT
   openinv              open your inventory (2x2 crafting)
@@ -61,7 +65,8 @@ AGENT (autonomous action layer -- queue an action; it runs in-world and reports 
   agent hold <0-8>                    queue selecting a hotbar slot
   agent equip <item>                  queue moving a named item to hand (needs an open container)
   agent use | agent place             queue use/place on the crosshair block
-  agent attack [nearest|<id>|crosshair] [crit|normal]   queue an attack (default: nearest, crit)
+  agent attack [nearest|<id>|crosshair] [crit|normal]   queue an attack: auto-approaches then hits (default nearest, crit)
+  agent follow <player> [dist]        lock onto a player and follow until stop (default dist 3)
   agent shield [ticks]                queue raising the shield (default 40t = 2s; alias: agent block)
   agent stop                          clear the queued plan and stop movement + mining
 ```
@@ -75,3 +80,4 @@ Notes:
   `describe`+`click`+`type` (see `02_create_world.md`).
 - This card tracks the code. If `help` shows a command not listed here, trust `help` and flag the drift.
 - **`agent ...`** is the queued autonomous layer: each subcommand returns at once with `queued ...`, runs on later in-world ticks, and its result arrives as a drained `[agent] <seq> <CLASS>: <text>` line on a subsequent reply. Poll `agent status`. Only runs while in a world.
+- **Unsolicited event lines are PUSHED to you** even with no command pending -- the server flushes them within ~200 ms, so a bare `listen` (read with no command sent) receives them. Kinds: `[alert] took X damage (health A -> B); nearest hostile ...` (you are being hit), `[agent] ...` (agent progress), `[auto-upgrade] ...` (armor). During combat/follow, `listen` between actions to catch them; check `where` (health) before declaring a threat handled.

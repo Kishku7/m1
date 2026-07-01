@@ -127,6 +127,8 @@ public final class AgentRuntime {
                 return "queued use/place (acts on the crosshair block next in-world tick)";
             case "attack":
                 return enqueueAttack(args);
+            case "follow":
+                return enqueueFollow(args);
             case "shield":
             case "block":
                 return enqueueShield(args);
@@ -139,7 +141,8 @@ public final class AgentRuntime {
                 return "agent: unknown subcommand '" + sub + "' (try: status | ping | "
                         + "goto <x y z> | moveto <x z> | patrol <x z ...> | look <x y z|yaw [pitch]> | "
                         + "mine <x y z> | hold <0-8> | equip <item> | use | "
-                        + "attack [nearest|<id>|crosshair] [crit|normal] | shield [ticks] | stop)";
+                        + "attack [nearest|<id>|crosshair] [crit|normal] | follow <player> [dist] | "
+                        + "shield [ticks] | stop)";
         }
     }
 
@@ -268,6 +271,25 @@ public final class AgentRuntime {
         }
         QUEUE.append(new AttackAction(spec, crit));
         return "queued attack (target=" + (spec.isEmpty() ? "crosshair" : spec) + ", crit=" + crit + ")";
+    }
+
+    /** {@code follow <player> [dist]} (default dist 3). Runs until 'stop'. */
+    private static String enqueueFollow(String args) {
+        String[] t = args.split("\\s+");
+        if (args.isEmpty() || t[0].isEmpty()) {
+            return "usage: agent follow <player> [dist]";
+        }
+        String who = t[0];
+        double dist = 3.0;
+        if (t.length >= 2) {
+            try {
+                dist = Double.parseDouble(t[1]);
+            } catch (NumberFormatException e) {
+                return "usage: agent follow <player> [dist]";
+            }
+        }
+        QUEUE.append(new FollowAction(who, dist));
+        return "queued follow " + who + " (keep within " + (int) dist + "m; 'stop' to end)";
     }
 
     /** {@code shield [holdTicks]} (default 40t = 2s). */

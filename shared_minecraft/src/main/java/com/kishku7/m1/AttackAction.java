@@ -15,7 +15,6 @@ import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.Vec3;
 
 import java.util.List;
-import java.util.Locale;
 
 /**
  * Leaf action: melee a target with correct combat TIMING. This is the core of M1 combat -- not
@@ -91,9 +90,16 @@ public final class AttackAction implements MinecraftAction {
 
         double distSq = target.distanceToSqr(p);
         if (distSq > REACH * REACH) {
-            ctx.report(ReportClass.STATUS, String.format(Locale.ROOT,
-                    "attack: target out of reach (%.1fm) -- approach first", Math.sqrt(distSq)));
-            return StepResult.FAILED;
+            // Auto-approach: walk to the target's live position, then strike. Re-path as it moves.
+            boolean needRepath = !MoveControl.isActive()
+                    || Math.hypot(MoveControl.targetX() - target.getX(), MoveControl.targetZ() - target.getZ()) > 2.0;
+            if (needRepath) {
+                ScreenOps.startMove(mc, p, target.getX(), target.getY(), target.getZ(), REACH - 0.5, "attack approach");
+            }
+            return StepResult.RUNNING;
+        }
+        if (MoveControl.isActive()) {
+            MoveControl.stop(); // within reach now -- stop walking before we strike
         }
 
         faceEntity(p, target);

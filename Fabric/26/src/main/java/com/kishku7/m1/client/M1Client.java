@@ -2,6 +2,7 @@ package com.kishku7.m1.client;
 
 import com.kishku7.m1.AgentRuntime;
 import com.kishku7.m1.CraftHarvest;
+import com.kishku7.m1.DamageWatch;
 import com.kishku7.m1.M1Server;
 import com.kishku7.m1.MineControl;
 import com.kishku7.m1.MoveControl;
@@ -19,6 +20,7 @@ public class M1Client implements ClientModInitializer {
             CraftHarvest.tick(mc);
             PickupUpgrade.tick(mc);
             AgentRuntime.tick(mc);
+            DamageWatch.tick(mc);
         });
     }
 }

@@ -72,7 +72,9 @@ public final class ScreenOps {
         "  screenshot [name]    save a PNG of the current frame to screenshots/ (vanilla writer)\n" +
         "  upgrades             show pending auto-armor-upgrade messages\n" +
         "  autoupgrade on|off   toggle auto armor upgrading (default on)\n" +
-        "  agent <sub>          queued action layer: status|ping|goto|moveto|patrol|look|mine|hold|equip|use|attack|shield|stop\n" +
+        "  attack [target] [crit|normal]   engage a mob (nearest|<id>|crosshair); approaches then hits\n" +
+        "  follow <player> [dist]          follow a player; 'stop' to end\n" +
+        "  agent <sub>          queued action layer: status|ping|goto|moveto|patrol|look|mine|hold|equip|use|attack|follow|shield|stop\n" +
         "  help                 this list\n" +
         "AI agents: type START for the AI_Brain index path (config/M1_AI_Brain/<ver>/00_Index.md); full command syntax is in 10_command_card.md.";
 
@@ -118,6 +120,8 @@ public final class ScreenOps {
             case "shot":      return screenshot(mc, rest);
             case "autoupgrade": return autoupgrade(rest);
             case "upgrades":  return upgrades();
+            case "attack":    return AgentRuntime.command("attack " + rest);
+            case "follow":    return AgentRuntime.command("follow " + rest);
             case "agent":     return AgentRuntime.command(rest);
             default:          return "ERR unknown command: " + cmd + " (try help)";
         }
@@ -582,6 +586,7 @@ public final class ScreenOps {
     }
 
     private static String stopMove() {
+        AgentRuntime.command("stop"); // clear any agent plan (follow/goto/attack) + stop move/mine
         MoveControl.stop();
         MineControl.stop();
         return "OK stopped";

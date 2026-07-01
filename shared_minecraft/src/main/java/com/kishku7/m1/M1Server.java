@@ -11,6 +11,7 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.SocketTimeoutException;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
@@ -39,6 +40,7 @@ public final class M1Server {
     public static final int PORT = Integer.getInteger("m1.port", 26000);
     private static final String END = "<<END\n";
     private static final long SETTLE_MS = 150;
+    private static final int POLL_MS = 200; // idle read timeout: how often to push async mod events
 
     private static volatile boolean running = false;
 
@@ -86,8 +88,17 @@ public final class M1Server {
             out.write(END);
             out.flush();
 
-            String line;
-            while ((line = in.readLine()) != null) {
+            s.setSoTimeout(POLL_MS); // wake periodically to push async mod events with no command pending
+
+            while (true) {
+                String line;
+                try {
+                    line = in.readLine();
+                } catch (SocketTimeoutException te) {
+                    flushAsync(out); // no command this window -- push any pending mod events
+                    continue;
+                }
+                if (line == null) break;
                 line = line.trim();
                 if (line.isEmpty()) continue;
                 String verb = line.split("\\s+", 2)[0].toLowerCase();
@@ -118,6 +129,8 @@ public final class M1Server {
                 if (!ups.isEmpty()) { out.write(ups); out.write("\n"); }
                 String agentReports = AgentRuntime.drainReports();
                 if (!agentReports.isEmpty()) { out.write(agentReports); out.write("\n"); }
+                String alerts = DamageWatch.drainReports();
+                if (!alerts.isEmpty()) { out.write(alerts); out.write("\n"); }
                 out.write(resp);
                 if (!resp.endsWith("\n")) out.write("\n");
 
@@ -137,6 +150,19 @@ public final class M1Server {
             // client disconnected
         }
         log("connection closed");
+    }
+
+    /** Push any pending async mod events (alerts / agent / auto-upgrade) between commands so a
+     *  polling client (listen) sees them promptly. Called on the idle read timeout. */
+    private static void flushAsync(BufferedWriter out) throws IOException {
+        boolean any = false;
+        String ups = PickupUpgrade.drainReports();
+        if (!ups.isEmpty()) { out.write(ups); out.write("\n"); any = true; }
+        String ag = AgentRuntime.drainReports();
+        if (!ag.isEmpty()) { out.write(ag); out.write("\n"); any = true; }
+        String al = DamageWatch.drainReports();
+        if (!al.isEmpty()) { out.write(al); out.write("\n"); any = true; }
+        if (any) out.flush();
     }
 
     private static boolean isAction(String line) {
