@@ -49,7 +49,11 @@ public final class MoveControl {
         return a;
     }
 
-    public static synchronized void stop() { active = false; status = "idle"; }
+    public static synchronized void stop() {
+        active = false; status = "idle";
+        Minecraft mc = Minecraft.getInstance();
+        if (mc != null) release(mc); // release forward/jump so the player does not keep walking after a stop
+    }
     public static synchronized boolean isActive() { return active; }
     public static synchronized String status() { return status; }
     public static synchronized double targetX() { return finalX; }
