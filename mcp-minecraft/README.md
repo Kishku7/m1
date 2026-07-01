@@ -69,8 +69,27 @@ All settings are environment variables; every one is optional. Copy
 | `RECONNECT_MIN_MS`  | `500`       | Initial reconnect delay to the target. |
 | `RECONNECT_MAX_MS`  | `3000`      | Maximum reconnect delay (backoff cap). Lower = reconnects sooner after the target opens. |
 | `QUIET_MS`          | `300`       | `send_command`: silence gap that marks a reply complete. |
-| `SEND_TIMEOUT_MS`   | `5000`      | `send_command`: overall cap for collecting a reply. |
+| `SEND_TIMEOUT_MS`   | `15000`     | `send_command`: overall cap for collecting a reply. |
+| `REPLY_SENTINEL`    | (empty)     | If set, `send_command` reads until a line equal to it (deterministic framing, e.g. M1's `<<END`). Empty = quiet-period timing. |
+| `CONNECT_INIT`      | (empty)     | A line sent once right after connecting (e.g. `RAW ON`). |
+| `DISCARD_CONNECT_BANNER` | `false` | Drain+discard the target's connect banner and the `CONNECT_INIT` reply so they don't pollute the first reply. Auto-enabled when `CONNECT_INIT` is set. |
+| `PRIME_QUIET_MS`    | `400`       | Silence gap that marks the banner drain complete. |
 | `LISTEN_WINDOW_MS`  | `30000`     | `listen`: how long a call waits for output before returning a keepalive. |
+
+### Driving the M1 Minecraft mod
+
+The M1 mod frames every reply with a `<<END` sentinel, sends a greeting on connect, and
+expects `RAW ON`. Configure the bridge to match:
+
+```
+TARGET_PORT=26000
+REPLY_SENTINEL=<<END
+CONNECT_INIT=RAW ON
+DISCARD_CONNECT_BANNER=true
+```
+
+With those set, `send_command` returns exactly one M1 reply with the sentinel stripped and
+the greeting discarded.
 
 ## Connect an MCP client
 
@@ -86,13 +105,12 @@ In Claude Desktop, add it as a custom/remote MCP server using that URL.
 ## Tools
 
 ### `send_command`
-Write one command line to the target and return the reply. The reply is
-collected until the socket goes quiet (`QUIET_MS`) or `SEND_TIMEOUT_MS` elapses,
-so multi-line replies come back whole. Returns an error if the target is not
-currently connected.
+Write one command line to the target and return its reply. If `REPLY_SENTINEL` is
+set, the reply is read exactly up to that line; otherwise it is collected until the
+socket goes quiet (`QUIET_MS`), up to `SEND_TIMEOUT_MS`. Returns an error if the
+target is not connected/ready.
 
 - `command` (string, required) - the line to send; a trailing newline is added.
-- `quiet_ms` (number, optional) - override the quiet-gap for this call.
 - `timeout_ms` (number, optional) - override the overall cap for this call.
 
 ### `listen`
@@ -109,7 +127,7 @@ during quiet periods. Both keepalive replies are normal (non-error) results.
 - `window_ms` (number, optional) - wait window for this call.
 
 ### `connection_status`
-Return the state of the target connection as JSON: `connected`,
+Return the state of the target connection as JSON: `connected`, `ready`,
 `connectedSince`, `reconnects`, `attempts`, `bytesIn`/`bytesOut`, `lastDataAt`,
 `lastError`, and `queuedLines`.
 
@@ -121,12 +139,13 @@ Return the state of the target connection as JSON: `connected`,
 {
   "status": "ok",
   "service": "mcp-minecraft",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "uptime_seconds": 360,
   "target": {
     "host": "localhost",
     "port": 26000,
     "connected": true,
+    "ready": true,
     "connected_since": "2026-01-01T00:00:00.000Z",
     "reconnects": 1,
     "attempts": 1,
@@ -141,7 +160,7 @@ Return the state of the target connection as JSON: `connected`,
 }
 ```
 
-`target.connected` is the answer to "is there a live connection to port 26000?"
+`target.connected` means the TCP socket is up; `target.ready` means it is also initialized and safe to drive.
 
 ## Run as a service
 

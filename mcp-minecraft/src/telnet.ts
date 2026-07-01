@@ -6,7 +6,8 @@ export const NO_DATA_KEEPALIVE = "NO-DATA-KEEPALIVE";
 export const NO_CONNECTION_KEEPALIVE = "NO-CONNECTION-KEEPALIVE";
 
 export interface TelnetStats {
-  connected: boolean;
+  connected: boolean;            // TCP socket established
+  ready: boolean;                // connected AND primed (safe to send commands)
   host: string;
   port: number;
   connectedSince: string | null; // ISO timestamp of the current connection
@@ -22,25 +23,27 @@ export interface TelnetStats {
 /**
  * Persistent client for a newline-delimited text ("telnet") socket.
  *
- * - Continuously tries to connect to the target; when the port opens it connects
- *   automatically, and when the connection drops it reconnects with backoff.
- * - Splits the incoming byte stream into lines and buffers complete lines in a
- *   FIFO queue that both send_command replies and listen() drain from.
- * - The socket is treated as request/response (one command in, reply lines out),
- *   matching the M1 mod contract, but any unsolicited output is still captured
- *   and surfaced through listen().
+ * - Continuously tries to connect; when the port opens it connects automatically,
+ *   and when the connection drops it reconnects with capped backoff.
+ * - On connect it can send an init line (config.connectInit, e.g. "RAW ON") and
+ *   drain the connect banner (config.discardBanner) before becoming "ready".
+ * - Splits the byte stream into lines buffered in a FIFO that send_command and
+ *   listen() drain from.
+ * - Reply framing: if config.replySentinel is set, send_command reads up to a line
+ *   equal to the sentinel (e.g. M1's "<<END"); otherwise it uses quiet-period timing.
  */
 export class TelnetClient {
   private socket: net.Socket | null = null;
   private stopped = false;
 
-  private partial = "";          // bytes not yet terminated by a newline
+  private partial = "";
   private readonly inbound: string[] = [];
   private readonly waiters: Array<() => void> = [];
 
   private currentBackoff: number;
 
-  private _connected = false;
+  private _socketUp = false;
+  private _ready = false;
   private _connectedSince: number | null = null;
   private _reconnects = 0;
   private _attempts = 0;
@@ -70,12 +73,17 @@ export class TelnetClient {
   }
 
   get connected(): boolean {
-    return this._connected;
+    return this._socketUp;
+  }
+
+  get ready(): boolean {
+    return this._ready;
   }
 
   stats(): TelnetStats {
     return {
-      connected: this._connected,
+      connected: this._socketUp,
+      ready: this._ready,
       host: this.host,
       port: this.port,
       connectedSince: this._connectedSince ? new Date(this._connectedSince).toISOString() : null,
@@ -93,23 +101,22 @@ export class TelnetClient {
     if (this.stopped) return;
     this._attempts++;
 
-    // `host` may resolve to IPv4 or IPv6; using "localhost" (the default) lets an
-    // IPv6-only listener be reached via ::1.
     const socket = net.createConnection({ host: this.host, port: this.port });
     this.socket = socket;
 
     socket.setNoDelay(true);
-    // OS-level TCP keepalive: probe an idle connection so a silently dropped peer
-    // is detected instead of hanging forever.
     socket.setKeepAlive(true, 15000);
 
     socket.on("connect", () => {
-      this._connected = true;
+      this._socketUp = true;
+      this._ready = false;
       this._connectedSince = Date.now();
       this._reconnects++;
       this._lastError = null;
-      this.currentBackoff = config.reconnectMinMs; // reset backoff on success
+      this.currentBackoff = config.reconnectMinMs;
       this.partial = "";
+      this.inbound.length = 0;
+      void this.prime(socket);
     });
 
     socket.on("data", (chunk: Buffer) => {
@@ -123,18 +130,43 @@ export class TelnetClient {
     });
 
     socket.on("close", () => {
-      this._connected = false;
+      this._socketUp = false;
+      this._ready = false;
       this._connectedSince = null;
       this.socket = null;
       this.scheduleReconnect();
     });
   }
 
+  // On connect: optionally send an init line, optionally drain the banner, then ready.
+  private async prime(socket: net.Socket): Promise<void> {
+    const doInit = config.connectInit.length > 0;
+    const doDrain = config.discardBanner || doInit;
+
+    if (doInit) {
+      const buf = Buffer.from(config.connectInit + "\n", "utf8");
+      socket.write(buf);
+      this._bytesOut += buf.length;
+    }
+
+    if (doDrain) {
+      const deadline = Date.now() + 5000;
+      while (Date.now() < deadline) {
+        const remaining = deadline - Date.now();
+        const got = await this.waitForData(Math.min(config.primeQuietMs, remaining));
+        if (!got) break; // quiet -> banner/init drained
+        this.inbound.length = 0; // discard
+      }
+      this.inbound.length = 0;
+      this.partial = "";
+    }
+
+    if (this._socketUp && this.socket === socket) this._ready = true;
+  }
+
   private scheduleReconnect(): void {
     if (this.stopped) return;
     const delay = this.currentBackoff;
-    // Exponential backoff, capped. When the target port is simply not open yet,
-    // this keeps retrying at the cap so we connect promptly once it appears.
     this.currentBackoff = Math.min(this.currentBackoff * 2, config.reconnectMaxMs);
     setTimeout(() => this.connect(), delay);
   }
@@ -155,7 +187,6 @@ export class TelnetClient {
     for (const w of pending) w();
   }
 
-  // Resolve true as soon as a line is available, or false when timeoutMs elapses.
   private waitForData(timeoutMs: number): Promise<boolean> {
     if (this.inbound.length > 0) return Promise.resolve(true);
     return new Promise<boolean>((resolve) => {
@@ -184,10 +215,7 @@ export class TelnetClient {
     return this.inbound.splice(0);
   }
 
-  /**
-   * Collect lines using a "quiet period" heuristic: keep reading until no new
-   * line arrives for `quietMs`, or until `maxMs` total elapses.
-   */
+  // Quiet-period reply collection (generic mode).
   private async collect(quietMs: number, maxMs: number): Promise<string[]> {
     const out: string[] = [];
     const deadline = Date.now() + maxMs;
@@ -195,48 +223,68 @@ export class TelnetClient {
     while (Date.now() < deadline) {
       const remaining = deadline - Date.now();
       const got = await this.waitForData(Math.min(quietMs, remaining));
-      if (!got) break; // no new data within the quiet window -> reply complete
+      if (!got) break;
       out.push(...this.drainAll());
     }
     return out;
   }
 
+  // Sentinel reply collection: read lines until one equals `sentinel`; leftover
+  // lines after it stay in the FIFO for the next read.
+  private async readUntilSentinel(sentinel: string, maxMs: number): Promise<string> {
+    const out: string[] = [];
+    const deadline = Date.now() + maxMs;
+    while (Date.now() < deadline) {
+      while (this.inbound.length > 0) {
+        const line = this.inbound.shift() as string;
+        if (line === sentinel) return out.join("\n");
+        out.push(line);
+      }
+      const remaining = deadline - Date.now();
+      const got = await this.waitForData(remaining);
+      if (!got) break;
+    }
+    const warn = `(warning: reply not terminated by '${sentinel}' within ${maxMs}ms)`;
+    return out.length > 0 ? out.join("\n") + "\n" + warn : warn;
+  }
+
   /**
    * Send one command line and collect the reply.
-   * Throws if there is no live connection to the target.
+   * Throws if there is no live, primed connection to the target.
    */
-  async sendCommand(
-    command: string,
-    quietMs: number = config.quietMs,
-    timeoutMs: number = config.sendTimeoutMs,
-  ): Promise<string> {
-    if (!this._connected || !this.socket) {
+  async sendCommand(command: string, timeoutMs: number = config.sendTimeoutMs): Promise<string> {
+    if (!this._socketUp || !this.socket) {
       throw new Error(
         `Not connected to target ${this.host}:${this.port}. The target program may not be running yet.`,
       );
+    }
+    if (!this._ready) {
+      throw new Error(`Connection to ${this.host}:${this.port} is still initializing; retry shortly.`);
     }
     const payload = command.endsWith("\n") ? command : command + "\n";
     const buf = Buffer.from(payload, "utf8");
     this.socket.write(buf);
     this._bytesOut += buf.length;
 
-    const lines = await this.collect(quietMs, timeoutMs);
+    if (config.replySentinel.length > 0) {
+      return this.readUntilSentinel(config.replySentinel, timeoutMs);
+    }
+    const lines = await this.collect(config.quietMs, timeoutMs);
     return lines.join("\n");
   }
 
   /**
    * Block up to `windowMs` for output from the target.
-   * - If output arrives, drain the burst and return it.
-   * - If nothing arrives while connected, return NO-DATA-KEEPALIVE.
-   * - If not connected to the target, return NO-CONNECTION-KEEPALIVE.
-   * Either sentinel keeps the MCP transport active.
+   * - output, if any arrived;
+   * - NO-DATA-KEEPALIVE if connected but idle;
+   * - NO-CONNECTION-KEEPALIVE if not connected/ready.
    */
   async listen(windowMs: number = config.listenWindowMs): Promise<string> {
-    if (!this._connected) return NO_CONNECTION_KEEPALIVE;
+    if (!this._socketUp || !this._ready) return NO_CONNECTION_KEEPALIVE;
     const got = await this.waitForData(windowMs);
     if (!got) return NO_DATA_KEEPALIVE;
     const lines = await this.collect(config.quietMs, 2000);
-    const text = lines.join("\n");
+    const text = lines.filter((l) => l !== config.replySentinel).join("\n");
     return text.length > 0 ? text : NO_DATA_KEEPALIVE;
   }
 }

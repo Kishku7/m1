@@ -1,6 +1,6 @@
 {
   "name": "mcp-minecraft",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "A generic MCP server that bridges a newline-delimited TCP/telnet socket to Claude over a persistent MCP connection. Auto-connects when the target port opens, auto-reconnects when it drops.",
   "license": "MIT",
   "type": "module",

@@ -30,6 +30,7 @@ app.get("/health", (_req: Request, res: Response) => {
       host: s.host,
       port: s.port,
       connected: s.connected,
+      ready: s.ready,
       connected_since: s.connectedSince,
       reconnects: s.reconnects,
       attempts: s.attempts,

@@ -13,7 +13,7 @@ export function createMcpServer(telnet: TelnetClient): McpServer {
         "Bridges a newline-delimited TCP text socket (e.g. the M1 Minecraft mod on " +
         "localhost:26000) to you. Use send_command to send one line and read the reply. " +
         "Use listen to poll for asynchronous output and to keep the connection warm. " +
-        "Use connection_status to check whether the target socket is connected.",
+        "Use connection_status to check whether the target socket is connected and ready.",
     },
   );
 
@@ -22,17 +22,12 @@ export function createMcpServer(telnet: TelnetClient): McpServer {
     {
       title: "Send command",
       description:
-        "Write one command line to the target socket and return the reply. The reply is " +
-        "collected until the socket goes quiet, so multi-line replies are returned whole. " +
-        "Errors if the target is not currently connected.",
+        "Write one command line to the target socket and return its reply. If a reply " +
+        "sentinel is configured (e.g. M1's <<END) the reply is read exactly up to it; " +
+        "otherwise it is collected until the socket goes quiet. Errors if the target is " +
+        "not connected/ready.",
       inputSchema: {
         command: z.string().describe("The command line to send (a trailing newline is added automatically)."),
-        quiet_ms: z
-          .number()
-          .int()
-          .positive()
-          .optional()
-          .describe(`Milliseconds of silence that marks the reply complete (default ${config.quietMs}).`),
         timeout_ms: z
           .number()
           .int()
@@ -41,9 +36,9 @@ export function createMcpServer(telnet: TelnetClient): McpServer {
           .describe(`Overall cap for collecting the reply in ms (default ${config.sendTimeoutMs}).`),
       },
     },
-    async ({ command, quiet_ms, timeout_ms }) => {
+    async ({ command, timeout_ms }) => {
       try {
-        const reply = await telnet.sendCommand(command, quiet_ms, timeout_ms);
+        const reply = await telnet.sendCommand(command, timeout_ms);
         return { content: [{ type: "text", text: reply.length > 0 ? reply : "(no reply)" }] };
       } catch (err) {
         return {
@@ -61,7 +56,7 @@ export function createMcpServer(telnet: TelnetClient): McpServer {
       description:
         "Block for up to window_ms waiting for output from the target. Returns the output if " +
         "any arrives; otherwise returns NO-DATA-KEEPALIVE (connected, idle) or " +
-        "NO-CONNECTION-KEEPALIVE (target not connected). Call it repeatedly to stream " +
+        "NO-CONNECTION-KEEPALIVE (target not connected/ready). Call it repeatedly to stream " +
         "asynchronous output and to keep the connection alive during quiet periods.",
       inputSchema: {
         window_ms: z
@@ -83,8 +78,8 @@ export function createMcpServer(telnet: TelnetClient): McpServer {
     {
       title: "Connection status",
       description:
-        "Report the state of the connection to the target socket: whether it is connected, " +
-        "since when, reconnect/attempt counts, bytes transferred, last activity, and last error.",
+        "Report the state of the connection to the target socket: connected, ready, since " +
+        "when, reconnect/attempt counts, bytes transferred, last activity, and last error.",
       inputSchema: {},
     },
     async () => {
