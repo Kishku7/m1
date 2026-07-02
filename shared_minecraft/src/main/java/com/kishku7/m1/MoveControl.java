@@ -25,6 +25,7 @@ public final class MoveControl {
     private static int ticks, maxTicks, recomputes;
     private static double stallX = Double.NaN, stallZ = Double.NaN;
     private static volatile String status = "idle";
+    private static volatile boolean sprint = false;
 
     private MoveControl() {}
 
@@ -50,10 +51,15 @@ public final class MoveControl {
     }
 
     public static synchronized void stop() {
-        active = false; status = "idle";
+        active = false; status = "idle"; sprint = false;
         Minecraft mc = Minecraft.getInstance();
         if (mc != null) release(mc); // release forward/jump so the player does not keep walking after a stop
     }
+
+    /** Caller-requested sprint (e.g. follow catch-up). Applied while a path is active; vanilla
+     *  itself refuses to sprint at food &lt;= 6, so no hunger check is duplicated here. */
+    public static synchronized void setSprint(boolean s) { sprint = s; }
+    public static synchronized boolean isSprinting() { return sprint; }
     public static synchronized boolean isActive() { return active; }
     public static synchronized String status() { return status; }
     public static synchronized double targetX() { return finalX; }
@@ -88,6 +94,7 @@ public final class MoveControl {
         float yaw = (float) Math.toDegrees(Math.atan2(-dx, dz));
         p.setYRot(yaw);
         mc.options.keyUp.setDown(true);
+        mc.options.keySprint.setDown(sprint);
         boolean needUp = dyNode > 0.25;
         mc.options.keyJump.setDown((needUp && p.onGround()) || (p.horizontalCollision && p.onGround()));
 
@@ -123,6 +130,7 @@ public final class MoveControl {
         if (mc.options != null) {
             mc.options.keyUp.setDown(false);
             mc.options.keyJump.setDown(false);
+            mc.options.keySprint.setDown(false);
         }
     }
 }

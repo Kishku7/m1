@@ -4,6 +4,7 @@ import com.kishku7.m1.AgentRuntime;
 import com.kishku7.m1.ChatWatch;
 import com.kishku7.m1.CraftHarvest;
 import com.kishku7.m1.DamageWatch;
+import com.kishku7.m1.HungerWatch;
 import com.kishku7.m1.M1Server;
 import com.kishku7.m1.MineControl;
 import com.kishku7.m1.MoveControl;
@@ -23,6 +24,7 @@ public class M1Client implements ClientModInitializer {
             PickupUpgrade.tick(mc);
             AgentRuntime.tick(mc);
             DamageWatch.tick(mc);
+            HungerWatch.tick(mc);
         });
         ClientReceiveMessageEvents.CHAT.register((message, signedMessage, sender, params, receptionTimestamp) -> {
             String nm = (sender != null) ? sender.name() : null;
