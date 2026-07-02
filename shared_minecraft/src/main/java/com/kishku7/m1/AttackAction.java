@@ -473,9 +473,13 @@ public final class AttackAction implements MinecraftAction {
                 // fall through to nearest
             }
         }
+        // "nearest" NEVER pre-emptively picks a SAFE-LIST (neutral) mob -- unless that mob is an
+        // active threat (it attacked us; ThreatWatch tracks it). Explicit id/crosshair targets
+        // remain allowed: that is the Master/AI override. (Master rule, 2026-07-02.)
         List<Mob> mobs = mc.level.getEntitiesOfClass(Mob.class,
                 p.getBoundingBox().inflate(ACQUIRE_RADIUS),
-                m -> m instanceof Enemy && m.isAlive());
+                m -> m instanceof Enemy && m.isAlive()
+                        && (!CombatOps.isSafeMob(m) || ThreatWatch.isThreat(m.getId())));
         LivingEntity best = null;
         double bestSq = Double.MAX_VALUE;
         for (Mob m : mobs) {

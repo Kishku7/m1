@@ -63,6 +63,8 @@ public final class ThreatWatch implements InterruptSource {
     private static final Map<Integer, Long> warned = new HashMap<>();
     /** entity id -> tick until which it must not be re-engaged (defense failed on it). */
     private static final Map<Integer, Long> blacklist = new HashMap<>();
+    /** rate-limit for the "not engaging (safe mob)" advisory. */
+    private static long nextSafeAdvisoryTick;
 
     @Override
     public List<MinecraftAction> poll(ActionContext ctx) {
@@ -140,6 +142,18 @@ public final class ThreatWatch implements InterruptSource {
             ctx.report(ReportClass.STATUS, "defend: " + who + " was hit (attacker unknown)");
             return;
         }
+        // SAFE-LIST rule (Master, 2026-07-02): never defend the MASTER against a neutral mob --
+        // joining that fight angers the group and escalates. SELF-defense stays allowed.
+        if (!"me".equals(who) && CombatOps.isSafeMob(attacker)) {
+            if (tick >= nextSafeAdvisoryTick) {
+                nextSafeAdvisoryTick = tick + 200;
+                ctx.report(ReportClass.ADVISORY, "defend: " + who + " is fighting "
+                        + attacker.getType().toShortString() + " (safe-list mob) -- NOT engaging so"
+                        + " they stay neutral toward me; order 'attack " + attacker.getId()
+                        + "' to override");
+            }
+            return;
+        }
         Long old = threats.put(attacker.getId(), tick + THREAT_TTL_TICKS);
         if (old == null) {
             ctx.report(ReportClass.STATUS, "defend: " + who + " was hit by "
@@ -176,7 +190,8 @@ public final class ThreatWatch implements InterruptSource {
 
     private static void earlyWarn(Minecraft mc, ActionContext ctx, LocalPlayer self, Player guard, long tick) {
         List<Mob> near = mc.level.getEntitiesOfClass(Mob.class,
-                self.getBoundingBox().inflate(WARN_RADIUS + 24.0), m -> m instanceof Enemy && m.isAlive());
+                self.getBoundingBox().inflate(WARN_RADIUS + 24.0),
+                m -> m instanceof Enemy && m.isAlive() && !CombatOps.isSafeMob(m)); // neutrals are not "hostile nearby"
         for (Mob m : near) {
             double dSelf = Math.sqrt(m.distanceToSqr(self));
             double dGuard = (guard != null) ? Math.sqrt(m.distanceToSqr(guard)) : Double.MAX_VALUE;
@@ -213,6 +228,11 @@ public final class ThreatWatch implements InterruptSource {
             }
         }
         return null;
+    }
+
+    /** True if this entity id is a tracked active threat (it attacked a protectee recently). */
+    static boolean isThreat(int entityId) {
+        return threats.containsKey(entityId);
     }
 
     /** Called by {@link DefendAction} when a defense fails so the target is not immediately re-engaged. */

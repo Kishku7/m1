@@ -4,6 +4,8 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.NeutralMob;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 
@@ -19,6 +21,17 @@ import net.minecraft.world.item.Items;
 final class CombatOps {
 
     private CombatOps() {}
+
+    /**
+     * SAFE-LIST mobs (Master rule, 2026-07-02, after the 10-zombified-piglin incident): mobs that
+     * are neutral-until-provoked. NO pre-emptive attacks, SELF-defense only, and the bot must NOT
+     * defend the Master against them (helping would anger the group and escalate). Principled
+     * check: every vanilla neutral (zombified piglin, enderman, wolf, bee, iron golem, polar
+     * bear, goat, llama, panda, dolphin...) implements NeutralMob.
+     */
+    static boolean isSafeMob(LivingEntity e) {
+        return e instanceof NeutralMob;
+    }
 
     /** DPS-flavored score for a melee weapon; 0 = not a weapon. */
     static double meleeScore(ItemStack s) {
