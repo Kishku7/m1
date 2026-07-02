@@ -110,6 +110,7 @@ public final class ScreenOps {
             case "moveto":    return moveto(mc, rest);
             case "goto":      return gotoCmd(mc, rest);
             case "stop":      return stopMove();
+            case "nav":       return navCmd(rest);
             case "mine":      return mine(mc, rest);
             case "worlds":    return worlds(mc);
             case "joinworld":
@@ -119,7 +120,9 @@ public final class ScreenOps {
             case "hold":      return Crafting.hold(mc, rest);
             case "equip":     return Crafting.equip(mc, rest);
             case "slot":      return Crafting.slotCmd(mc, rest);
-            case "place":     return Crafting.place(mc);
+            case "place":
+            case "use":
+            case "interact":  return Crafting.place(mc); // use/interact aliases (AI reached for them, session 702)
             case "craft":     return Crafting.craft(mc, rest);
             case "openpack":  return openpack(mc);
             case "screenshot":
@@ -594,10 +597,16 @@ public final class ScreenOps {
     }
 
     static String startMove(Minecraft mc, LocalPlayer p, double tx, double ty, double tz, double stop, String label) {
+        MoveControl.stop(); // clear any prior move on either engine
+        int maxT = (int) (Math.hypot(tx - p.getX(), tz - p.getZ()) * 30) + 120;
+        if (MoveControl.ownNav() && NavEngine.start(mc, tx, ty, tz, stop, maxT)) {
+            return String.format("OK %s -> (%.1f,%.1f) own pather, segment 1 (%d wp). poll 'where'.",
+                label, tx, tz, NavEngine.waypointCount());
+        }
         Path path = PathOracle.compute(mc, tx, ty, tz, 1);
         if (path == null || path.getNodeCount() == 0)
             return String.format("no path to (%.1f,%.1f) -- re-scan and pick a closer/clearer point", tx, tz);
-        MoveControl.startPath(path, tx, tz, stop, (int) (Math.hypot(tx - p.getX(), tz - p.getZ()) * 30) + 120);
+        MoveControl.startPath(path, tx, tz, stop, maxT);
         String partial = path.canReach() ? "" : " (partial, will re-route)";
         return String.format("OK %s -> (%.1f,%.1f) via %d waypoints%s. poll 'where'.",
             label, tx, tz, path.getNodeCount(), partial);
@@ -608,6 +617,22 @@ public final class ScreenOps {
         MoveControl.stop();
         MineControl.stop();
         return "OK stopped";
+    }
+
+    /** Engine toggle for the own pather (Master decision 2026-07-02): nav [own|vanilla|status]. */
+    private static String navCmd(String rest) {
+        String a = rest == null ? "" : rest.trim().toLowerCase();
+        switch (a) {
+            case "own":     MoveControl.setOwnNav(true);  return "OK nav engine = own (M1Pather)";
+            case "vanilla": MoveControl.setOwnNav(false); return "OK nav engine = vanilla (PathOracle)";
+            case "":
+            case "status":
+                return "nav engine=" + (MoveControl.ownNav() ? "own" : "vanilla")
+                        + " active=" + NavEngine.isActive()
+                        + " status=" + NavEngine.status()
+                        + " segment=" + NavEngine.segmentNo();
+            default: return "ERR usage: nav [own|vanilla|status]";
+        }
     }
 
     private static Float compassYaw(String d) {
