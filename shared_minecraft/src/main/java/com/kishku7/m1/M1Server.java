@@ -125,14 +125,15 @@ public final class M1Server {
                     }
                 }
 
+                // Chat/master lines FIRST -- orders must never scroll under nav telemetry (702d).
+                String chat = ChatWatch.drainReports();
+                if (!chat.isEmpty()) { out.write(chat); out.write("\n"); }
+                String alerts = DamageWatch.drainReports();
+                if (!alerts.isEmpty()) { out.write(alerts); out.write("\n"); }
                 String ups = PickupUpgrade.drainReports();
                 if (!ups.isEmpty()) { out.write(ups); out.write("\n"); }
                 String agentReports = AgentRuntime.drainReports();
                 if (!agentReports.isEmpty()) { out.write(agentReports); out.write("\n"); }
-                String alerts = DamageWatch.drainReports();
-                if (!alerts.isEmpty()) { out.write(alerts); out.write("\n"); }
-                String chat = ChatWatch.drainReports();
-                if (!chat.isEmpty()) { out.write(chat); out.write("\n"); }
                 out.write(resp);
                 if (!resp.endsWith("\n")) out.write("\n");
 
@@ -158,14 +159,14 @@ public final class M1Server {
      *  polling client (listen) sees them promptly. Called on the idle read timeout. */
     private static void flushAsync(BufferedWriter out) throws IOException {
         boolean any = false;
+        String ch = ChatWatch.drainReports(); // chat first (702d: orders were buried under telemetry)
+        if (!ch.isEmpty()) { out.write(ch); out.write("\n"); any = true; }
+        String al = DamageWatch.drainReports();
+        if (!al.isEmpty()) { out.write(al); out.write("\n"); any = true; }
         String ups = PickupUpgrade.drainReports();
         if (!ups.isEmpty()) { out.write(ups); out.write("\n"); any = true; }
         String ag = AgentRuntime.drainReports();
         if (!ag.isEmpty()) { out.write(ag); out.write("\n"); any = true; }
-        String al = DamageWatch.drainReports();
-        if (!al.isEmpty()) { out.write(al); out.write("\n"); any = true; }
-        String ch = ChatWatch.drainReports();
-        if (!ch.isEmpty()) { out.write(ch); out.write("\n"); any = true; }
         if (any) out.flush();
     }
 

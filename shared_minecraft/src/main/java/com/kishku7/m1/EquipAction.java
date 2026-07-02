@@ -32,7 +32,7 @@ public final class EquipAction implements MinecraftAction {
             ctx.report(ReportClass.STATUS, "equip: not in world");
             return StepResult.FAILED;
         }
-        String r = Crafting.equip(mc, item);
+        String r = item.trim().equalsIgnoreCase("all") ? InventoryOps.equipAll(mc) : InventoryOps.equipNamed(mc, item);
         ctx.report(ReportClass.STATUS, "equip: " + r);
         return r.startsWith("OK") ? StepResult.DONE : StepResult.FAILED;
     }

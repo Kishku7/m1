@@ -66,7 +66,8 @@ public final class ScreenOps {
         "  joinworld <idx>      load saved world #idx (re-enter)\n" +
         "  openinv / close      open inventory (2x2 grid) / close screen\n" +
         "  craft planks|sticks|table|axe   craft items (axe needs the crafting table open=3x3)\n" +
-        "  hold <0-8> / equip <item>       select hotbar slot / move item to hand\n" +
+        "  hold <0-8> / equip <item|all>   select hotbar slot / auto-equip by name (armor->slot, shield->offhand) or ALL\n" +
+        "  organize hotbar / takeall / stash junk / moveitem <item> to <hb1-9|offhand|head|chest|legs|feet>\n" +
         "  place                use/place held item on the block you are looking at\n" +
         "  slot <id> [btn] [pickup|quick|swap]   raw slot click\n" +
         "  openpack             open your worn Travelers Backpack (triggers its keybind)\n" +
@@ -112,6 +113,7 @@ public final class ScreenOps {
             case "stop":      return stopMove();
             case "nav":       return navCmd(rest);
             case "sleep":     return AgentRuntime.command("sleep");
+            case "recover":   return AgentRuntime.command("recover");
             case "mine":      return mine(mc, rest);
             case "worlds":    return worlds(mc);
             case "joinworld":
@@ -119,7 +121,13 @@ public final class ScreenOps {
             case "openinv":   return Crafting.openInv(mc);
             case "close":     return Crafting.close(mc);
             case "hold":      return Crafting.hold(mc, rest);
-            case "equip":     return Crafting.equip(mc, rest);
+            case "equip":
+                if (rest.trim().equalsIgnoreCase("all")) return InventoryOps.equipAll(mc);
+                return InventoryOps.equipNamed(mc, rest);
+            case "organize":  return InventoryOps.organizeHotbar(mc); // "organize hotbar"
+            case "takeall":   return InventoryOps.takeAll(mc);
+            case "stash":     return InventoryOps.stashJunk(mc);      // "stash junk"
+            case "moveitem":  return InventoryOps.moveItem(mc, rest);
             case "slot":      return Crafting.slotCmd(mc, rest);
             case "place":
             case "use":
@@ -255,6 +263,10 @@ public final class ScreenOps {
         if (cn.contains("Result")) return "CRAFT-RESULT(no storage)";
         if (cn.contains("Crafting")) return "CRAFT-GRID(no storage!)";
         if (cn.contains("Equipment") || cn.contains("Armor")) return "armor";
+        if (cn.toLowerCase(java.util.Locale.ROOT).contains("trinket")
+                || slot.getClass().getName().toLowerCase(java.util.Locale.ROOT).contains("trinket")) {
+            return "TRINKET (worn accessory: backpack/elytra/etc)";
+        }
         return "container";
     }
 
@@ -275,6 +287,10 @@ public final class ScreenOps {
                 MoveControl.targetX(), MoveControl.targetZ(), MoveControl.waypointIdx(), MoveControl.waypointCount(), d);
         } else if (!MoveControl.status().equals("idle")) {
             base += "  | last move: " + MoveControl.status();
+        }
+        if (M1Compat.screen(mc) != null) {
+            base += "  | screen OPEN: " + M1Compat.screen(mc).getClass().getSimpleName()
+                    + " (movement holds while a screen is up -- 'close' to exit)";
         }
         return base;
     }
@@ -607,6 +623,10 @@ public final class ScreenOps {
         LocalPlayer p = mc.player;
         if (p == null || mc.level == null) return "moveto: not in world";
         String[] t = rest.trim().split("\\s+");
+        if (t.length >= 3) {
+            // 3 coords given: the caller meant goto (702d: y was silently parsed as z)
+            return gotoCmd(mc, rest);
+        }
         if (t.length < 2) return "ERR usage: moveto <x> <z>";
         try {
             double x = Double.parseDouble(t[0]), z = Double.parseDouble(t[1]);
@@ -627,6 +647,25 @@ public final class ScreenOps {
 
     static String startMove(Minecraft mc, LocalPlayer p, double tx, double ty, double tz, double stop, String label) {
         MoveControl.stop(); // clear any prior move on either engine
+        // If the target cell is a solid block (e.g. the Bank Vault's iron blocks -- 702d), you can
+        // never STAND there. Retarget to the nearest standable cell beside it so "walk to the vault"
+        // works when the AI names the block itself.
+        net.minecraft.core.BlockPos gp = net.minecraft.core.BlockPos.containing(tx, ty, tz);
+        if (mc.level != null && !mc.level.getBlockState(gp).getCollisionShape(mc.level, gp).isEmpty()) {
+            for (net.minecraft.core.Direction d : new net.minecraft.core.Direction[]{
+                    net.minecraft.core.Direction.NORTH, net.minecraft.core.Direction.SOUTH,
+                    net.minecraft.core.Direction.EAST, net.minecraft.core.Direction.WEST}) {
+                net.minecraft.core.BlockPos side = gp.relative(d);
+                boolean feetClear = mc.level.getBlockState(side).getCollisionShape(mc.level, side).isEmpty();
+                boolean floor = !mc.level.getBlockState(side.below()).getCollisionShape(mc.level, side.below()).isEmpty();
+                if (feetClear && floor) {
+                    tx = side.getX() + 0.5;
+                    ty = side.getY();
+                    tz = side.getZ() + 0.5;
+                    break;
+                }
+            }
+        }
         int maxT = (int) (Math.hypot(tx - p.getX(), tz - p.getZ()) * 30) + 120;
         if (MoveControl.ownNav() && NavEngine.start(mc, tx, ty, tz, stop, maxT)) {
             return String.format("OK %s -> (%.1f,%.1f) own pather, segment 1 (%d wp). poll 'where'.",

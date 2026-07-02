@@ -1,5 +1,5 @@
 # Command card (exact syntax cheat-sheet)
-<!-- Valid as of: M1 v0.7.0 | MC 1.20 - 26.3 | updated 2026-07-02 (own pather, sleep, universal combat, slot roles) -->
+<!-- Valid as of: M1 v0.8.0 | MC 1.20 - 26.3 | updated 2026-07-02 (inventory verbs, recover, grave/death reflexes) -->
 **Covers:** every M1 command with syntax + a one-line note, so you can reload just the syntax cheaply.
 Concepts behind these live in `01_drive_m1.md`.
 
@@ -36,7 +36,16 @@ ACT (async -- poll inv/look)
   place | use | interact   place/use/interact the held item or the block you face.
                        A "Pass" result = NOTHING HAPPENED (wrong block/out of reach) -- re-aim
   hold <0-8>           select hotbar slot 0-8 (= in-game 1-9)
-  equip <item>         equip a named item from inventory
+  equip all            ONE command: wear best armor + shield to off-hand + best weapon to hand
+  equip <item>         by NAME or id, auto-routed: armor -> its slot, shield -> off-hand, else hand
+  organize hotbar      standard layout: hb1 sword, hb2 pick, hb3 axe, hb4 shovel, hb5 hoe, hb9 food
+  takeall              empty the OPEN container (chest/vault) into your inventory in one shot
+  stash junk           move junk (rotten flesh/bones/spider eyes) off the hotbar
+  moveitem <item> to <hb1..hb9|offhand|head|chest|legs|feet>   named move using HUMAN slot words
+  recover              GRAVE-SITE recovery composite: break the name sign, empty the chest, break
+                       the armor stand, collect drops, then equip all + organize hotbar. Run it
+                       when standing AT a death grave (chest + armor-stand + sign). One command
+  (see the equip/organize/takeall/stash/moveitem/recover verbs under ACT above)
 
 COMBAT / FOLLOW (top-level; run on the agent engine, progress arrives as [agent] lines)
   attack [nearest|<id>|crosshair] [crit|normal|ranged]   engage a mob. AUTO-EQUIPS the best hotbar
@@ -128,6 +137,16 @@ AGENT (autonomous action layer -- queue an action; it runs in-world and reports 
 ```
 
 Notes:
+- **INVENTORY: prefer the high-level verbs over raw `slot`/`click`.** `equip all`, `equip <name>`,
+  `organize hotbar`, `takeall`, `stash junk`, `moveitem <name> to <human slot>` all take NAMES and
+  HUMAN slot words (hb1..hb9 as spoken, offhand, head/chest/legs/feet) -- you never compute menu
+  indices. They auto-open the player inventory if a container is up. Raw `slot`/`slots` stay for
+  surgery but you rarely need them now.
+- **A grave/death chest** (chest + armor stand + name sign)? Just `recover`. Do NOT hand-drive it.
+- **Sign-edit dialogs auto-close** -- right-clicking a sign no longer traps you; mine/attack a sign
+  to remove it.
+- **On death you auto-respawn** and the death spot is reported (a `DIED at x,y,z` line).
+- `where` now announces `screen OPEN: ...` when a menu is up (movement holds until you `close`).
 - **Async commands** (`move*`/`goto`/`mine`/`craft`) return immediately -- poll `where` / `inv` /
   `look` to track them. They do NOT hit the 10 s execution cap.
 - `slot <id> ...` and `slots` use the OPEN MENU index; `hold` / `equip` use the stable `inv` index.

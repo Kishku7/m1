@@ -49,8 +49,15 @@ public final class Crafting {
 
     /** A menu slot (index >= minIndex) whose item id contains path; -1 if none. */
     static int findSlot(Minecraft mc, String path, int minIndex) {
+        // Match registry id ("diamond_helmet") AND display name ("Diamond Helmet"), case-blind,
+        // spaces tolerated -- "equip Diamond Helmet" must just work (702d fix).
+        String qId = path.trim().toLowerCase(java.util.Locale.ROOT).replace(' ', '_');
+        String qName = path.trim().toLowerCase(java.util.Locale.ROOT);
         for (Slot sl : menu(mc).slots) {
-            if (sl.index >= minIndex && itemId(sl.getItem()).contains(path)) return sl.index;
+            if (sl.index < minIndex || sl.getItem().isEmpty()) continue;
+            if (itemId(sl.getItem()).contains(qId)) return sl.index;
+            if (sl.getItem().getHoverName().getString().toLowerCase(java.util.Locale.ROOT)
+                    .contains(qName)) return sl.index;
         }
         return -1;
     }
@@ -67,12 +74,23 @@ public final class Crafting {
 
     public static String openInv(Minecraft mc) {
         if (mc.player == null) return "openinv: not in world";
+        if (mc.player.containerMenu != mc.player.inventoryMenu) {
+            // a container menu (chest/backpack) is still active -- close it properly first,
+            // otherwise slots would show THAT menu, not the player inventory (702d fix)
+            M1Compat.setScreen(mc, null);
+            mc.player.closeContainer();
+        }
         M1Compat.setScreen(mc, new InventoryScreen(mc.player));
-        return "OK inventory open (2x2 grid, containerId=" + containerId(mc) + ")";
+        return "OK inventory open (2x2 grid, menu="
+                + mc.player.containerMenu.getClass().getSimpleName()
+                + ", containerId=" + containerId(mc) + ")";
     }
 
     public static String close(Minecraft mc) {
         M1Compat.setScreen(mc, null);
+        if (mc.player != null && mc.player.containerMenu != mc.player.inventoryMenu) {
+            mc.player.closeContainer(); // drop the server-side menu too, or movement stays frozen (702d)
+        }
         return "OK closed";
     }
 

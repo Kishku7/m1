@@ -71,6 +71,7 @@ public final class AgentRuntime {
         if (mc.player == null || mc.level == null) {
             return; // only run while actually in a world
         }
+        ScreenWatch.tick(mc); // sign-dialog dismissal + death auto-respawn (702d)
         LOOP.tick(SERVICES);
     }
 
@@ -178,6 +179,10 @@ public final class AgentRuntime {
             case "sleep":
                 QUEUE.append(new SleepAction());
                 return "queued sleep (find a usable bed, walk beside it, sleep in it)";
+            case "recover":
+                QUEUE.append(new RecoverAction());
+                return "queued recover (grave-site: break sign, empty chest, break armor stand,"
+                        + " collect drops, equip all, organize hotbar)";
             case "openinv":
                 QUEUE.append(new InvScreenAction(true));
                 return "queued openinv";
@@ -199,7 +204,7 @@ public final class AgentRuntime {
                 return "agent: unknown subcommand '" + sub + "' (try: status | ping | "
                         + "goto <x y z> | moveto <x z> | patrol <x z ...> | look <x y z|yaw [pitch]> | "
                         + "mine <x y z> | hold <0-8> | equip <item> | use | drop [all] | jump | "
-                        + "sneak [on|off] | sprint [on|off] | sleep | slot <id> [btn] [mode] | openinv | close | "
+                        + "sneak [on|off] | sprint [on|off] | sleep | recover | slot <id> [btn] [mode] | openinv | close | "
                         + "attack [nearest|<id>|crosshair] [crit|normal|ranged] | follow <player> [dist] | "
                         + "shield [ticks] | defend [on|off|status|auto|<player>] | vault <sub> | vault close | craft <item> [count] | stop)";
         }

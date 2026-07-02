@@ -304,7 +304,8 @@ public final class NavEngine {
             return false;
         }
         if (np.length() == 0) {
-            if (!np.partial) {
+            double goalDist = Math.hypot(goalX - p.getX(), goalZ - p.getZ());
+            if (!np.partial && goalDist < 2.5) {
                 // Goal satisfied at the START node (node resolution coarser than stopDist):
                 // do not call this boxed in -- close the last stretch directly. (702b fix)
                 path = np;
@@ -318,8 +319,16 @@ public final class NavEngine {
                 return true;
             }
             String blk = String.valueOf(mc.level.getBlockState(p.blockPosition()).getBlock());
-            report("nav: no path from (" + fmt(p.getX()) + "," + fmt(p.getY()) + "," + fmt(p.getZ())
-                    + ") -- boxed in (standing in " + blk + ")");
+            String goalBlk = String.valueOf(mc.level.getBlockState(
+                    net.minecraft.core.BlockPos.containing(goalX, goalY, goalZ)).getBlock());
+            boolean goalSolid = !mc.level.getBlockState(
+                    net.minecraft.core.BlockPos.containing(goalX, goalY, goalZ))
+                    .getCollisionShape(mc.level, net.minecraft.core.BlockPos.containing(goalX, goalY, goalZ))
+                    .isEmpty();
+            report("nav: cannot reach (" + fmt(goalX) + "," + fmt(goalY) + "," + fmt(goalZ)
+                    + ") from (" + fmt(p.getX()) + "," + fmt(p.getY()) + "," + fmt(p.getZ()) + ") -- "
+                    + (goalSolid ? "the GOAL is a solid block (" + goalBlk + ") -- aim at a spot"
+                            + " NEXT TO it, not inside it" : "boxed in (standing in " + blk + ")"));
             return false;
         }
         if (np.partial) {
