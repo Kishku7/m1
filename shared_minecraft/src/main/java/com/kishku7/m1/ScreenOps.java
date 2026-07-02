@@ -74,6 +74,7 @@ public final class ScreenOps {
         "  upgrades             show pending auto-armor-upgrade messages\n" +
         "  autoupgrade on|off   toggle auto armor upgrading (default on)\n" +
         "  vault <sub>          Bank Vault storage: mark|status|contents|withdraw|deposit|find|memory ('vault help')\n" +
+        "  cancraft <item>      recipe-book feasibility: craftable now? what's missing? (vault-aware)\n" +
         "  attack [target] [crit|normal]   engage a mob (nearest|<id>|crosshair); approaches then hits\n" +
         "  follow <player> [dist]          follow a player; 'stop' to end\n" +
         "  defend [on|off|status|auto|<p>] auto-defense reflex: if the master or I get attacked,\n" +
@@ -126,6 +127,7 @@ public final class ScreenOps {
             case "autoupgrade": return autoupgrade(rest);
             case "upgrades":  return upgrades();
             case "vault":     return VaultOps.command(mc, rest);
+            case "cancraft":  return RecipeOps.canCraft(mc, rest.trim());
             case "attack":    return AgentRuntime.command("attack " + rest);
             case "follow":    return AgentRuntime.command("follow " + rest);
             case "defend":    return AgentRuntime.command("defend " + rest);

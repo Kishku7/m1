@@ -14,10 +14,15 @@ public final class CraftHarvest {
 
     private static volatile boolean active = false;
     private static int ticks, emptyTicks;
+    private static int slot = 0;
+    private static boolean harvested;   // saw at least one result (post-fill grace until then)
 
     private CraftHarvest() {}
 
-    public static synchronized void start() { active = true; ticks = 0; emptyTicks = 0; }
+    public static synchronized void start() { start(0); }
+
+    /** Harvest a specific result slot (0 = crafting/inventory; the vault uses its own index). */
+    public static synchronized void start(int resultSlot) { active = true; ticks = 0; emptyTicks = 0; slot = resultSlot; harvested = false; }
 
     public static synchronized boolean isActive() { return active; }
 
@@ -25,13 +30,17 @@ public final class CraftHarvest {
         if (!active) return;
         if (mc.player == null || mc.player.containerMenu == null || M1Compat.screen(mc) == null) { active = false; return; }
         ticks++;
-        boolean empty = mc.player.containerMenu.getSlot(0).getItem().isEmpty();
+        boolean empty = slot >= mc.player.containerMenu.slots.size()
+                || mc.player.containerMenu.getSlot(slot).getItem().isEmpty();
         if (!empty) {
-            ContainerCompat.click(mc, mc.player.containerMenu.containerId, 0, 0, ContainerCompat.Mode.QUICK_MOVE);
+            ContainerCompat.click(mc, mc.player.containerMenu.containerId, slot, 0, ContainerCompat.Mode.QUICK_MOVE);
             emptyTicks = 0;
+            harvested = true;
         } else {
             emptyTicks++;
         }
-        if (emptyTicks >= 4 || ticks > 80) active = false;
+        // Until the FIRST result lands, allow the server fill round-trip (handlePlaceRecipe) up
+        // to 30t; after harvesting begins, 4 consecutive empty ticks = recipe exhausted.
+        if ((harvested && emptyTicks >= 4) || (!harvested && ticks > 30) || ticks > 200) active = false;
     }
 }

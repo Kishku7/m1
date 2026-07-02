@@ -136,6 +136,22 @@ public final class AgentRuntime {
                 return enqueueShield(args);
             case "defend":
                 return ThreatWatch.command(args);
+            case "craft": {
+                String[] ct = args.split("\\s+");
+                if (args.isEmpty() || ct[0].isEmpty()) {
+                    return "usage: agent craft <item> [count]";
+                }
+                int cn = 1;
+                if (ct.length > 1) {
+                    try {
+                        cn = Integer.parseInt(ct[1]);
+                    } catch (NumberFormatException e) {
+                        return "usage: agent craft <item> [count]";
+                    }
+                }
+                QUEUE.append(new CraftAction(ct[0], cn));
+                return "queued craft " + ct[0] + " x" + cn + " (needs a crafting grid open)";
+            }
             case "vault":
                 if (args.equalsIgnoreCase("close")) {
                     QUEUE.append(new VaultGuardAction());
@@ -182,7 +198,7 @@ public final class AgentRuntime {
                         + "mine <x y z> | hold <0-8> | equip <item> | use | drop [all] | jump | "
                         + "sneak [on|off] | sprint [on|off] | slot <id> [btn] [mode] | openinv | close | "
                         + "attack [nearest|<id>|crosshair] [crit|normal] | follow <player> [dist] | "
-                        + "shield [ticks] | defend [on|off|status|auto|<player>] | vault <sub> | vault close | stop)";
+                        + "shield [ticks] | defend [on|off|status|auto|<player>] | vault <sub> | vault close | craft <item> [count] | stop)";
         }
     }
 
