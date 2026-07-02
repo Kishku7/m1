@@ -1,5 +1,5 @@
 # Command card (exact syntax cheat-sheet)
-<!-- Valid as of: M1 v0.5.1 | MC 1.20 - 26.3 | updated 2026-07-01 -->
+<!-- Valid as of: M1 v0.5.7 | MC 1.20 - 26.3 | updated 2026-07-02 -->
 **Covers:** every M1 command with syntax + a one-line note, so you can reload just the syntax cheaply.
 Concepts behind these live in `01_drive_m1.md`.
 
@@ -43,8 +43,24 @@ COMBAT / FOLLOW (top-level; run on the agent engine, progress arrives as [agent]
 
 CRAFT
   openinv              open your inventory (2x2 crafting)
-  craft planks|sticks|table|axe   craft a known recipe
+  craft planks|sticks|table|axe   craft a known legacy recipe (prefer agent craft below)
+  cancraft <item>      recipe-book feasibility: YES via <recipe>, or NO + per-ingredient
+                       HAVE/NEED lines with "(in vault: id)" and "(craftable)" annotations
   close                close the open menu
+
+STORAGE (Bank Vault -- 26.x, needs the bank-vault mod; vault = your player-bound bank)
+  vault mark [x y z]   remember the vault block position (default: the block you face). Do this
+                       once per session BEFORE closing -- the trinket guard needs it to verify
+  vault status         is the vault screen open; kinds/items; trinket slot count; marked pos
+  vault contents [f]   list contents (filter f) AND record them to per-world storage memory
+  vault withdraw <n> <item>   withdraw n of item (BV /bank withdraw; arrives in inventory)
+  vault deposit rows   deposit ALL main inventory rows -- the HOTBAR IS THE KEEP-LIST (kept)
+  vault deposit all    deposit main rows AND hotbar
+  vault deposit <item> deposit every player stack whose id contains <item>
+  vault find <item>    search per-world storage memory (last-seen) for an item
+  vault memory         storage-memory summary for this world
+  NOTE open the vault by walking to it and `place` (use) with an EMPTY or non-placeable hand;
+       it only opens as a COMPLETED 3x3 set. Close with `agent vault close` (guarded), not close
 
 WORLD
   cmd <server command> run a slash-command (e.g. cmd time set day) -- needs cheats/permission
@@ -75,7 +91,23 @@ AGENT (autonomous action layer -- queue an action; it runs in-world and reports 
   agent attack [nearest|<id>|crosshair] [crit|normal]   queue an attack: auto-approaches then hits (default nearest, crit)
   agent follow <player> [dist]        lock onto a player and follow until stop (default dist 3)
   agent shield [ticks]                queue raising the shield (default 40t = 2s; alias: agent block)
-  agent stop                          clear the queued plan and stop movement + mining
+  agent drop [all]                    queue dropping 1 (or the whole stack) of the HELD item on the ground
+  agent jump                          queue a one-shot jump
+  agent sneak [on|off]                sneak state toggle (agent stop releases it)
+  agent sprint [on|off]               sprint state toggle (pathing may override while moving)
+  agent slot <id> [btn] [mode]        queue a raw click on the OPEN menu slot (pickup|quick|swap)
+  agent openinv | agent close         queue opening the 2x2 inventory / closing the open screen
+  agent vault <sub>                   queue any vault subcommand (see STORAGE)
+  agent vault close                   guarded vault close: closes, REOPENS the marked vault, verifies
+                                      worn trinkets vs the session snapshot, re-equips any the
+                                      Trinkets eject bug knocked into your inventory, closes again
+  agent craft <item> [count]          GENERIC recipe-book craft: needs the 2x2 or a crafting table
+                                      OPEN; picks a satisfiable recipe, auto-fills the grid, collects.
+                                      AUTO-SOURCES missing ingredients from the vault (storage memory
+                                      -> /bank withdraw) from anywhere. Shift-harvest may overshoot
+                                      count. NOT the vault grid; furnace/smithing/stonecutter not yet
+  agent stop                          clear the queued plan and stop movement + mining (and release
+                                      sneak/sprint toggles)
 ```
 
 Notes:
