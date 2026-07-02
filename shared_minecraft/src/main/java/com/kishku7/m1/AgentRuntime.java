@@ -29,11 +29,13 @@ import java.util.Locale;
  * {@code agent} socket command.
  *
  * <p>Phase 1 basics wired here as queue actions: movement (goto/moveto/patrol), aim ({@link
- * LookAction}), break ({@link MineAction}), inventory verbs hold/equip/use ({@link Crafting}), and
- * combat ({@link AttackAction} cooldown-gated jump-crit, {@link ShieldAction} block). The reflex
- * {@link InterruptSource} is still an empty stub (a sensor-driven combat reflex is a later phase) and
- * the {@link ServiceLocator} resolves just the {@link Minecraft} instance; the real registry,
- * sensors, perception and navigation register here as later phases land.
+ * LookAction}), break ({@link MineAction}), inventory verbs hold/equip/use ({@link Crafting}),
+ * item handling ({@link DropAction}, {@link SlotAction}, {@link InvScreenAction}), movement keys
+ * ({@link KeyInputAction} jump/sneak/sprint), and combat ({@link AttackAction} cooldown-gated
+ * jump-crit, {@link ShieldAction} block). The reflex {@link InterruptSource} is {@link
+ * ThreatWatch} (auto-defense); the {@link ServiceLocator} resolves just the {@link Minecraft}
+ * instance; the real registry, sensors, perception and navigation register here as later phases
+ * land.
  */
 public final class AgentRuntime {
 
@@ -134,17 +136,53 @@ public final class AgentRuntime {
                 return enqueueShield(args);
             case "defend":
                 return ThreatWatch.command(args);
-            case "stop":
+            case "vault":
+                if (args.equalsIgnoreCase("close")) {
+                    QUEUE.append(new VaultGuardAction());
+                    return "queued vault close (trinket-guarded)";
+                }
+                QUEUE.append(new VaultCmdAction(args));
+                return "queued vault " + (args.isEmpty() ? "status" : args);
+            case "drop":
+                QUEUE.append(new DropAction(args.equalsIgnoreCase("all")));
+                return "queued drop" + (args.equalsIgnoreCase("all") ? " all" : " (1)");
+            case "jump":
+                QUEUE.append(new KeyInputAction(KeyInputAction.Mode.JUMP));
+                return "queued jump";
+            case "sneak":
+                return enqueueToggle("sneak", args);
+            case "sprint":
+                return enqueueToggle("sprint", args);
+            case "slot":
+                if (args.isEmpty()) {
+                    return "usage: agent slot <id> [button] [pickup|quick|swap]";
+                }
+                QUEUE.append(new SlotAction(args));
+                return "queued slot " + args;
+            case "openinv":
+                QUEUE.append(new InvScreenAction(true));
+                return "queued openinv";
+            case "close":
+                QUEUE.append(new InvScreenAction(false));
+                return "queued close";
+            case "stop": {
                 QUEUE.replace(Collections.<MinecraftAction>emptyList());
                 MoveControl.stop();
                 MineControl.stop();
+                Minecraft mc = Minecraft.getInstance();
+                if (mc != null && mc.options != null) {
+                    mc.options.keyShift.setDown(false); // release the sneak toggle too
+                    mc.options.keySprint.setDown(false);
+                }
                 return "agent: plan cleared and movement/mining stopped";
+            }
             default:
                 return "agent: unknown subcommand '" + sub + "' (try: status | ping | "
                         + "goto <x y z> | moveto <x z> | patrol <x z ...> | look <x y z|yaw [pitch]> | "
-                        + "mine <x y z> | hold <0-8> | equip <item> | use | "
+                        + "mine <x y z> | hold <0-8> | equip <item> | use | drop [all] | jump | "
+                        + "sneak [on|off] | sprint [on|off] | slot <id> [btn] [mode] | openinv | close | "
                         + "attack [nearest|<id>|crosshair] [crit|normal] | follow <player> [dist] | "
-                        + "shield [ticks] | defend [on|off|status|auto|<player>] | stop)";
+                        + "shield [ticks] | defend [on|off|status|auto|<player>] | vault <sub> | vault close | stop)";
         }
     }
 
@@ -250,6 +288,24 @@ public final class AgentRuntime {
         }
         QUEUE.append(new EquipAction(args));
         return "queued equip " + args;
+    }
+
+    /** {@code sneak|sprint [on|off]} -- empty arg means on. */
+    private static String enqueueToggle(String which, String args) {
+        String a = args.trim().toLowerCase(Locale.ROOT);
+        boolean on;
+        if (a.isEmpty() || a.equals("on")) {
+            on = true;
+        } else if (a.equals("off")) {
+            on = false;
+        } else {
+            return "usage: agent " + which + " [on|off]";
+        }
+        KeyInputAction.Mode m = which.equals("sneak")
+                ? (on ? KeyInputAction.Mode.SNEAK_ON : KeyInputAction.Mode.SNEAK_OFF)
+                : (on ? KeyInputAction.Mode.SPRINT_ON : KeyInputAction.Mode.SPRINT_OFF);
+        QUEUE.append(new KeyInputAction(m));
+        return "queued " + which + " " + (on ? "on" : "off");
     }
 
     /** {@code attack [nearest|<id>|crosshair] [crit|normal|sweep]}. Defaults: nearest, crit. */
