@@ -22,7 +22,7 @@ import java.util.Map;
 
 /**
  * The reflex sensor layer (fills the {@link InterruptSource} seam in {@link AgentRuntime}).
- * Auto-defense per Kishku7 (2026-07-01): if a mob attacks the MASTER or the AI player, the AI player
+ * Auto-defense per Master (2026-07-01): if a mob attacks the MASTER or the AI player, the AI player
  * takes immediate action to defend -- mod-side, no AI round-trip -- then the interrupted standing
  * plan (e.g. follow) resumes automatically via the {@code ActionQueue} pause/resume contract.
  *

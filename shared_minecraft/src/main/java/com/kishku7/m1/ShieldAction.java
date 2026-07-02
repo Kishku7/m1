@@ -12,7 +12,7 @@ import net.minecraft.world.item.Items;
 
 /**
  * Leaf action: raise a shield and hold the block for a number of ticks, then lower. Basic but real --
- * the "proper use of a shield" primitive Kishku7 called out. A shield blocks frontal melee, projectiles,
+ * the "proper use of a shield" primitive Master called out. A shield blocks frontal melee, projectiles,
  * and reduces explosions ONLY while facing the attacker and after a short raise delay, so the caller
  * raises BEFORE the hit (couple with {@link LookAction} / {@link AttackAction} facing).
  *
