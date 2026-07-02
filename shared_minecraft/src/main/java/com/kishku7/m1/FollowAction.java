@@ -30,7 +30,7 @@ public final class FollowAction implements MinecraftAction {
     private static final double REACQUIRE_DRIFT = 1.5; // re-path once the standoff point moves this far
     private static final int LOST_GRACE_TICKS = 100;   // ~5s out-of-sight grace before giving up
 
-    private static final double SPRINT_ON_FACTOR = 2.0;  // sprint when gap > 2x standoff (Master 2026-07-01)
+    private static final double SPRINT_ON_FACTOR = 2.0;  // sprint when gap > 2x standoff (Kishku7 2026-07-01)
     private static final double SPRINT_OFF_FACTOR = 1.5; // stop sprinting once back inside 1.5x
     private static final int PORTAL_SCAN_RADIUS = 4;     // blocks around last-seen pos to find a portal
     private static final int PORTAL_GRACE_TICKS = 400;   // ~20s to transit + re-acquire on the other side
@@ -73,7 +73,7 @@ public final class FollowAction implements MinecraftAction {
             portalGoal = null;
             MoveControl.stop();
             if (endTransit) {
-                // CRITICAL (Master 2026-07-01): after an END portal transit, stand absolutely still.
+                // CRITICAL (Kishku7 2026-07-01): after an END portal transit, stand absolutely still.
                 ctx.report(ReportClass.STATUS, "follow: passed through END portal -- AUTO-STOP (holding position)");
                 return StepResult.DONE;
             }
@@ -133,7 +133,7 @@ public final class FollowAction implements MinecraftAction {
 
         double gap = Math.sqrt(me.distanceToSqr(target));
 
-        // Sprint catch-up (Master 2026-07-01): kick on when falling behind >2x the standoff,
+        // Sprint catch-up (Kishku7 2026-07-01): kick on when falling behind >2x the standoff,
         // back to walking once inside 1.5x. Vanilla blocks sprint at food <= 6 on its own.
         if (gap > dist * SPRINT_ON_FACTOR) {
             MoveControl.setSprint(true);

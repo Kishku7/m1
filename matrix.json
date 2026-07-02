@@ -272,7 +272,7 @@
     "26.3 NeoForge: NeoForge not released for 26.3 yet -- legitimate loader-floor gap (Fabric 26.3 only for now).",
     "1.21 vs 1.21.1: Fabric+NeoForge ranges overlap ([1.21,1.21.2)) -- collapse to one cell each in the unified source."
   ],
-  "scope": "EVERY supportable release 1.20.0-26.3, each boot-smoketested per claimed loader BEFORE Raider live testing. A compat claim REQUIRES a smoketest demonstrating the effort. (Master 2026-06-28)",
+  "scope": "EVERY supportable release 1.20.0-26.3, each boot-smoketested per claimed loader BEFORE Raider live testing. A compat claim REQUIRES a smoketest demonstrating the effort. (Kishku7 2026-06-28)",
   "reuseStrategy": "Stages 2-3 mine the existing per-version 1.20.x/1.21.x project code -- the API-drift answers are already solved there; lift them into the single source via Cog/facade rather than re-deriving.",
   "claimedVersions": [
     {

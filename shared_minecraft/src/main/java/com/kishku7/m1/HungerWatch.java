@@ -9,14 +9,14 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Auto-eat (Master, 2026-07-01). Registered on END_CLIENT_TICK alongside the other watchers.
+ * Auto-eat (Kishku7, 2026-07-01). Registered on END_CLIENT_TICK alongside the other watchers.
  *
  * <p>Trigger: food &lt;= 18 (2 below max). While sprint-chasing (follow catch-up engaged) eating is
  * DEFERRED unless food is critically low (&lt;= 7, where vanilla kills sprint anyway). Once eating
  * starts it continues until food is back to 20 or no acceptable food remains. Eating happens while
  * moving (the use key is held; MC slows the walk -- physics, accepted).
  *
- * <p>Food choice, by Master's preference order: golden carrot &gt; cooked beef/porkchop &gt; cooked
+ * <p>Food choice, by Kishku7's preference order: golden carrot &gt; cooked beef/porkchop &gt; cooked
  * chicken/fish/mutton &gt; bread &gt; any other plain food. Harmful/effect foods are SKIPPED
  * (spider eye, poisonous potato, pufferfish, chorus fruit, suspicious stew) EXCEPT rotten flesh,
  * which is eaten only when it is the ONLY food. Golden apples are reserved for combat emergencies

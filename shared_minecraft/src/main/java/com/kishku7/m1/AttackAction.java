@@ -20,7 +20,7 @@ import java.util.List;
  * Leaf action: melee a target with correct combat TIMING. This is the core of M1 combat -- not
  * "swing the sword" but a tick-stepped loop that respects the attack cooldown and times a jump-crit.
  *
- * <p>Per Master (2026-06-29): combat = timing, jumping at the right time for a critical, proper use of
+ * <p>Per Kishku7 (2026-06-29): combat = timing, jumping at the right time for a critical, proper use of
  * a shield. Crit detection itself is automatic inside {@code Player.attack} (it checks falling /
  * not-sprinting / not-in-water + cooldown), so this action only has to: face the target, WAIT for the
  * weapon to recharge ({@link net.minecraft.world.entity.player.Player#getAttackStrengthScale}), and
