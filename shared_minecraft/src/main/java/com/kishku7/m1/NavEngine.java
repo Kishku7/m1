@@ -207,6 +207,7 @@ public final class NavEngine {
                     halt(mc, "blocked");
                     return;
                 }
+                if (!directFinish) {
                 advance(px, py, pz);
                 if (idx >= path.length()) {
                     if (Math.hypot(goalX - px, goalZ - pz) < 3.0) {
@@ -217,6 +218,7 @@ public final class NavEngine {
                         halt(mc, "blocked");
                         return;
                     }
+                }
                 }
             }
         }
@@ -297,9 +299,27 @@ public final class NavEngine {
             return false;
         }
         NavPath np = M1Pather.compute(mc.level, p.blockPosition(), goalX, goalY, goalZ);
-        if (np == null || np.length() == 0) {
+        if (np == null) {
+            report("nav: no path (no level)");
+            return false;
+        }
+        if (np.length() == 0) {
+            if (!np.partial) {
+                // Goal satisfied at the START node (node resolution coarser than stopDist):
+                // do not call this boxed in -- close the last stretch directly. (702b fix)
+                path = np;
+                idx = 0;
+                segment++;
+                directFinish = true;
+                directTicks = 0;
+                status = "moving";
+                MoveControl.navStatus("moving");
+                report("nav: final approach (at goal node)");
+                return true;
+            }
+            String blk = String.valueOf(mc.level.getBlockState(p.blockPosition()).getBlock());
             report("nav: no path from (" + fmt(p.getX()) + "," + fmt(p.getY()) + "," + fmt(p.getZ())
-                    + ") -- boxed in");
+                    + ") -- boxed in (standing in " + blk + ")");
             return false;
         }
         if (np.partial) {
@@ -342,7 +362,7 @@ public final class NavEngine {
             }
             int[] c = path.pts[i];
             if (Math.hypot(c[0] + 0.5 - px, c[2] + 0.5 - pz) < WP_REACH
-                    && Math.abs(c[1] - py) < 1.6) {
+                    && Math.abs(c[1] - py) < 0.7) { // tight vertically: never eat a climb standing still (702b fix)
                 idx = i + 1;
             }
         }
@@ -464,7 +484,21 @@ public final class NavEngine {
         }
     }
 
+    private static String lastReport = "";
+    private static int repeatCount;
+
     private static void report(String t) {
+        // Dedupe identical consecutive lines (702b flood fix): emit 1st, then x5/x25/x100...
+        if (t.equals(lastReport)) {
+            repeatCount++;
+            if (repeatCount != 5 && repeatCount != 25 && (repeatCount % 100) != 0) {
+                return;
+            }
+            t = t + " (x" + repeatCount + ")";
+        } else {
+            lastReport = t;
+            repeatCount = 1;
+        }
         try {
             AgentRuntime.reports().emit(ReportClass.STATUS, t, 0L);
         } catch (Throwable ignored) {
