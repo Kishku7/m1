@@ -1,5 +1,5 @@
 # Command card (exact syntax cheat-sheet)
-<!-- Valid as of: M1 v0.5.7 | MC 1.20 - 26.3 | updated 2026-07-02 -->
+<!-- Valid as of: M1 v0.7.0 | MC 1.20 - 26.3 | updated 2026-07-02 (own pather, sleep, universal combat, slot roles) -->
 **Covers:** every M1 command with syntax + a one-line note, so you can reload just the syntax cheaply.
 Concepts behind these live in `01_drive_m1.md`.
 
@@ -10,7 +10,9 @@ OBSERVE
   look                 what you are pointed at (block/entity + distance)
   scan [r|<name>]      line-of-sight scan; r<=32 (default 32). scan <name> = nearest match. scan 16 = radius 16
   inv                  stable player inventory (0-8 hotbar, 9-35 main, 36-40 armor/offhand)
-  slots                slots of the OPEN menu (renumber per container -- always run live)
+  slots                slots of the OPEN menu, each labeled with its ROLE:
+                       CRAFT-RESULT/CRAFT-GRID(no storage!)/armor:head|chest|legs|feet/
+                       hotbar-N/main/offhand/container. NEVER park items in CRAFT slots
 
 MENUS
   click <id>           click widget <id> from the latest describe; reply includes a `--- now ---` re-describe
@@ -22,17 +24,28 @@ MOVE (async -- returns at once, poll `where`)
   moveto <x> <z>       pathfind to an x,z (routes around walls, steps up). Preferred mover
   goto <x> <y> <z>     pathfind to a full coordinate
   move <dir> <n>       move n blocks in a compass dir (north/south/east/west/ne/nw/se/sw)
-  face <dir | x y z>   aim the camera (resting view = face 0 0; yaw 0 = south)
+  face <dir|up|down|x y z>  aim the camera (resting view = face 0 0; yaw 0 = south)
+  sleep                ONE-SHOT composite: find a usable bed nearby, walk BESIDE it, sleep in it.
+                       Fails with a reason (daytime / none found / unreachable / no effect)
+  nav [own|vanilla|status]  pathfinder engine toggle. OWN is default: opens gates/doors itself,
+                       walks rails and stairs, 16-block segmented paths to ANY distance
   stop                 cancel movement, mining, AND any queued agent plan (attack/follow)
 
 ACT (async -- poll inv/look)
   mine [x y z]         mine the block you face, or the one at x y z
-  place                place/use/interact the held item or the block you face
+  place | use | interact   place/use/interact the held item or the block you face.
+                       A "Pass" result = NOTHING HAPPENED (wrong block/out of reach) -- re-aim
   hold <0-8>           select hotbar slot 0-8 (= in-game 1-9)
   equip <item>         equip a named item from inventory
 
 COMBAT / FOLLOW (top-level; run on the agent engine, progress arrives as [agent] lines)
-  attack [nearest|<id>|crosshair] [crit|normal]   engage a mob: WALKS to it then hits (auto-approach + timed crits). Default nearest, crit
+  attack [nearest|<id>|crosshair] [crit|normal|ranged]   engage a mob. AUTO-EQUIPS the best hotbar
+                       weapon, walks to it, timed crits. Per-enemy policies built in: creeper =
+                       hit-and-back (never lingers in blast range); skeleton/pillager = shield-advance
+                       (off-hand shield up while closing); blaze/ghast = prefers the bow. RANGED mode
+                       (or a far/unreachable target + a bow and arrows) = full-draw ballistic bow fire
+                       with line-of-sight repositioning. A held SPEAR stabs at 2-4.5 blocks and swaps
+                       to a close weapon if the target hugs you. Default nearest, crit
   follow <player> [dist]   lock onto a player, keep within dist (default 3); the mod re-tracks them as they move -- issue ONCE, ends on stop
   defend [on|off|status|auto|<player>]   auto-defense reflex, ON by default: if the master (or the named
                        player) or I get attacked, the MOD immediately engages the attacker (no command
@@ -53,7 +66,10 @@ STORAGE (Bank Vault -- 26.x, needs the bank-vault mod; vault = your player-bound
                        once per session BEFORE closing -- the trinket guard needs it to verify
   vault status         is the vault screen open; kinds/items; trinket slot count; marked pos
   vault contents [f]   list contents (filter f) AND record them to per-world storage memory
-  vault withdraw <n> <item>   withdraw n of item (BV /bank withdraw; arrives in inventory)
+  vault withdraw <item> [n]   withdraw item (either arg order works). Accepts a plain id OR an
+                       "id#hash" key from `vault contents` (enchanted/trimmed stacks -- withdrawn
+                       with components INTACT). A plain id with only one special variant in the
+                       bank auto-matches it; several variants -> the chat lists the keys to pick
   vault deposit rows   deposit ALL main inventory rows -- the HOTBAR IS THE KEEP-LIST (kept)
   vault deposit all    deposit main rows AND hotbar
   vault deposit <item> deposit every player stack whose id contains <item>
@@ -88,7 +104,8 @@ AGENT (autonomous action layer -- queue an action; it runs in-world and reports 
   agent hold <0-8>                    queue selecting a hotbar slot
   agent equip <item>                  queue moving a named item to hand (needs an open container)
   agent use | agent place             queue use/place on the crosshair block
-  agent attack [nearest|<id>|crosshair] [crit|normal]   queue an attack: auto-approaches then hits (default nearest, crit)
+  agent attack [nearest|<id>|crosshair] [crit|normal|ranged]   queue an attack (see COMBAT above)
+  agent sleep                         queue the sleep-in-nearby-bed composite (see MOVE above)
   agent follow <player> [dist]        lock onto a player and follow until stop (default dist 3)
   agent shield [ticks]                queue raising the shield (default 40t = 2s; alias: agent block)
   agent drop [all]                    queue dropping 1 (or the whole stack) of the HELD item on the ground

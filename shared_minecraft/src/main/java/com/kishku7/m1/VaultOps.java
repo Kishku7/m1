@@ -136,7 +136,7 @@ public final class VaultOps {
             vault mark [x y z]     remember the vault block position (default: crosshair target)
             vault status           is a vault open; entry/trinket counts; marked pos
             vault contents [f]     list vault contents (filter f), record to storage memory
-            vault withdraw <n> <item>   withdraw n of item (via /bank withdraw; member+)
+            vault withdraw <item> [n]   withdraw item (plain id or id#hash key; either arg order)
             vault deposit rows     deposit ALL main inventory rows (hotbar = keep-list, untouched)
             vault deposit all      deposit main rows AND hotbar
             vault deposit <item>   deposit every player stack whose id contains <item>
@@ -264,23 +264,45 @@ public final class VaultOps {
     }
 
     private static String withdraw(Minecraft mc, String args) {
-        String[] t = args.split("\\s+", 2);
-        if (t.length < 2) {
-            return "ERR usage: vault withdraw <count> <item>";
+        // Accept BOTH argument orders (the 702b confusion): "withdraw <count> <item>" and
+        // "withdraw <item> [count]". Item may be a plain id or an "id#hash" special key
+        // (component-bearing stack -- BV withdraws it with components intact as of 2026-07-02).
+        String[] t = args.trim().split("\\s+");
+        if (t.length == 0 || t[0].isEmpty()) {
+            return "ERR usage: vault withdraw <item> [count]  (or <count> <item>)";
         }
-        int n;
-        try {
+        int n = 1;
+        String item;
+        if (t.length == 1) {
+            item = t[0];
+        } else if (isInt(t[0])) {
             n = Integer.parseInt(t[0]);
-        } catch (NumberFormatException e) {
-            return "ERR usage: vault withdraw <count> <item>";
+            item = t[1];
+        } else if (isInt(t[t.length - 1])) {
+            n = Integer.parseInt(t[t.length - 1]);
+            item = t[0];
+        } else {
+            item = t[0];
+        }
+        if (n < 1) {
+            return "ERR count must be >= 1";
         }
         if (mc.getConnection() == null) {
             return "vault withdraw: no connection";
         }
         // /bank withdraw is BV's own player-facing command; result arrives as a chat line and
         // the items land directly in the inventory (or drop if full).
-        mc.getConnection().sendCommand("bank withdraw " + n + " " + t[1].trim());
-        return "OK sent /bank withdraw " + n + " " + t[1].trim() + " (check 'inv'; chat confirms)";
+        mc.getConnection().sendCommand("bank withdraw " + n + " " + item);
+        return "OK sent /bank withdraw " + n + " " + item + " (check 'inv'; chat confirms)";
+    }
+
+    private static boolean isInt(String s) {
+        try {
+            Integer.parseInt(s);
+            return true;
+        } catch (NumberFormatException e) {
+            return false;
+        }
     }
 
     private static String deposit(Minecraft mc, String args) {
