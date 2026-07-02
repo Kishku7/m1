@@ -111,6 +111,7 @@ public final class ScreenOps {
             case "goto":      return gotoCmd(mc, rest);
             case "stop":      return stopMove();
             case "nav":       return navCmd(rest);
+            case "sleep":     return AgentRuntime.command("sleep");
             case "mine":      return mine(mc, rest);
             case "worlds":    return worlds(mc);
             case "joinworld":
@@ -226,9 +227,35 @@ public final class ScreenOps {
         StringBuilder b = new StringBuilder();
         b.append("menu: ").append(m.getClass().getSimpleName()).append("  slots: ").append(m.slots.size()).append("\n");
         for (Slot slot : m.slots) {
-            b.append("  [").append(slot.index).append("] ").append(itemStr(slot.getItem())).append("\n");
+            b.append("  [").append(slot.index).append("] ")
+                    .append(slotRole(p, slot)).append("  ")
+                    .append(itemStr(slot.getItem())).append("\n");
         }
         return trim(b);
+    }
+
+    /**
+     * Human/AI-readable ROLE of a slot (702b fix: the AI parked diamond tools in the 2x2 craft
+     * grid because slot ids carried no meaning). Player-inventory slots label as hotbar/main/
+     * armor/offhand; crafting grids and results are called out as NOT-storage.
+     */
+    private static String slotRole(LocalPlayer p, Slot slot) {
+        if (slot.container == p.getInventory()) {
+            int cs = slot.getContainerSlot();
+            if (cs >= 0 && cs <= 8) return "hotbar-" + cs;
+            if (cs >= 9 && cs <= 35) return "main";
+            if (cs == 36) return "armor:feet";
+            if (cs == 37) return "armor:legs";
+            if (cs == 38) return "armor:chest";
+            if (cs == 39) return "armor:head";
+            if (cs == 40) return "offhand";
+            return "inv";
+        }
+        String cn = slot.container.getClass().getSimpleName();
+        if (cn.contains("Result")) return "CRAFT-RESULT(no storage)";
+        if (cn.contains("Crafting")) return "CRAFT-GRID(no storage!)";
+        if (cn.contains("Equipment") || cn.contains("Armor")) return "armor";
+        return "container";
     }
 
     // ---------- world perception ----------
@@ -541,6 +568,8 @@ public final class ScreenOps {
         if (p == null) return "face: not in world";
         String[] t = rest.trim().split("\\s+");
         if (t.length == 0 || t[0].isEmpty()) return "ERR usage: face <dir|yaw [pitch]|x y z>";
+        if (t[0].equalsIgnoreCase("up"))   { p.setXRot(-90f); return "OK facing up (pitch -90)"; }
+        if (t[0].equalsIgnoreCase("down")) { p.setXRot(90f);  return "OK facing down (pitch 90)"; }
         Float cy = compassYaw(t[0]);
         if (cy != null) { p.setYRot(cy); return "OK facing " + t[0] + " (yaw " + cy + ")"; }
         try {

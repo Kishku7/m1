@@ -175,6 +175,9 @@ public final class AgentRuntime {
                 }
                 QUEUE.append(new SlotAction(args));
                 return "queued slot " + args;
+            case "sleep":
+                QUEUE.append(new SleepAction());
+                return "queued sleep (find a usable bed, walk beside it, sleep in it)";
             case "openinv":
                 QUEUE.append(new InvScreenAction(true));
                 return "queued openinv";
@@ -196,8 +199,8 @@ public final class AgentRuntime {
                 return "agent: unknown subcommand '" + sub + "' (try: status | ping | "
                         + "goto <x y z> | moveto <x z> | patrol <x z ...> | look <x y z|yaw [pitch]> | "
                         + "mine <x y z> | hold <0-8> | equip <item> | use | drop [all] | jump | "
-                        + "sneak [on|off] | sprint [on|off] | slot <id> [btn] [mode] | openinv | close | "
-                        + "attack [nearest|<id>|crosshair] [crit|normal] | follow <player> [dist] | "
+                        + "sneak [on|off] | sprint [on|off] | sleep | slot <id> [btn] [mode] | openinv | close | "
+                        + "attack [nearest|<id>|crosshair] [crit|normal|ranged] | follow <player> [dist] | "
                         + "shield [ticks] | defend [on|off|status|auto|<player>] | vault <sub> | vault close | craft <item> [count] | stop)";
         }
     }
@@ -324,17 +327,17 @@ public final class AgentRuntime {
         return "queued " + which + " " + (on ? "on" : "off");
     }
 
-    /** {@code attack [nearest|<id>|crosshair] [crit|normal|sweep]}. Defaults: nearest, crit. */
+    /** {@code attack [nearest|<id>|crosshair] [crit|normal|sweep|ranged]}. Defaults: nearest, crit. */
     private static String enqueueAttack(String args) {
         String spec = "nearest";
-        boolean crit = true;
+        String mode = "crit";
         if (!args.isEmpty()) {
             for (String tok : args.split("\\s+")) {
                 String low = tok.toLowerCase(Locale.ROOT);
-                if (low.equals("crit")) {
-                    crit = true;
+                if (low.equals("crit") || low.equals("ranged")) {
+                    mode = low;
                 } else if (low.equals("normal") || low.equals("nocrit") || low.equals("sweep")) {
-                    crit = false;
+                    mode = "normal";
                 } else {
                     spec = tok;
                 }
@@ -343,8 +346,8 @@ public final class AgentRuntime {
         if (spec.equalsIgnoreCase("crosshair")) {
             spec = "";
         }
-        QUEUE.append(new AttackAction(spec, crit));
-        return "queued attack (target=" + (spec.isEmpty() ? "crosshair" : spec) + ", crit=" + crit + ")";
+        QUEUE.append(new AttackAction(spec, mode));
+        return "queued attack (target=" + (spec.isEmpty() ? "crosshair" : spec) + ", mode=" + mode + ")";
     }
 
     /** {@code follow <player> [dist]} (default dist 3). Runs until 'stop'. */
