@@ -389,6 +389,45 @@ slot 1 0 quick     ->   OK slot 1 btn 0 QUICK_MOVE
 > ingredients are placed and only moves out with an empty hand -- the `craft` command handles that
 > timing for you, so just poll `inv`.
 
+### Agent layer, combat, storage & generic crafting (0.5.x)
+
+The `agent` verb queues **autonomous, tick-stepped actions** on M1's agent engine: each subcommand
+returns `queued ...` immediately, runs over later in-world ticks, and reports back asynchronously as
+`[agent] <seq> <CLASS>: <text>` lines on subsequent replies. Poll `agent status`.
+
+| Command | What it does |
+|---|---|
+| `agent status` / `agent ping` | Engine status / end-to-end probe. |
+| `agent goto <x y z>` / `agent moveto <x z>` / `agent patrol <x z ...>` | Queued pathfinding movement. |
+| `agent look <x y z\|yaw [pitch]>` / `agent mine <x y z>` / `agent use` / `agent place` | Aim, break, use/place. |
+| `agent hold <0-8>` / `agent equip <item>` / `agent slot <id> [btn] [mode]` | Inventory verbs as plan steps. |
+| `agent drop [all]` | Drop 1 (or the stack) of the held item on the ground. |
+| `agent jump` / `agent sneak [on\|off]` / `agent sprint [on\|off]` | Movement-key leaves (KeyMapping-driven). |
+| `agent openinv` / `agent close` | Open the 2x2 inventory / close the screen, as plan steps. |
+| `agent attack [nearest\|<id>\|crosshair] [crit\|normal]` | Engage a mob: auto-approach + timed jump-crits. |
+| `agent follow <player> [dist]` | Lock onto a player and keep pace (sprint catch-up, portals) until `stop`. |
+| `defend [on\|off\|status\|auto\|<player>]` | Auto-defense reflex: if you or the protectee is hit, the mod engages the attacker, then resumes the previous plan. |
+| `agent shield [ticks]` | Raise/hold a shield. |
+| `agent stop` / `stop` | Clear the plan, stop moving/mining, release sneak/sprint. |
+
+**Bank Vault storage** (requires the [Bank Vault](https://modrinth.com/mod/bank-vault) mod, 26.x):
+`vault mark [x y z]` (remember the vault block), `vault status`, `vault contents [filter]` (reads the
+open vault and records a **per-world storage memory**), `vault withdraw <n> <item>`,
+`vault deposit rows|all|<item>` (`rows` never touches the hotbar -- the hotbar is the keep-list),
+`vault find <item>` / `vault memory` (query what was last seen where), and **`agent vault close`** --
+a guarded close that reopens the marked vault, verifies worn trinkets against the session snapshot,
+and re-equips anything the known Trinkets eject-on-close bug knocked into the inventory.
+
+**Generic crafting** (26.x): `cancraft <item>` answers "can I make this right now?" from the live
+recipe book -- YES with the recipe, or NO with per-ingredient HAVE/NEED lines annotated
+`(in vault: <id>)` and `(craftable)`. `agent craft <item> [count]` crafts ANY recipe-book recipe:
+open the 2x2 or a crafting table, and it picks a satisfiable recipe, auto-fills the grid, collects
+the result, and **auto-withdraws missing ingredients from your Bank Vault** when storage memory
+knows they are there. (Furnace/smithing/stonecutter and auto-crafting of intermediates are planned.)
+
+The AI_Brain command card (`m1_ai_brain/10_command_card.md`, shipped in the jar) is the always-current
+syntax reference for everything above.
+
 ### Gear / auto armor-upgrade
 
 | Command | What it does |
