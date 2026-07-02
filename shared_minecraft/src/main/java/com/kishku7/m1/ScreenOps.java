@@ -75,6 +75,8 @@ public final class ScreenOps {
         "  autoupgrade on|off   toggle auto armor upgrading (default on)\n" +
         "  attack [target] [crit|normal]   engage a mob (nearest|<id>|crosshair); approaches then hits\n" +
         "  follow <player> [dist]          follow a player; 'stop' to end\n" +
+        "  defend [on|off|status|auto|<p>] auto-defense reflex: if the master or I get attacked,\n" +
+        "                                  engage the attacker, then resume (leashed to 16m)\n" +
         "  agent <sub>          queued action layer: status|ping|goto|moveto|patrol|look|mine|hold|equip|use|attack|follow|shield|stop\n" +
         "  help                 this list\n" +
         "AI agents: type START for the AI_Brain index path (config/M1_AI_Brain/<ver>/00_Index.md); full command syntax is in 10_command_card.md.";
@@ -124,6 +126,7 @@ public final class ScreenOps {
             case "upgrades":  return upgrades();
             case "attack":    return AgentRuntime.command("attack " + rest);
             case "follow":    return AgentRuntime.command("follow " + rest);
+            case "defend":    return AgentRuntime.command("defend " + rest);
             case "agent":     return AgentRuntime.command(rest);
             default:          return "ERR unknown command: " + cmd + " (try help)";
         }

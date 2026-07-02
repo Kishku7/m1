@@ -42,7 +42,7 @@ public final class AgentRuntime {
     private static final Budgeter BUDGETER = new Budgeter(2.0); // ~2 ms/tick discretionary budget
     private static final WorkerPool WORKERS = new WorkerPool(2);
     private static final ServiceLocator SERVICES = new McServices();
-    private static final InterruptSource INTERRUPTS = ctx -> Collections.emptyList(); // sensors: later
+    private static final InterruptSource INTERRUPTS = new ThreatWatch(); // reflex auto-defense (2026-07-01)
     private static final AgentLoop LOOP = new AgentLoop(QUEUE, REPORTS, BUDGETER, INTERRUPTS);
 
     private AgentRuntime() {
@@ -132,6 +132,8 @@ public final class AgentRuntime {
             case "shield":
             case "block":
                 return enqueueShield(args);
+            case "defend":
+                return ThreatWatch.command(args);
             case "stop":
                 QUEUE.replace(Collections.<MinecraftAction>emptyList());
                 MoveControl.stop();
@@ -142,7 +144,7 @@ public final class AgentRuntime {
                         + "goto <x y z> | moveto <x z> | patrol <x z ...> | look <x y z|yaw [pitch]> | "
                         + "mine <x y z> | hold <0-8> | equip <item> | use | "
                         + "attack [nearest|<id>|crosshair] [crit|normal] | follow <player> [dist] | "
-                        + "shield [ticks] | stop)";
+                        + "shield [ticks] | defend [on|off|status|auto|<player>] | stop)";
         }
     }
 

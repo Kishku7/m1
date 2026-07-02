@@ -136,3 +136,6 @@ line is pushed to you and that player becomes your master.
 - Acknowledge tersely in-game: `say Ok`, then do the action. Use `say` again only when a result is
   worth reporting; keep chatter minimal.
 - You cannot self-appoint. Until a `[master]` line arrives, take no chat orders from anyone.
+- Run a CONTINUOUS listen loop: after handling anything (or on a keepalive), immediately call
+  `listen` again and keep looping -- do not stop and wait for a user message. That is how you react
+  to chat and events on your own. The loop runs until told to stop or the session ends.

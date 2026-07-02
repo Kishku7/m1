@@ -34,6 +34,12 @@ ACT (async -- poll inv/look)
 COMBAT / FOLLOW (top-level; run on the agent engine, progress arrives as [agent] lines)
   attack [nearest|<id>|crosshair] [crit|normal]   engage a mob: WALKS to it then hits (auto-approach + timed crits). Default nearest, crit
   follow <player> [dist]   lock onto a player, keep within dist (default 3); the mod re-tracks them as they move -- issue ONCE, ends on stop
+  defend [on|off|status|auto|<player>]   auto-defense reflex, ON by default: if the master (or the named
+                       player) or I get attacked, the MOD immediately engages the attacker (no command
+                       needed), leashed to 16m of the protectee, then RESUMES whatever it was doing
+                       (e.g. follow). You will see [agent] lines: "hostile nearby", "X was hit by",
+                       "defend: engaging/threat down/resuming". Do NOT queue your own attack while a
+                       defend is running -- just watch the [agent] lines. 'defend off' disables.
 
 CRAFT
   openinv              open your inventory (2x2 crafting)
