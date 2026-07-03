@@ -7,8 +7,7 @@ operate Minecraft entirely by typing. No GUI mouse/keyboard is required and noth
 "looked at" on screen; the window is there purely for observability.
 
 Loaders / versions: Fabric + NeoForge, MC 26.x (this `main` branch is the entry point; the unified
-source tree (MC 1.20 - 26.x, Fabric + NeoForge) lives on branch `minecraft-1.20-26.3`). Internal
-tooling, all rights reserved.
+source tree (MC 1.20 - 26.x, Fabric + NeoForge) lives on branch `minecraft-1.20-26.3`). Current: **v0.9.x**.
 
 > **New here? Read [the AI_Brain (`00_Index.md`)](https://github.com/Kishku7/m1/tree/minecraft-1.20-26.3/shared_common/src/main/resources/m1_ai_brain) first.** That is the file an AI agent
 > is expected to load before a play session. This README is the reference manual behind it.
@@ -45,7 +44,63 @@ one Minecraft version -- just plain text into the real game.
 
 ---
 
-## 2. Connecting
+## 2. Quick start -- drive Minecraft from Claude Desktop
+
+Three pieces: **(1)** the M1 mod in your game, **(2)** the **MCP-Minecraft** bridge (in this repo
+under [`mcp-minecraft/`](https://github.com/Kishku7/m1/tree/minecraft-1.20-26.3/mcp-minecraft)),
+**(3)** Claude Desktop (or any MCP client) pointed at the bridge.
+
+**1. Install the mod.** Get the jar for your loader + MC version (a release, or build it -- see the
+[source branch](https://github.com/Kishku7/m1/tree/minecraft-1.20-26.3)). Drop it in your instance's
+`mods/` folder with the matching loader (Fabric Loader + Fabric API, or NeoForge). Launch and load a
+world. M1 is **client-side only** -- no server mod needed. On load it opens its socket on
+`127.0.0.1:26000` and, first run, extracts the AI_Brain docs (see section 3).
+
+**2. Run the MCP-Minecraft bridge.** Clone this repo and build the Node bridge:
+
+```bash
+git clone https://github.com/Kishku7/m1.git
+cd m1/mcp-minecraft
+npm install && npm run build
+```
+
+Configure it for M1 (copy `.env.example` to `.env`):
+
+```
+TARGET_PORT=26000
+REPLY_SENTINEL=<<END
+CONNECT_INIT=RAW ON
+DISCARD_CONNECT_BANNER=true
+```
+
+Start it with `npm start`. It auto-connects when the game socket opens and reconnects if the game
+restarts, so start order does not matter. It prints its endpoint (default `http://localhost:26001/mcp`)
+and a `/health` URL. Full options + running as a service: [`mcp-minecraft/README.md`](https://github.com/Kishku7/m1/tree/minecraft-1.20-26.3/mcp-minecraft).
+
+**3. Add it to Claude Desktop.** Edit `claude_desktop_config.json` (Settings -> Developer -> Edit
+Config). The bridge serves Streamable HTTP, so bridge it with `mcp-remote`:
+
+```json
+{
+  "mcpServers": {
+    "mcp-minecraft": {
+      "command": "npx",
+      "args": ["-y", "mcp-remote", "http://localhost:26001/mcp"]
+    }
+  }
+}
+```
+
+Restart Claude Desktop. You get three tools -- `send_command`, `listen` (streams `[chat]`/`[alert]`/
+`[agent]` events), and `connection_status`. Ask Claude to send `where`; if you are in a world it
+reports your position, and you are driving Minecraft from chat.
+
+> Bridge on a different machine than Claude Desktop? Set `BIND_HOST=0.0.0.0` and use that machine's
+> LAN address in the URL. There is **no authentication** -- trusted network only.
+
+---
+
+## 3. Connecting
 
 When the modded client starts, M1 opens a TCP server on **`127.0.0.1:26000`** on the machine
 running the client. It binds loopback only -- there is **no new inbound network surface**; only
@@ -128,7 +183,7 @@ loopback-only by design.
 
 ---
 
-## 3. The AI_Brain
+## 4. The AI_Brain
 
 [the AI_Brain (`00_Index.md`)](https://github.com/Kishku7/m1/tree/minecraft-1.20-26.3/shared_common/src/main/resources/m1_ai_brain) (in this branch) is the **standing brief an AI reads in
 before a session.** It is deliberately on `main` so it travels with every branch and version, and
@@ -138,7 +193,7 @@ machine's launch/control specifics (those stay in internal infra docs).
 It covers:
 
 * **Role and scope** -- the agent's only job is to play through M1; it ignores unrelated tooling.
-* **Connecting** -- the socket, the protocol, and the read-until-`<<END` discipline above.
+* **Connecting** -- the socket, the protocol, and the read-until-`<<END` discipline in section 3.
 * **Operating discipline** -- the habits that make autonomous play work, and that the command
   outputs are designed to support:
   * *Look before you move* -- run `scan` + `where` and actually read them before acting.
@@ -152,7 +207,7 @@ It covers:
   * *Use what you know* -- apply given context (e.g. "trees are to the southeast") to choose a
     direction.
 * **The command quick-reference**, plus **how to read a `scan`** and **how to read the two slot
-  numbering systems** -- the parts an agent gets wrong without guidance (detailed in section 4).
+  numbering systems** -- the parts an agent gets wrong without guidance (detailed in section 5).
 * **Recording** -- how/when to append to a session log (on request only).
 
 The interpretive glue matters as much as the raw commands: section 3 marks, for the non-obvious
@@ -160,7 +215,7 @@ outputs, **how the instruction file tells an agent to read them.**
 
 ---
 
-## 4. Command reference
+## 5. Command reference
 
 Send any verb on its own line. `help` prints the live list. Aliases are shown in parentheses.
 Bracketed `[...]` args are optional. Coordinates are absolute world coordinates.
@@ -325,9 +380,13 @@ cmd time set 6000   ->   OK sent: /time set 6000
 | `face <dir\|yaw [pitch]\|x y z>` | Set facing: a compass word, a raw yaw (+optional pitch), or look-at a coordinate. |
 | `stop` | Stop moving (and stop mining). |
 
-All three move verbs compute a **real vanilla A\* path** (the same navigation villagers use, via an
-un-ticked proxy mob) and follow it waypoint by waypoint -- routing **around** walls and
-**stepping/jumping up** automatically. You do not time key-holds and you do not jump yourself.
+All three move verbs run **M1's own pathfinder** (`nav own`, the default; `nav vanilla` falls back
+to the borrowed vanilla A*). It is built for a PLAYER body, not a mob: it **opens fence gates and
+doors itself** mid-route, walks over **rails**, **walks up stairs** (rather than jumping), routes
+**around walls**, and reaches **any distance** by planning in 16-block segments (a destination
+millions of blocks away is fine -- it only ever computes ~18 blocks ahead). Name a solid block as
+the target and it retargets to a standable cell beside it. Progress + honest failure reasons arrive
+as `[agent] nav:` lines. You do not time key-holds and you do not jump yourself.
 
 ```
 move se 8     ->   OK move se -> (126.3,-2.3) via 9 waypoints. poll 'where'.
@@ -370,7 +429,7 @@ mine            ->   mine: not looking at a block (face it first, or 'mine x y z
 | `openinv` | Open the inventory screen (the 2x2 crafting grid). |
 | `close` | Close the open screen. |
 | `hold <0-8>` | Select a hotbar slot (0-based; `hold 0` = hotbar slot 1). |
-| `equip <item>` | Move an item (id substring) into your hand. Requires an open container. |
+| `equip <item>` \| `equip all` | Auto-route by NAME or id: armor -> its slot, shield -> off-hand, backpack -> worn, else to hand. `equip all` kits you out in one command. |
 | `place` | Use/place the held item on the block you are looking at (places a block, opens a table, presses a button, uses a bed, etc.). |
 | `craft planks\|sticks\|table\|axe` | Craft an item (asynchronous; poll `inv`). |
 | `slot <id> [btn] [pickup\|quick\|swap]` | Low-level raw slot click by the **open menu's** index. |
@@ -389,7 +448,7 @@ slot 1 0 quick     ->   OK slot 1 btn 0 QUICK_MOVE
 > ingredients are placed and only moves out with an empty hand -- the `craft` command handles that
 > timing for you, so just poll `inv`.
 
-### Agent layer, combat, storage & generic crafting (0.5.x)
+### Agent layer, combat, storage, inventory verbs & composites (0.6-0.9)
 
 The `agent` verb queues **autonomous, tick-stepped actions** on M1's agent engine: each subcommand
 returns `queued ...` immediately, runs over later in-world ticks, and reports back asynchronously as
@@ -404,7 +463,7 @@ returns `queued ...` immediately, runs over later in-world ticks, and reports ba
 | `agent drop [all]` | Drop 1 (or the stack) of the held item on the ground. |
 | `agent jump` / `agent sneak [on\|off]` / `agent sprint [on\|off]` | Movement-key leaves (KeyMapping-driven). |
 | `agent openinv` / `agent close` | Open the 2x2 inventory / close the screen, as plan steps. |
-| `agent attack [nearest\|<id>\|crosshair] [crit\|normal]` | Engage a mob: auto-approach + timed jump-crits. |
+| `attack [nearest\|<id>\|crosshair] [crit\|normal\|ranged]` | Universal combat: **auto-equips the best weapon**, walks in, times crits. `ranged` draws a bow (ballistic aim); a held spear stabs at 2-4.5 blocks. Per-enemy tactics built in (creeper hit-and-back, skeleton shield-advance, flyers prefer the bow). |
 | `agent follow <player> [dist]` | Lock onto a player and keep pace (sprint catch-up, portals) until `stop`. |
 | `defend [on\|off\|status\|auto\|<player>]` | Auto-defense reflex: if you or the protectee is hit, the mod engages the attacker, then resumes the previous plan. |
 | `agent shield [ticks]` | Raise/hold a shield. |
@@ -424,6 +483,30 @@ recipe book -- YES with the recipe, or NO with per-ingredient HAVE/NEED lines an
 open the 2x2 or a crafting table, and it picks a satisfiable recipe, auto-fills the grid, collects
 the result, and **auto-withdraws missing ingredients from your Bank Vault** when storage memory
 knows they are there. (Furnace/smithing/stonecutter and auto-crafting of intermediates are planned.)
+
+**SAFE-MOB doctrine.** `attack nearest` never pre-emptively targets a neutral mob (zombified
+piglins, endermen, wolves, bees, iron golems, ...) -- self-defense only, and the mod will not defend
+you/the master against one (joining angers the group). You may still target one explicitly.
+
+**High-level inventory verbs (names, not indices).** These take item names and human slot words and
+do the slot mechanics for you (auto-opening the inventory if a container is up): `equip all` (wear
+best armor + shield to off-hand + best weapon), `equip <item>` (auto-routed: armor -> its slot,
+shield -> off-hand, backpack -> worn, else hand), `organize hotbar` (standard layout: sword/pickaxe/
+axe/shovel/hoe/food), `takeall` (empty an open container), `stash junk` (junk off the hotbar),
+`moveitem <item> to <hb1-9\|offhand\|head\|chest\|legs\|feet>`.
+
+**Composites.** `sleep` -- find a bed (or deploy a Travelers-Backpack sleeping bag), walk beside it,
+sleep, with a concrete reason on failure. `recover` -- clear a death grave-site (name sign + chest +
+armor stand) in one command: break the sign, empty the chest, break the stand, collect drops, then
+`equip all` + `organize hotbar`.
+
+**Travelers Backpack** (requires the mod): `pack on` wears a backpack from your inventory at the code
+level (no GUI); `pack contents [f]` / `pack put <item\|all\|junk>` / `pack take <item> [n]` read and
+batch-move its storage.
+
+**Automatic screen + death reflexes.** Right-clicking a sign opens its edit dialog -- M1
+auto-dismisses it (mine/attack a sign to remove it). On death you auto-respawn (the death spot is
+reported). `where` warns `screen OPEN: ...` when a menu is holding your movement -- send `close`.
 
 The AI_Brain command card (`m1_ai_brain/10_command_card.md`, shipped in the jar) is the always-current
 syntax reference for everything above.
@@ -471,7 +554,7 @@ screenshot scene1 -> OK screenshot scene1.png (148213 bytes) path=<gameDir>/scre
 
 ---
 
-## 5. Slot numbering
+## 6. Slot numbering
 
 There are **two** numbering schemes and mixing them up is the most common slot bug.
 
@@ -499,7 +582,7 @@ craft grids exist only while a screen is open, so they appear in `slots`, never 
 
 ---
 
-## 6. Operating notes & safety
+## 7. Operating notes & safety
 
 * **Client-only.** M1 never runs server-side logic. `cmd` is just sending a normal client-to-server
   command, exactly like a player typing `/time`.
@@ -513,7 +596,7 @@ craft grids exist only while a screen is open, so they appear in `slots`, never 
 
 ---
 
-## 7. Repo layout
+## 8. Repo layout
 
 `main` is the entry point (this README). The unified buildable source -- one tree spanning MC
 1.20 - 26.x for Fabric + NeoForge -- lives on branch
@@ -522,6 +605,7 @@ craft grids exist only while a screen is open, so they appear in `slots`, never 
 * `shared_minecraft/` -- the MC-coupled observe+actuate engine (single source of truth), `srcDir`'d
   into the per-loader `Fabric*/` and `NeoForge*/` cells.
 * `shared_common/` -- MC-agnostic code + resources, including the **AI_Brain** operating brief that
-  ships inside every jar and extracts to `config/M1_AI_Brain/<version>/` at runtime:
+  ships inside every jar and extracts, on first run, to `config/M1_AI_Brain/<MAJOR.MINOR>/`
+  (relative to the game/instance dir -- e.g. `config/M1_AI_Brain/0.9/`), create-once per minor:
   https://github.com/Kishku7/m1/tree/minecraft-1.20-26.3/shared_common/src/main/resources/m1_ai_brain
 * Build with `build-all-fabric.ps1` / `build-all-neoforge.ps1`; jars land in `dist/`.
