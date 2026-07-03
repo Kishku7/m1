@@ -68,6 +68,7 @@ public final class ScreenOps {
         "  craft planks|sticks|table|axe   craft items (axe needs the crafting table open=3x3)\n" +
         "  hold <0-8> / equip <item|all>   select hotbar slot / auto-equip by name (armor->slot, shield->offhand) or ALL\n" +
         "  organize hotbar / takeall / stash junk / moveitem <item> to <hb1-9|offhand|head|chest|legs|feet>\n" +
+        "  pack on|contents [f]|put <item|all|junk>|take <item> [n]   wear + use a Travelers Backpack\n" +
         "  place                use/place held item on the block you are looking at\n" +
         "  slot <id> [btn] [pickup|quick|swap]   raw slot click\n" +
         "  openpack             open your worn Travelers Backpack (triggers its keybind)\n" +
@@ -128,6 +129,18 @@ public final class ScreenOps {
             case "takeall":   return InventoryOps.takeAll(mc);
             case "stash":     return InventoryOps.stashJunk(mc);      // "stash junk"
             case "moveitem":  return InventoryOps.moveItem(mc, rest);
+            case "pack": {
+                String[] pt = rest.trim().split("\\s+", 2);
+                String sub = pt.length > 0 ? pt[0].toLowerCase(java.util.Locale.ROOT) : "";
+                String pa = pt.length > 1 ? pt[1] : "";
+                switch (sub) {
+                    case "on":       return BackpackOps.equip(mc);
+                    case "contents": return BackpackOps.contents(mc, pa);
+                    case "put":      return BackpackOps.put(mc, pa);
+                    case "take":     return BackpackOps.take(mc, pa);
+                    default: return "ERR usage: pack on|contents [f]|put <item|all|junk>|take <item> [n]";
+                }
+            }
             case "slot":      return Crafting.slotCmd(mc, rest);
             case "place":
             case "use":

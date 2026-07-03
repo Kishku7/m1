@@ -33,14 +33,16 @@ public final class SleepAction implements MinecraftAction {
     private static final int VERIFY_TICKS = 15;
     private static final int MAX_USE_TRIES = 3;
 
-    private enum St { FIND, NAVIGATE, FACE, VERIFY }
+    private enum St { FIND, NAVIGATE, FACE, VERIFY, DEPLOY_BAG }
 
     private St st = St.FIND;
-    private BlockPos bed;        // the bed block we will click
+    private BlockPos bed;        // the bed (or sleeping-bag) block we will click
     private BlockPos approach;   // the cell we stand in
     private int faceTicks;
     private int verifyTicks;
     private int useTries;
+    private int deployTicks;
+    private boolean triedBag;
 
     @Override
     public String name() {
@@ -65,7 +67,17 @@ public final class SleepAction implements MinecraftAction {
                 }
                 bed = findBed(lvl, p.blockPosition());
                 if (bed == null) {
-                    ctx.report(ReportClass.STATUS, "sleep: no usable bed within " + SCAN_R + " blocks");
+                    // No natural bed. If a Travelers Backpack sleeping bag is available (loose item
+                    // or attached to the worn/carried backpack), deploy it and sleep in place.
+                    if (!triedBag && BagSleep.available(mc)) {
+                        triedBag = true;
+                        st = St.DEPLOY_BAG;
+                        deployTicks = 0;
+                        ctx.report(ReportClass.STATUS, "sleep: no bed nearby -- deploying a sleeping bag");
+                        return StepResult.RUNNING;
+                    }
+                    ctx.report(ReportClass.STATUS, "sleep: no usable bed within " + SCAN_R
+                            + " blocks and no sleeping bag available");
                     return StepResult.FAILED;
                 }
                 approach = findApproach(lvl, bed);
@@ -139,6 +151,29 @@ public final class SleepAction implements MinecraftAction {
                     ctx.report(ReportClass.STATUS, "sleep: bed use had no effect (" + why + ")");
                     return StepResult.FAILED;
                 }
+                return StepResult.RUNNING;
+            }
+            case DEPLOY_BAG: {
+                if (deployTicks++ == 0) {
+                    BagSleep.deploy(mc); // select + aim-down + use the bag item to place the block
+                    return StepResult.RUNNING;
+                }
+                if (deployTicks < 10) {
+                    return StepResult.RUNNING; // let the block placement settle
+                }
+                bed = findBed(lvl, p.blockPosition()); // the placed sleeping-bag block IS a BedBlock
+                if (bed == null) {
+                    ctx.report(ReportClass.STATUS, "sleep: have a sleeping bag but could not deploy it here"
+                            + " (Travelers Backpack bag placement -- needs 2 clear cells on flat ground;"
+                            + " if it keeps failing, place a bed instead)");
+                    return StepResult.FAILED;
+                }
+                approach = findApproach(lvl, bed);
+                if (approach == null) {
+                    approach = p.blockPosition(); // stand where we are; the bag is at our feet
+                }
+                st = St.FACE;
+                faceTicks = 0;
                 return StepResult.RUNNING;
             }
             default:

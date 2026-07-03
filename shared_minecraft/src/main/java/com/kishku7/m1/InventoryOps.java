@@ -116,6 +116,9 @@ final class InventoryOps {
     // ---------- equip <name> (auto-routing) ----------
 
     static String equipNamed(Minecraft mc, String name) {
+        if (name.trim().toLowerCase(Locale.ROOT).contains("backpack")) {
+            return BackpackOps.equip(mc); // backpacks wear via the code-level TB path, not a slot click
+        }
         String prep = ensurePlayerInv(mc);
         if (prep != null) {
             return prep;

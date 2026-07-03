@@ -1,5 +1,5 @@
 # Command card (exact syntax cheat-sheet)
-<!-- Valid as of: M1 v0.8.0 | MC 1.20 - 26.3 | updated 2026-07-02 (inventory verbs, recover, grave/death reflexes) -->
+<!-- Valid as of: M1 v0.9.0 | MC 1.20 - 26.3 | updated 2026-07-02 (Travelers Backpack: wear + batch store; sleeping-bag detect) -->
 **Covers:** every M1 command with syntax + a one-line note, so you can reload just the syntax cheaply.
 Concepts behind these live in `01_drive_m1.md`.
 
@@ -42,6 +42,10 @@ ACT (async -- poll inv/look)
   takeall              empty the OPEN container (chest/vault) into your inventory in one shot
   stash junk           move junk (rotten flesh/bones/spider eyes) off the hotbar
   moveitem <item> to <hb1..hb9|offhand|head|chest|legs|feet>   named move using HUMAN slot words
+  pack on              WEAR a Travelers Backpack from your inventory (code-level equip; no GUI)
+  pack contents [f]    list the worn backpack contents (filter f)
+  pack put <item|all|junk>   stash matching inventory items INTO the backpack (batch, quick)
+  pack take <item> [n]       pull items OUT of the backpack into your inventory (batch)
   recover              GRAVE-SITE recovery composite: break the name sign, empty the chest, break
                        the armor stand, collect drops, then equip all + organize hotbar. Run it
                        when standing AT a death grave (chest + armor-stand + sign). One command
