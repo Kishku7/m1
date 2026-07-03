@@ -1,5 +1,5 @@
 # Command card (exact syntax cheat-sheet)
-<!-- Valid as of: M1 v0.9.1 | MC 1.20 - 26.3 | updated 2026-07-02 (Travelers Backpack: wear + batch store; sleeping-bag detect) -->
+<!-- Valid as of: M1 v0.10.0 | MC 1.20 - 26.3 | updated 2026-07-03 (Bank Vault 1.4.0 api verbs: snapshot/list/count/find + api withdraw/deposit) -->
 **Covers:** every M1 command with syntax + a one-line note, so you can reload just the syntax cheaply.
 Concepts behind these live in `01_drive_m1.md`.
 
@@ -74,22 +74,31 @@ CRAFT
                        HAVE/NEED lines with "(in vault: id)" and "(craftable)" annotations
   close                close the open menu
 
-STORAGE (Bank Vault -- 26.x, needs the bank-vault mod; vault = your player-bound bank)
+STORAGE (Bank Vault -- vault = your player-bound bank; needs the bank-vault mod.
+         BV 1.4.0+ api verbs return ONE machine-readable line: "BV|op|OK|..." or
+         "BV|op|ERR|reason"; keys are plain ids or "id#hash" specials. NO screen needed)
+  vault snapshot       bank totals: BV|snapshot|OK|total=..|unique=..|cap=..|upgrades=..|members=..
+  vault list [page]    full bank listing, 50 keys/page: BV|list|OK|page=1/N|key=count;...
+  vault count <key>    exact count of a key; a plain id also lists its id#hash variants
+  vault find <item>    LIVE bank search (BV|find|OK|key=n;...); on old BV falls back to the
+                       per-world storage memory (last-seen)
+  vault withdraw <item> [n]   withdraw item (either arg order; plain id or id#hash key).
+                       BV 1.4.0+: parsed result (BV|withdraw|OK|key|taken=n; AMBIG lists the
+                       variant keys to pick from). Old BV: fires /bank withdraw, watch chat.
+                       Items land in your inventory either way, components INTACT
+  vault deposit hand [n]      deposit the held stack via the api (n omitted = whole stack)
+  vault deposit <id> [n]      deposit by plain item id (api; n omitted/0 = every matching stack).
+                       With the vault screen OPEN this quick-moves matching stacks instead (GUI)
+  vault deposit rows   GUI (screen open): deposit ALL main rows -- the HOTBAR IS THE KEEP-LIST
+  vault deposit all    GUI (screen open): deposit main rows AND hotbar
   vault mark [x y z]   remember the vault block position (default: the block you face). Do this
                        once per session BEFORE closing -- the trinket guard needs it to verify
-  vault status         is the vault screen open; kinds/items; trinket slot count; marked pos
-  vault contents [f]   list contents (filter f) AND record them to per-world storage memory
-  vault withdraw <item> [n]   withdraw item (either arg order works). Accepts a plain id OR an
-                       "id#hash" key from `vault contents` (enchanted/trimmed stacks -- withdrawn
-                       with components INTACT). A plain id with only one special variant in the
-                       bank auto-matches it; several variants -> the chat lists the keys to pick
-  vault deposit rows   deposit ALL main inventory rows -- the HOTBAR IS THE KEEP-LIST (kept)
-  vault deposit all    deposit main rows AND hotbar
-  vault deposit <item> deposit every player stack whose id contains <item>
-  vault find <item>    search per-world storage memory (last-seen) for an item
+  vault status         is the vault screen open; kinds/items; trinket slots; marked pos; api mode
+  vault contents [f]   (screen open) list synced contents AND record to per-world storage memory
   vault memory         storage-memory summary for this world
-  NOTE open the vault by walking to it and `place` (use) with an EMPTY or non-placeable hand;
-       it only opens as a COMPLETED 3x3 set. Close with `agent vault close` (guarded), not close
+  NOTE the api verbs (snapshot/list/count/find/withdraw/deposit-by-id/hand) work WITHOUT opening
+       the vault screen. The GUI still opens only as a COMPLETED 3x3 set; close it with
+       `agent vault close` (guarded), not close
 
 WORLD
   cmd <server command> run a slash-command (e.g. cmd time set day) -- needs cheats/permission

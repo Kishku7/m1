@@ -9,6 +9,7 @@ import com.kishku7.m1.M1Server;
 import com.kishku7.m1.MineControl;
 import com.kishku7.m1.MoveControl;
 import com.kishku7.m1.PickupUpgrade;
+import com.kishku7.m1.VaultNet;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents;
@@ -32,6 +33,12 @@ public class M1Client implements ClientModInitializer {
             String content = (signedMessage != null) ? signedMessage.signedContent()
                     : ((message != null) ? message.getString() : "");
             ChatWatch.onChat(nm, content);
+        });
+        // System messages (command feedback): Bank Vault's "/bank api" replies arrive here.
+        ClientReceiveMessageEvents.GAME.register((message, overlay) -> {
+            if (!overlay && message != null) {
+                VaultNet.onSystemLine(message.getString());
+            }
         });
     }
 }

@@ -5,11 +5,13 @@ import com.kishku7.m1.M1Server;
 import com.kishku7.m1.MineControl;
 import com.kishku7.m1.MoveControl;
 import com.kishku7.m1.PickupUpgrade;
+import com.kishku7.m1.VaultNet;
 import net.minecraft.client.Minecraft;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
+import net.neoforged.neoforge.client.event.ClientChatReceivedEvent;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.common.NeoForge;
 
@@ -19,6 +21,7 @@ public class M1NeoForge {
         if (dist.isClient()) {
             M1Server.start();
             NeoForge.EVENT_BUS.addListener(this::onClientTick);
+            NeoForge.EVENT_BUS.addListener(this::onSystemChat);
         }
     }
 
@@ -29,5 +32,12 @@ public class M1NeoForge {
         MineControl.tick(mc);
         CraftHarvest.tick(mc);
         PickupUpgrade.tick(mc);
+    }
+
+    /** System messages (command feedback): Bank Vault's "/bank api" replies arrive here. */
+    private void onSystemChat(ClientChatReceivedEvent.System event) {
+        if (event.getMessage() != null) {
+            VaultNet.onSystemLine(event.getMessage().getString());
+        }
     }
 }

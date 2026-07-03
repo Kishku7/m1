@@ -17,10 +17,14 @@ import java.util.Locale;
 import java.util.Map;
 
 /**
- * Bank Vault (BV) storage integration -- GUI-driven, ALL reflection, zero compile dependency on
- * the bank-vault mod. Works wherever BV is loaded (Fabric + NeoForge, mojmap runtime 26.x).
+ * Bank Vault (BV) storage integration -- zero compile dependency on the bank-vault mod.
  *
- * How it drives BV (all existing player-facing entry points):
+ * Since BV 1.4.0 the PREFERRED transport is the machine-readable automation surface
+ * (com.kishku7.bankvault.api.VaultApi in-JVM, or the hidden "/bank api ..." command over chat)
+ * bridged by {@link VaultNet}: snapshot/list/count/find/withdraw/deposit return a single
+ * "BV|op|OK|..." ASCII line that is relayed on the socket verbatim. For BV &lt; 1.4.0 (or when
+ * the api times out) the legacy paths below remain as fallbacks:
+ *
  *   contents  -- reads the vault screen's synced entry list (BankVaultScreen.entries, filled by
  *                VaultSyncPayload) while the vault screen is open; records to StorageMemory.
  *   deposit   -- vanilla QUICK_MOVE clicks on the player slots of the open BankVaultMenu
@@ -32,8 +36,8 @@ import java.util.Map;
  *                intermittent eject-on-close bug: snapshot trinket slots while open; after close,
  *                report (and let VaultGuardAction re-equip) anything that landed in the inventory.
  *
- * The vault is player-bound (not block-bound) server-side, but M1 keeps the interaction physical:
- * mark the vault block, walk to it, use it, work the screen.
+ * The vault is player-bound (not block-bound) server-side, but M1 keeps the interaction physical
+ * where the GUI is involved: mark the vault block, walk to it, use it, work the screen.
  */
 public final class VaultOps {
 
@@ -133,14 +137,20 @@ public final class VaultOps {
     // ---------- socket command ----------
 
     static final String HELP = """
+            vault snapshot         bank totals: items/kinds/capacity/upgrades/members (BV 1.4.0 api)
+            vault list [page]      full bank listing, 50 keys/page (api; keys = plain id or id#hash)
+            vault count <key>      exact count of a key; plain id also lists id#hash variants (api)
+            vault find <item>      live bank search (api; falls back to storage memory on old BV)
+            vault withdraw <item> [n]   withdraw (api-parsed BV| result; either arg order;
+                                        plain /bank withdraw fallback for BV < 1.4.0)
+            vault deposit hand [n]      deposit the held stack (api)
+            vault deposit <id> [n]      deposit by plain item id (api; GUI quick-move when the
+                                        vault screen is open; n omitted/0 = everything)
+            vault deposit rows     GUI: deposit ALL main inventory rows (hotbar = keep-list)
+            vault deposit all      GUI: deposit main rows AND hotbar (screen must be open)
             vault mark [x y z]     remember the vault block position (default: crosshair target)
             vault status           is a vault open; entry/trinket counts; marked pos
-            vault contents [f]     list vault contents (filter f), record to storage memory
-            vault withdraw <item> [n]   withdraw item (plain id or id#hash key; either arg order)
-            vault deposit rows     deposit ALL main inventory rows (hotbar = keep-list, untouched)
-            vault deposit all      deposit main rows AND hotbar
-            vault deposit <item>   deposit every player stack whose id contains <item>
-            vault find <item>      search storage memory (last-seen) for an item
+            vault contents [f]     list open-screen contents (filter f), record to storage memory
             vault memory           storage memory summary for this world""";
 
     public static String command(Minecraft mc, String rest) {
@@ -161,6 +171,29 @@ public final class VaultOps {
                     return status(mc);
                 case "contents":
                     return contents(mc, args);
+                case "snapshot": {
+                    String r = VaultNet.call(mc, "snapshot", "");
+                    return r != null ? r : "vault snapshot: BV api unavailable (needs BV 1.4.0+)";
+                }
+                case "list": {
+                    int page = 1;
+                    if (!args.isEmpty()) {
+                        if (!isInt(args)) {
+                            return "ERR usage: vault list [page]";
+                        }
+                        page = Math.max(1, Integer.parseInt(args));
+                    }
+                    String r = VaultNet.call(mc, "list", String.valueOf(page), page);
+                    return r != null ? r
+                            : "vault list: BV api unavailable (needs BV 1.4.0+; try 'vault contents' at the open vault)";
+                }
+                case "count": {
+                    if (args.isEmpty()) {
+                        return "ERR usage: vault count <key>";
+                    }
+                    String r = VaultNet.call(mc, "count", args, args);
+                    return r != null ? r : "vault count: BV api unavailable (needs BV 1.4.0+)";
+                }
                 case "withdraw":
                     return withdraw(mc, args);
                 case "deposit":
@@ -169,7 +202,11 @@ public final class VaultOps {
                     if (args.isEmpty()) {
                         return "ERR usage: vault find <item>";
                     }
-                    List<String> hits = StorageMemory.find(mc, args);
+                    String r = VaultNet.call(mc, "find", args, args);
+                    if (r != null) {
+                        return r;
+                    }
+                    List<String> hits = StorageMemory.find(mc, args);  // legacy: last-seen memory
                     return hits.isEmpty() ? "vault find: nothing remembered matching '" + args + "'"
                             : String.join("\n", hits);
                 }
@@ -221,12 +258,13 @@ public final class VaultOps {
             b.append(" | trinket slots: ").append(trinketCount(menu));
         }
         b.append(" | marked: ").append(vaultPos == null ? "none" : vaultPos.toShortString());
+        b.append(" | api: ").append(VaultNet.inJvm() ? "in-jvm" : "chat-or-none");
         return b.toString();
     }
 
     private static String contents(Minecraft mc, String filter) throws Exception {
         if (!isVaultScreen(mc)) {
-            return "vault contents: vault screen not open (walk to the vault and 'use' it)";
+            return "vault contents: vault screen not open (walk to the vault and 'use' it; or try 'vault list')";
         }
         snapshotTrinkets(mc);   // any vault session refreshes the guard snapshot
         Map<String, Long> m = readEntries(mc);
@@ -266,7 +304,7 @@ public final class VaultOps {
     private static String withdraw(Minecraft mc, String args) {
         // Accept BOTH argument orders (the 702b confusion): "withdraw <count> <item>" and
         // "withdraw <item> [count]". Item may be a plain id or an "id#hash" special key
-        // (component-bearing stack -- BV withdraws it with components intact as of 2026-07-02).
+        // (component-bearing stack -- BV withdraws it with components intact as of 1.3.0).
         String[] t = args.trim().split("\\s+");
         if (t.length == 0 || t[0].isEmpty()) {
             return "ERR usage: vault withdraw <item> [count]  (or <count> <item>)";
@@ -290,8 +328,13 @@ public final class VaultOps {
         if (mc.getConnection() == null) {
             return "vault withdraw: no connection";
         }
-        // /bank withdraw is BV's own player-facing command; result arrives as a chat line and
-        // the items land directly in the inventory (or drop if full).
+        // BV 1.4.0+: machine-readable result (BV|withdraw|OK|key|taken=n, AMBIG variant list,
+        // or BV|withdraw|ERR|reason). Relayed verbatim -- items arrive in the inventory.
+        String r = VaultNet.call(mc, "withdraw", n + " " + item, item, n);
+        if (r != null) {
+            return r;
+        }
+        // Legacy BV < 1.4.0: fire the player-facing command; result is a plain chat line.
         mc.getConnection().sendCommand("bank withdraw " + n + " " + item);
         return "OK sent /bank withdraw " + n + " " + item + " (check 'inv'; chat confirms)";
     }
@@ -306,6 +349,49 @@ public final class VaultOps {
     }
 
     private static String deposit(Minecraft mc, String args) {
+        String a = args.toLowerCase(Locale.ROOT).trim();
+        if (a.isEmpty()) {
+            return "ERR usage: vault deposit rows|all|hand|<item> [n]";
+        }
+        // GUI bulk modes always drive the open screen (rows keeps the hotbar as the keep-list).
+        if (a.equals("rows") || a.equals("all")) {
+            return depositGui(mc, a);
+        }
+        // api modes: "hand [n]", "<n> hand", "<id> [n]", "<n> <id>"; n omitted/0 = everything.
+        String[] t = a.split("\\s+");
+        int n = 0;
+        String what;
+        if (t.length == 1) {
+            what = t[0];
+        } else if (isInt(t[0])) {
+            n = Integer.parseInt(t[0]);
+            what = t[1];
+        } else if (isInt(t[t.length - 1])) {
+            n = Integer.parseInt(t[t.length - 1]);
+            what = t[0];
+        } else {
+            what = t[0];
+        }
+        if (n < 0) {
+            return "ERR count must be >= 0";
+        }
+        // With the vault screen open, keep the proven GUI quick-move for item deposits (it also
+        // refreshes the trinket guard snapshot). "hand" is api-only.
+        if (!"hand".equals(what) && isVaultScreen(mc)) {
+            return depositGui(mc, what);
+        }
+        String r = VaultNet.call(mc, "deposit", n + " " + what, what, n);
+        if (r != null) {
+            return r;
+        }
+        if (isVaultScreen(mc)) {
+            return depositGui(mc, what);
+        }
+        return "vault deposit: BV api unavailable (needs BV 1.4.0+; or open the vault screen for GUI deposit)";
+    }
+
+    /** Legacy GUI deposit -- QUICK_MOVE clicks on the open BankVaultMenu's player slots. */
+    private static String depositGui(Minecraft mc, String mode) {
         if (!isVaultScreen(mc)) {
             return "vault deposit: vault screen not open";
         }
@@ -314,14 +400,10 @@ public final class VaultOps {
             return "vault deposit: open menu is not the vault";
         }
         snapshotTrinkets(mc);
-        String a = args.toLowerCase(Locale.ROOT).trim();
-        if (a.isEmpty()) {
-            return "ERR usage: vault deposit rows|all|<item>";
-        }
         int from;
         int to;
         String match = null;
-        switch (a) {
+        switch (mode) {
             case "rows":            // main inventory rows only -- hotbar (menu 27..35) is the keep-list
                 from = 0;
                 to = 26;
@@ -333,7 +415,7 @@ public final class VaultOps {
             default:                // by item id substring, anywhere in the 36 player slots
                 from = 0;
                 to = 35;
-                match = a;
+                match = mode;
                 break;
         }
         int moved = 0;
@@ -353,7 +435,7 @@ public final class VaultOps {
         if (moved == 0) {
             return "vault deposit: nothing to deposit" + (match != null ? " matching '" + match + "'" : "");
         }
-        return "OK deposit " + a + ": quick-moved " + moved + " stack(s) (" + before
+        return "OK deposit " + mode + ": quick-moved " + moved + " stack(s) (" + before
                 + " items offered; anything left didn't fit or was refused)";
     }
 }
