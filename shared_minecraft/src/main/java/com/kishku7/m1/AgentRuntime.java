@@ -161,8 +161,7 @@ public final class AgentRuntime {
                 QUEUE.append(new VaultCmdAction(args));
                 return "queued vault " + (args.isEmpty() ? "status" : args);
             case "drop":
-                QUEUE.append(new DropAction(args.equalsIgnoreCase("all")));
-                return "queued drop" + (args.equalsIgnoreCase("all") ? " all" : " (1)");
+                return enqueueDrop(args);
             case "jump":
                 QUEUE.append(new KeyInputAction(KeyInputAction.Mode.JUMP));
                 return "queued jump";
@@ -203,7 +202,7 @@ public final class AgentRuntime {
             default:
                 return "agent: unknown subcommand '" + sub + "' (try: status | ping | "
                         + "goto <x y z> | moveto <x z> | patrol <x z ...> | look <x y z|yaw [pitch]> | "
-                        + "mine <x y z> | hold <0-8> | equip <item> | use | drop [all] | jump | "
+                        + "mine <x y z> | hold <0-8> | equip <item> | use | drop [slot|item] [n|all] | jump | "
                         + "sneak [on|off] | sprint [on|off] | sleep | recover | slot <id> [btn] [mode] | openinv | close | "
                         + "attack [nearest|<id>|crosshair] [crit|normal|ranged] | follow <player> [dist] | "
                         + "shield [ticks] | defend [on|off|status|auto|<player>] | vault <sub> | vault close | craft <item> [count] | stop)";
@@ -372,6 +371,39 @@ public final class AgentRuntime {
         }
         QUEUE.append(new FollowAction(who, dist));
         return "queued follow " + who + " (keep within " + (int) dist + "m; 'stop' to end)";
+    }
+
+    /**
+     * {@code drop [hand|hb1-9|inv N|head|chest|legs|feet|offhand|<name>] [n|all]} -- the Q-key
+     * equivalent (703a gap). Bare integers are a COUNT; "inv N" is a slot. Default: 1 from hand.
+     */
+    private static String enqueueDrop(String args) {
+        String a = (args == null) ? "" : args.trim();
+        String[] t = a.isEmpty() ? new String[0] : a.split("\\s+");
+        int count = 1;
+        StringBuilder spec = new StringBuilder();
+        for (int i = 0; i < t.length; i++) {
+            String tok = t[i];
+            if (tok.equalsIgnoreCase("all")) {
+                count = DropAction.ALL;
+                continue;
+            }
+            boolean numeric = !tok.isEmpty() && tok.chars().allMatch(Character::isDigit);
+            if (numeric && !(i > 0 && t[i - 1].equalsIgnoreCase("inv"))) {
+                count = Integer.parseInt(tok);
+                if (count < 1) {
+                    return "usage: drop [slot|<item>] [n|all] (n >= 1)";
+                }
+                continue;
+            }
+            if (spec.length() > 0) {
+                spec.append(' ');
+            }
+            spec.append(tok);
+        }
+        QUEUE.append(new DropAction(spec.toString(), count));
+        return "queued drop " + (spec.length() == 0 ? "held item" : "'" + spec + "'")
+                + (count == DropAction.ALL ? " (whole stack)" : " x" + count);
     }
 
     /** {@code shield [holdTicks]} (default 40t = 2s). */

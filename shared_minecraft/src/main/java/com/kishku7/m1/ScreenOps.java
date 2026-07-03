@@ -71,6 +71,8 @@ public final class ScreenOps {
         "  pack on|contents [f]|put <item|all|junk>|take <item> [n]   wear + use a Travelers Backpack\n" +
         "  place                use/place held item on the block you are looking at\n" +
         "  slot <id> [btn] [pickup|quick|swap]   raw slot click\n" +
+        "  drop [slot|<item>] [n|all]   throw item(s) on the ground, Q-equivalent (slot: hand|hb1-9|inv N|head|chest|legs|feet|offhand)\n" +
+        "  examine [slot|<item>]        full item readout: id, custom name, enchantments, durability, tooltip, vault key\n" +
         "  openpack             open your worn Travelers Backpack (triggers its keybind)\n" +
         "  screenshot [name]    save a PNG of the current frame to screenshots/ (vanilla writer)\n" +
         "  upgrades             show pending auto-armor-upgrade messages\n" +
@@ -81,7 +83,7 @@ public final class ScreenOps {
         "  follow <player> [dist]          follow a player; 'stop' to end\n" +
         "  defend [on|off|status|auto|<p>] auto-defense reflex: if the master or I get attacked,\n" +
         "                                  engage the attacker, then resume (leashed to 16m)\n" +
-        "  agent <sub>          queued action layer: status|ping|goto|moveto|patrol|look|mine|hold|equip|use|attack|follow|shield|stop\n" +
+        "  agent <sub>          queued action layer: status|ping|goto|moveto|patrol|look|mine|hold|equip|use|drop|jump|sneak|sprint|slot|openinv|close|sleep|recover|craft|vault|attack|follow|shield|defend|stop\n" +
         "  help                 this list\n" +
         "AI agents: type START for the AI_Brain index path (config/M1_AI_Brain/<ver>/00_Index.md); full command syntax is in 10_command_card.md.";
 
@@ -142,6 +144,10 @@ public final class ScreenOps {
                 }
             }
             case "slot":      return Crafting.slotCmd(mc, rest);
+            case "drop":
+            case "throw":     return AgentRuntime.command("drop " + rest);
+            case "examine":
+            case "inspect":   return ItemInfo.examine(mc, rest);
             case "place":
             case "use":
             case "interact":  return Crafting.place(mc); // use/interact aliases (AI reached for them, session 702)
@@ -558,12 +564,12 @@ public final class ScreenOps {
         Inventory in = p.getInventory();
         StringBuilder b = new StringBuilder();
         int held = InventoryCompat.getSelected(in);
-        b.append("held: hotbar[").append(held).append("] = ").append(itemStr(in.getItem(held))).append("\n");
-        b.append("items:\n");
+        b.append("held: ").append(ItemInfo.label(held)).append(" = ").append(itemStr(in.getItem(held))).append("\n");
+        b.append("items (hbN = hotbar, idx = raw index; 'examine <slot>' for detail):\n");
         boolean any = false;
         for (int i = 0; i < in.getContainerSize(); i++) {
             ItemStack it = in.getItem(i);
-            if (!it.isEmpty()) { b.append("  [").append(i).append("] ").append(itemStr(it)).append("\n"); any = true; }
+            if (!it.isEmpty()) { b.append("  [").append(ItemInfo.label(i)).append("] ").append(itemStr(it)).append("\n"); any = true; }
         }
         if (!any) b.append("  (empty)\n");
         return trim(b);

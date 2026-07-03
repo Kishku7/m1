@@ -1,5 +1,5 @@
 # Command card (exact syntax cheat-sheet)
-<!-- Valid as of: M1 v0.10.0 | MC 1.20 - 26.3 | updated 2026-07-03 (Bank Vault 1.4.0 api verbs: snapshot/list/count/find + api withdraw/deposit) -->
+<!-- Valid as of: M1 v0.11.0 | MC 1.20 - 26.3 | updated 2026-07-03 (examine verb, drop-from-any-slot, dual hb/idx inv labels, BV ERR lines self-explain) -->
 **Covers:** every M1 command with syntax + a one-line note, so you can reload just the syntax cheaply.
 Concepts behind these live in `01_drive_m1.md`.
 
@@ -9,7 +9,14 @@ OBSERVE
   where                your position + movement status (pos / moving / arrived / blocked / no world)
   look                 what you are pointed at (block/entity + distance)
   scan [r|<name>]      line-of-sight scan; r<=32 (default 32). scan <name> = nearest match. scan 16 = radius 16
-  inv                  stable player inventory (0-8 hotbar, 9-35 main, 36-40 armor/offhand)
+  inv                  stable player inventory. Slots are labeled in BOTH spaces: [hb6 (idx 5)]
+                       for hotbar (hbN = as spoken, idx = raw 0-8), [inv 9..35] main,
+                       feet/legs/chest/head (36-39), offhand (40)
+  examine [slot|<item>]   FULL readout of one item: exact id, custom name, enchantments (+levels),
+                       durability, advanced tooltip, non-default components, and its vault key
+                       form (plain id vs id#hash special). Slot: hand|hb1-9|inv N|head|chest|
+                       legs|feet|offhand, or a name/id to search all 41 slots.
+                       "Does my sword have mending?" -> examine sword
   slots                slots of the OPEN menu, each labeled with its ROLE:
                        CRAFT-RESULT/CRAFT-GRID(no storage!)/armor:head|chest|legs|feet/
                        hotbar-N/main/offhand/container. NEVER park items in CRAFT slots
@@ -42,6 +49,10 @@ ACT (async -- poll inv/look)
   takeall              empty the OPEN container (chest/vault) into your inventory in one shot
   stash junk           move junk (rotten flesh/bones/spider eyes) off the hotbar
   moveitem <item> to <hb1..hb9|offhand|head|chest|legs|feet>   named move using HUMAN slot words
+  drop [slot|<item>] [n|all]   THROW item(s) on the ground (the Q key). Default: 1 from hand.
+                       Any source slot: hand|hb1-9|inv N|head|chest|legs|feet|offhand, or an item
+                       name -- non-held sources are brought to hand automatically. n = that many
+                       single throws; all = the whole stack. Alias: throw
   pack on              WEAR a Travelers Backpack from your inventory (code-level equip; no GUI)
   pack contents [f]    list the worn backpack contents (filter f)
   pack put <item|all|junk>   stash matching inventory items INTO the backpack (batch, quick)
@@ -80,7 +91,10 @@ STORAGE (Bank Vault -- vault = your player-bound bank; needs the bank-vault mod.
          SINGLEPLAYER: the BV| line comes back immediately as the reply. MULTIPLAYER: the
          verb returns "OK sent ..." at once and the BV| line is PUSHED shortly after as a
          "[bv] BV|..." report line (read it from the same reply, the next command's reply,
-         or a bare listen). No [bv] line = the server's Bank Vault predates 1.4.0)
+         or a bare listen). No [bv] line = the server's Bank Vault predates 1.4.0.
+         ERR lines SELF-EXPLAIN: every "BV|op|ERR|reason" arrives with " -- <plain-language
+         explanation + fix>" appended, e.g. deposit-only-member tells you to ask the owner
+         for a promotion. Read the explanation BEFORE retrying -- do not burn turns probing)
   vault snapshot       bank totals: BV|snapshot|OK|total=..|unique=..|cap=..|upgrades=..|members=..
   vault list [page]    full bank listing, 50 keys/page: BV|list|OK|page=1/N|key=count;...
   vault count <key>    exact count of a key; a plain id also lists its id#hash variants
@@ -134,7 +148,7 @@ AGENT (autonomous action layer -- queue an action; it runs in-world and reports 
   agent sleep                         queue the sleep-in-nearby-bed composite (see MOVE above)
   agent follow <player> [dist]        lock onto a player and follow until stop (default dist 3)
   agent shield [ticks]                queue raising the shield (default 40t = 2s; alias: agent block)
-  agent drop [all]                    queue dropping 1 (or the whole stack) of the HELD item on the ground
+  agent drop [slot|<item>] [n|all]    queue a drop/throw -- same syntax as top-level drop above
   agent jump                          queue a one-shot jump
   agent sneak [on|off]                sneak state toggle (agent stop releases it)
   agent sprint [on|off]               sprint state toggle (pathing may override while moving)

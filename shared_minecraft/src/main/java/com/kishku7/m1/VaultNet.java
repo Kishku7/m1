@@ -77,9 +77,9 @@ public final class VaultNet {
     static String call(Minecraft mc, String op, String chatTail, Object... jvmArgs) {
         String r = callJvm(mc, op, jvmArgs);
         if (r != null) {
-            return r;
+            return explain(r);
         }
-        return callChat(mc, op, chatTail);
+        return explain(callChat(mc, op, chatTail));
     }
 
     // ---------- transport 1: in-JVM reflection on the integrated-server thread ----------
@@ -189,9 +189,75 @@ public final class VaultNet {
         }
         synchronized (reports) {
             if (reports.size() < MAX_REPORTS) {
-                reports.add("[bv] " + line);
+                reports.add("[bv] " + explain(line));
             }
         }
+    }
+
+    /**
+     * Append a plain-language explanation + fix hint to a "BV|op|ERR|reason" line so a failure is
+     * understood at FIRST sight (703a lesson: the agent burned several exchanges discovering it
+     * was a deposit-only member). OK lines, non-BV lines, and already-explained lines pass
+     * through untouched. Codes mirror BV 1.4.0 VaultApi.err().
+     */
+    static String explain(String line) {
+        if (line == null || !line.startsWith("BV|") || line.contains(" -- ")) {
+            return line;
+        }
+        int i = line.indexOf("|ERR|");
+        if (i < 0) {
+            return line;
+        }
+        String reason = line.substring(i + 5);
+        String code = reason;
+        String arg = "";
+        int cIdx = reason.indexOf(':');
+        if (cIdx >= 0) {
+            code = reason.substring(0, cIdx);
+            arg = reason.substring(cIdx + 1);
+        }
+        String why;
+        switch (code) {
+            case "deposit-only-member":
+                why = "you are a DEPOSIT-ONLY member (level 1): deposits work, withdrawals do not."
+                        + " Fix: ask the vault owner to promote you to Full Member.";
+                break;
+            case "not-a-member":
+                why = "you are not a member of this vault. Fix: ask the vault owner to add you.";
+                break;
+            case "no-bank":
+                why = "no vault/bank is linked to you on this server.";
+                break;
+            case "unknown-item":
+                why = "'" + arg + "' is not a known item id.";
+                break;
+            case "no-such-key":
+                why = "the vault has no entry under '" + arg + "'."
+                        + " Fix: 'vault find <name>' lists exact keys (special items use id#hash).";
+                break;
+            case "empty":
+                why = "the vault's stock under '" + arg + "' is empty.";
+                break;
+            case "decode-failed":
+                why = "the stored special item under '" + arg + "' could not be reconstructed.";
+                break;
+            case "empty-hand":
+                why = "you are not holding anything to deposit.";
+                break;
+            case "vault-full-or-rejected":
+                why = "the vault is at capacity or rejected the item.";
+                break;
+            case "bad-id":
+                why = "'" + arg + "' is not a valid item id.";
+                break;
+            case "none-moved":
+                why = "nothing matching '" + arg + "' was in your inventory to deposit.";
+                break;
+            default:
+                why = "unrecognized BV error code -- see the raw reason.";
+                break;
+        }
+        return line + " -- " + why;
     }
 
     /** Drain pending [bv] lines for the socket. Mirrors {@link ChatWatch#drainReports}. */
