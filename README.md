@@ -1,70 +1,70 @@
 # M1 -- Machine One AI Interface
 
-Client-side Minecraft mod that exposes the live game client over a localhost text socket, described
-and driven entirely by text -- so a human at a terminal, **or an AI (e.g. Claude) over an MCP
-connection**, can operate Minecraft by typing. The game window exists only so you can watch.
+**M1 is a client-side Minecraft mod that exposes the real, running game client over a plain
+localhost text socket.** It describes whatever screen or world is in front of the client as text,
+and accepts text commands to drive it -- so a human at a terminal, or an AI over a socket, can
+operate Minecraft entirely by typing. No GUI mouse/keyboard is required and nothing needs to be
+"looked at" on screen; the window is there purely for observability.
 
-This branch (`minecraft-1.20-26.3`) is the **unified source**: one tree builds every supportable MC
-release from **1.20 through 26.x** for **Fabric** and **NeoForge** (plus Forge on 1.20.1, where
-NeoForge has none). The full reference manual -- complete command set, `scan`/inventory semantics,
-worked examples -- lives in the [`main` branch README](https://github.com/Kishku7/m1/blob/main/README.md).
+Loaders / versions: Fabric + NeoForge, MC 26.x (this `main` branch is the entry point; the unified
+source tree (MC 1.20 - 26.x, Fabric + NeoForge) lives on branch `minecraft-1.20-26.3`). Current: **v0.9.x**.
 
-## What M1 can do (v0.9.x)
-
-Everything is text in / text out over the socket. Highlights of the current command surface:
-
-* **Perception:** `describe` (any screen), `scan` (line-of-sight world), `where`, `look`, `inv`,
-  `slots` (role-labelled).
-* **Navigation -- M1's own pathfinder:** `moveto`/`goto` to any coordinate at any distance; it
-  opens gates + doors itself, walks rails and stairs, and routes in 16-block segments. `nav
-  own|vanilla` picks the engine.
-* **Combat (universal):** `attack [nearest|<id>|crosshair] [crit|normal|ranged]` -- auto-equips the
-  best weapon, times crits, bow ballistics, spear stab, per-enemy tactics; `shield`, `follow`,
-  `defend`. A SAFE-MOB doctrine never pre-empts neutral mobs (piglins, endermen, ...).
-* **Inventory verbs (names, not indices):** `equip all`, `equip <item>`, `organize hotbar`,
-  `takeall`, `stash junk`, `moveitem <item> to <hb1-9|offhand|head|chest|legs|feet>`.
-* **Composites:** `sleep` (bed or backpack sleeping bag), `recover` (clear a death grave-site),
-  generic `craft <item>` (RecipeManager-driven, vault-sourced).
-* **Storage:** Bank Vault (`vault ...`, enchanted-gear `id#hash` withdraw) and Travelers Backpack
-  (`pack on|contents|put|take`, code-level wear + batch move).
-* **Autonomy:** the `agent` layer queues actions that run in-world and report back async; chat
-  master control (`Who is your daddy` -> take orders from that player).
-
-The exhaustive syntax + semantics live in the AI_Brain (see below) and the [`main` branch
-README](https://github.com/Kishku7/m1/blob/main/README.md).
+> **New here? Read [the AI_Brain (`00_Index.md`)](https://github.com/Kishku7/m1/tree/minecraft-1.20-26.3/shared_common/src/main/resources/m1_ai_brain) first.** That is the file an AI agent
+> is expected to load before a play session. This README is the reference manual behind it.
 
 ---
 
-## Quick start -- drive Minecraft from Claude Desktop
+## 1. Popular Uses for M1
 
-You need three pieces: **(1)** the M1 mod in your game, **(2)** the **MCP-Minecraft** bridge from
-this repo, and **(3)** Claude Desktop (or any MCP client) pointed at the bridge.
+Most "AI plays Minecraft" projects never actually run Minecraft. They are protocol bots that speak
+the server's network protocol from the outside (Mineflayer, and LLM agents built on it like
+Voyager), or research stacks pinned to ancient versions (Malmo, MineRL). Because they never load
+the real client, **they are blind to anything the client draws -- mod GUIs simply do not exist to
+them**, and a version or mod mismatch breaks them.
 
-### 1. Install the mod
+M1 *is* the real client. It loads as an ordinary Fabric/NeoForge mod, reads every real screen, and
+drives the game the way you would. That unlocks what the protocol bots cannot touch:
 
-1. Grab the jar for your loader + MC version from a release, or build it (see
-   [Building](#building) below). Fabric and NeoForge are both supported on 26.x.
-2. Drop the jar in your instance's `mods/` folder alongside the matching loader (Fabric Loader +
-   Fabric API, or NeoForge). Launch the game and load into a world.
-3. On load, M1 opens its control socket on **`localhost:26000`** (loopback only) and, on first run,
-   **extracts the AI_Brain operating docs to disk** (see [AI_Brain](#ai_brain----the-operating-brief)).
+1. **Mod development & real-client testing.** Test your mod the way a player actually experiences
+   it -- open its screens, click its buttons, read its inventories, drive its menus, grab
+   screenshots -- all by text. M1 has served as the live test harness across **20+ release builds
+   spanning many Minecraft versions and both loaders**, so you validate a mod across the whole
+   range, not one pinned version.
+2. **AI agents that genuinely play.** Point any LLM at a text socket and let it go -- proven
+   end-to-end: spawn, find a tree, mine, craft, and build a wooden axe, entirely over the wire --
+   and because it is the real client, your agent can operate *mod* GUIs too, not just vanilla
+   movement.
+3. **Hands-free / accessible play.** Run the whole game -- menus, worlds, inventory, crafting -- by
+   typing. Nothing on screen needs to be looked at.
+4. **Automation & scripting.** Repeatable command sequences for the tedious stuff (gather, craft,
+   navigate, set up a world), from any language, in plain text -- with auto armor-upgrade built in.
 
-That's the whole game side -- M1 is client-side only, no server mod required.
+No protocol reverse-engineering, no pixel pipeline, no RL training, no lock-in to one AI model or
+one Minecraft version -- just plain text into the real game.
 
-### 2. Run the MCP-Minecraft bridge
+---
 
-The bridge is a small Node MCP server that lives in this repo under
-[`mcp-minecraft/`](mcp-minecraft/). Clone the repo and build it:
+## 2. Quick start -- drive Minecraft from Claude Desktop
+
+Three pieces: **(1)** the M1 mod in your game, **(2)** the **MCP-Minecraft** bridge (in this repo
+under [`mcp-minecraft/`](https://github.com/Kishku7/m1/tree/minecraft-1.20-26.3/mcp-minecraft)),
+**(3)** Claude Desktop (or any MCP client) pointed at the bridge.
+
+**1. Install the mod.** Get the jar for your loader + MC version (a release, or build it -- see the
+[source branch](https://github.com/Kishku7/m1/tree/minecraft-1.20-26.3)). Drop it in your instance's
+`mods/` folder with the matching loader (Fabric Loader + Fabric API, or NeoForge). Launch and load a
+world. M1 is **client-side only** -- no server mod needed. On load it opens its socket on
+`127.0.0.1:26000` and, first run, extracts the AI_Brain docs (see section 3).
+
+**2. Run the MCP-Minecraft bridge.** Clone this repo and build the Node bridge:
 
 ```bash
 git clone https://github.com/Kishku7/m1.git
 cd m1/mcp-minecraft
-npm install
-npm run build
+npm install && npm run build
 ```
 
-Configure it for M1 (M1 frames replies with a `<<END` sentinel, greets on connect, and wants
-`RAW ON`). Copy `.env.example` to `.env` and set:
+Configure it for M1 (copy `.env.example` to `.env`):
 
 ```
 TARGET_PORT=26000
@@ -73,21 +73,12 @@ CONNECT_INIT=RAW ON
 DISCARD_CONNECT_BANNER=true
 ```
 
-Then start it (it auto-connects the moment the game's socket opens, and reconnects if the game
-restarts, so the order you start things in does not matter):
+Start it with `npm start`. It auto-connects when the game socket opens and reconnects if the game
+restarts, so start order does not matter. It prints its endpoint (default `http://localhost:26001/mcp`)
+and a `/health` URL. Full options + running as a service: [`mcp-minecraft/README.md`](https://github.com/Kishku7/m1/tree/minecraft-1.20-26.3/mcp-minecraft).
 
-```bash
-npm start
-```
-
-It prints the MCP endpoint (default `http://localhost:26001/mcp`) and a `/health` URL. Full option
-list + how to run it as a service (systemd / launchd / Windows NSSM) is in
-[`mcp-minecraft/README.md`](mcp-minecraft/README.md).
-
-### 3. Add it to Claude Desktop
-
-Claude Desktop reads a JSON config (`claude_desktop_config.json` -- Settings -> Developer -> Edit
-Config). MCP-Minecraft serves **Streamable HTTP**, so bridge it with `mcp-remote`:
+**3. Add it to Claude Desktop.** Edit `claude_desktop_config.json` (Settings -> Developer -> Edit
+Config). The bridge serves Streamable HTTP, so bridge it with `mcp-remote`:
 
 ```json
 {
@@ -100,73 +91,521 @@ Config). MCP-Minecraft serves **Streamable HTTP**, so bridge it with `mcp-remote
 }
 ```
 
-Restart Claude Desktop. You'll get three tools: **`send_command`** (send one M1 command, get its
-reply), **`listen`** (stream async `[chat]`/`[alert]`/`[agent]` events + keepalive), and
-**`connection_status`**. Ask Claude to send `where` -- if you're in a world it should report your
-position and surroundings, and you're driving Minecraft from chat.
+Restart Claude Desktop. You get three tools -- `send_command`, `listen` (streams `[chat]`/`[alert]`/
+`[agent]` events), and `connection_status`. Ask Claude to send `where`; if you are in a world it
+reports your position, and you are driving Minecraft from chat.
 
-> Running the bridge on a different machine than Claude Desktop? Set `BIND_HOST=0.0.0.0` on the
-> bridge and use that machine's LAN address in the URL. There is **no authentication** -- keep it on
-> a trusted network only (see the bridge README's Security note).
+> Bridge on a different machine than Claude Desktop? Set `BIND_HOST=0.0.0.0` and use that machine's
+> LAN address in the URL. There is **no authentication** -- trusted network only.
 
 ---
 
-## AI_Brain -- the operating brief
+## 3. Connecting
 
-The brief an AI reads before driving M1 ships **inside the jar** and is extracted **the first time
-the game runs** to, relative to your game/instance directory:
+When the modded client starts, M1 opens a TCP server on **`127.0.0.1:26000`** on the machine
+running the client. It binds loopback only -- there is **no new inbound network surface**; only
+processes already on that machine can reach it. Run one modded client at a time (every build binds
+the same port).
+
+The channel is the same whether a person types it or an AI sends it -- one grammar, one code path.
+Anything an AI does is reproducible by hand and vice versa.
+
+### Wire protocol
+
+* **Newline-delimited.** Send one command per line (`<command>\n`). The reply is one or more lines
+  of text, terminated by a single sentinel line: **`<<END`**.
+* **A greeting is sent on connect** -- `Connected to Machine One (M1). Type START to begin, or HELP for commands.` followed by a `<<END`. Read and
+  discard it before sending your first command.
+* **After an action command (`click` / `type`)** the reply also contains a `--- now ---` marker
+  followed by a fresh `describe` of the resulting screen (the mod waits ~150 ms for any
+  transition/fade to settle, then auto-describes). So every action tells you the new situation.
+* **Auto-upgrade notices** (see the armor section) arrive **unsolicited**, prefixed
+  `[auto-upgrade]`, prepended to the next reply you receive.
+* **Each command has a 10-second execution cap.** This is how long M1 waits for a command's
+  handler to finish **on the game's main thread** and hand back a reply. If a handler overruns,
+  M1 returns `ERR exec: ... TimeoutException` rather than leaving your connection hanging. **The
+  cap is on the handler returning a reply -- it is NOT a limit on how long an in-world action
+  takes.** The asynchronous commands (`move` / `moveto` / `goto` / `mine` / `craft`) return almost
+  instantly with `OK ... poll 'where'` and then run in the background, so a two-minute walk or a
+  long mine never hits the cap -- only a genuinely stalled or hitched client would. Practical
+  consequence: set your socket read timeout **above** 10 s (e.g. 15 s) so your reader outlasts the
+  server's own cap and actually receives that `ERR` line instead of tripping its own timeout first.
+* Each command runs on the client's main thread, so the game stays consistent.
+* `quit` / `exit` closes your connection (it does **not** stop the client).
+
+### Interfacing tips
+
+**For a quick manual poke** (a human at a shell on the client machine): any line-oriented TCP tool
+works -- `telnet 127.0.0.1 26000`, `nc 127.0.0.1 26000`, or PowerShell's `TcpClient`. Type `help`,
+then `describe`. This is great for exploring, but raw `telnet` does not understand the `<<END`
+sentinel -- you just eyeball where each reply ends.
+
+**For programmatic / AI use**, use a **persistent, buffered socket reader**. The two mistakes that
+break clients:
+
+1. Reading a fixed number of bytes instead of reading **until `<<END`**. Replies vary in length.
+2. Throwing away bytes that arrive **after** the sentinel. TCP does not respect message
+   boundaries; a single `recv` can contain the tail of one reply and the head of the next. Keep a
+   buffer, slice off everything up to the first `<<END`, and **retain the remainder** for the next
+   read -- otherwise you desync and every later reply is misaligned.
+
+A minimal, correct Python reader:
+
+```python
+import socket
+
+s = socket.create_connection(("127.0.0.1", 26000), 6)
+s.settimeout(15)            # > the server's 10s command cap
+buf = b""
+
+def read_reply():
+    global buf
+    while b"<<END" not in buf:
+        chunk = s.recv(4096)
+        if not chunk:
+            break
+        buf += chunk
+    i = buf.find(b"<<END")
+    out, buf = (buf[:i], buf[i + 5:].lstrip(b"\r\n")) if i >= 0 else (buf, b"")
+    return out.decode("utf-8", "replace").rstrip()
+
+def cmd(line):
+    s.sendall((line + "\n").encode())
+    return read_reply()
+
+read_reply()                # consume the greeting first
+print(cmd("describe"))
+```
+
+If you are driving from another machine, do not expose the port -- get a shell on the client
+machine (SSH, a relay agent, etc.) and connect to `127.0.0.1:26000` from there. The mod stays
+loopback-only by design.
+
+---
+
+## 4. The AI_Brain
+
+[the AI_Brain (`00_Index.md`)](https://github.com/Kishku7/m1/tree/minecraft-1.20-26.3/shared_common/src/main/resources/m1_ai_brain) (in this branch) is the **standing brief an AI reads in
+before a session.** It is deliberately on `main` so it travels with every branch and version, and
+so any operator can read it. It is portable -- it contains the transferable rules, not any one
+machine's launch/control specifics (those stay in internal infra docs).
+
+It covers:
+
+* **Role and scope** -- the agent's only job is to play through M1; it ignores unrelated tooling.
+* **Connecting** -- the socket, the protocol, and the read-until-`<<END` discipline in section 3.
+* **Operating discipline** -- the habits that make autonomous play work, and that the command
+  outputs are designed to support:
+  * *Look before you move* -- run `scan` + `where` and actually read them before acting.
+  * *Move with pathfinding* -- give a destination (`moveto` / `goto` / `move`); the mod routes
+    around walls and steps/jumps up for you. Never enable the game's Auto-Jump, never try to jump
+    manually.
+  * *Do not repeat what failed* -- if a move comes back `blocked` / `timeout` / `no path`, stop,
+    re-`scan`, and pick a new or closer target. Never bump the same wall twice.
+  * *Verify before you act* -- confirm a target actually meets the goal first (e.g. `BOUNDS UP` is
+    air/grass before treating a spot as "outside").
+  * *Use what you know* -- apply given context (e.g. "trees are to the southeast") to choose a
+    direction.
+* **The command quick-reference**, plus **how to read a `scan`** and **how to read the two slot
+  numbering systems** -- the parts an agent gets wrong without guidance (detailed in section 5).
+* **Recording** -- how/when to append to a session log (on request only).
+
+The interpretive glue matters as much as the raw commands: section 3 marks, for the non-obvious
+outputs, **how the instruction file tells an agent to read them.**
+
+---
+
+## 5. Command reference
+
+Send any verb on its own line. `help` prints the live list. Aliases are shown in parentheses.
+Bracketed `[...]` args are optional. Coordinates are absolute world coordinates.
+
+### Screen / menu navigation
+
+| Command | What it does |
+|---|---|
+| `describe` (`screen`) | Enumerate the current screen and **every** widget, recursively (tab bars, nested config panels). |
+| `click <id>` | Click the widget with that id (then auto-describes the result). |
+| `type <id> <text>` | Set the text of an `EditBox` widget. |
+| `slots` | List the slots of the currently open container. |
+| `worlds` | List saved worlds (on the world-select screen). |
+| `joinworld <idx>` (`join`) | Enter/re-enter saved world number `idx`. |
+| `pause` | Open the pause menu (then `describe` + `click` "Save and Quit to Title" to save+exit). |
+
+**`describe` example** -- each widget is `[id] Type "label" pos=(x,y) size=WxH FLAGS`, where the
+three flags are **V**isible / **A**ctive / **F**ocused (a `-` means off). An `EditBox` also shows
+`value="..."`.
 
 ```
-config/M1_AI_Brain/<MAJOR.MINOR>/          e.g.  config/M1_AI_Brain/0.9/
+screen: TitleScreen  title: "Minecraft"
+widgets: 5
+  [0] Button "Singleplayer" pos=(286,98) size=200x20 VA-
+  [1] Button "Multiplayer"  pos=(286,122) size=200x20 VA-
+  [2] Button "Options..."   pos=(286,146) size=98x20 VA-
+  [3] ImageButton "Language" pos=(265,146) size=20x20 VA-
+  [4] Button "Quit Game"    pos=(389,146) size=98x20 VA-
 ```
 
-Create-once per minor version -- your edits are preserved across restarts, and a
-`100_User_Overrides.md` layer (shipped blank, never overwritten) overrides the numbered defaults.
-An AI agent gets this path from the `START` command on connect; start reading at `00_Index.md`, a
-router to the topic files (drive-M1, create-world, join-server, play, command-card, capabilities,
-recovery, safety). Source of truth for the docs:
-[`shared_common/src/main/resources/m1_ai_brain/`](shared_common/src/main/resources/m1_ai_brain).
-
-## The wire protocol (for writing your own client)
-
-If you talk to `localhost:26000` directly instead of through the bridge:
-
-* One command per line (`<command>\n`). Replies are newline-delimited, terminated by a `<<END`
-  sentinel line. Read until `<<END`, and keep any bytes after it for the next reply.
-* On connect M1 sends a greeting (`Connected to Machine One (M1)...` then `<<END`) -- read and
-  discard it. Send `RAW ON` (keeps the `<<END` marker, which a machine client wants); `RAW OFF`
-  hides it for a human on a terminal.
-* `START` returns the AI_Brain index path; `HELP` lists commands. Neither is a gate -- a client that
-  knows the protocol can issue commands immediately.
-* Unsolicited event lines are pushed even with no command pending (`[chat]`, `[alert]`, `[agent]`,
-  `[auto-upgrade]`) -- a bare read/`listen` receives them.
-* Each command has a ~10 s execution cap on its synchronous handler; the long actions
-  (`move`/`moveto`/`goto`/`mine`/`craft`/`agent`) return immediately and run in the background, so
-  set your socket read timeout above 10 s.
-
-The bridge in [`mcp-minecraft/`](mcp-minecraft/) handles all of this for you (`REPLY_SENTINEL`,
-`CONNECT_INIT`, banner discard) -- writing a raw client is only needed if you are not using MCP.
-
-## Building
-
-Bulk build scripts (PowerShell) build every cell and drop jars in `dist/`:
+**`click` example** -- `handled=true` means the screen consumed the click (a real interaction);
+`false` usually means you clicked a decorative/inactive widget. Note the auto-describe:
 
 ```
-build-all-fabric.ps1        # all Fabric cells (1.20 -> 26.x)
-build-all-neoforge.ps1      # all NeoForge cells
+OK click 0 "Singleplayer" handled=true
+--- now ---
+screen: SelectWorldScreen  title: "Select World"
+widgets: 6
+  [0] EditBox "search" pos=(...) size=... VA- value=""
+  [1] Button "Play Selected World" pos=(...) ...
+  ...
 ```
 
-Requires a JDK (21 for the modern cells) and network access for the loader toolchains on first run.
+**`type` example** -- targets the box by id; fires the field's responder (e.g. the world-seed
+handler):
 
-## Layout
+```
+OK type 0 -> "myseed"
+--- now ---
+...
+```
 
-* `shared_minecraft/` -- the MC-coupled observe+actuate engine plus the `*Compat` reflection facades.
-  Single source of truth; `srcDir`'d into each mojmap-runtime cell.
-* `shared_common/` -- MC-agnostic Java (the `AiBrain` extractor) + resources, including the AI_Brain docs.
-* `Fabric*/`, `NeoForge*/`, `Forge-1.20.1/` -- per-version cells; each holds only the loader
-  entrypoint (`M1Client` / `M1NeoForge` / `M1Forge`). Mojmap cells (26 Fabric, all NeoForge/Forge)
-  `srcDir` the shared folders directly; pre-26 Fabric cells build from a generated `gen/` tree
-  (`cog-gen.ps1` + Cog) because their runtime is intermediary, not mojmap.
-* `mcp-minecraft/` -- the generic MCP bridge (Node/TypeScript) that connects an MCP client to M1's
-  text socket. MIT-licensed and Minecraft-agnostic; see its own README.
-* `_codegen/` -- Cog sources/data for the generated cells. `matrix.json` -- the cell/version matrix.
+> `type` only works on an `EditBox`. Aiming it at another widget returns
+> `ERR widget 3 is Button, not an EditBox`.
+
+**`worlds` / `joinworld`** -- world rows live in a selection list (not the widget list), so they
+have their own commands:
+
+```
+world entries:
+  [0] M1Garden, Survival Mode, version 26.1.2
+  [1] New World, Creative Mode, version 26.2
+```
+```
+joinworld 0   ->   OK joining world #0
+```
+
+### World state & perception
+
+| Command | What it does |
+|---|---|
+| `where` (`state`) | Player position, facing, health, food, dimension -- and live movement status while moving. |
+| `look` | What the crosshair is pointed at right now. |
+| `scan [r\|<name>]` | Line-of-sight perception (default and max radius 32). See "Reading a scan". |
+| `inv` (`inventory`) | Held item + everything you carry, by stable inventory index. |
+| `cmd <command>` | Run a server command (no leading slash). Needs cheats in the world. |
+
+**`where` example:**
+
+```
+pos=(120.50, 71.00, -8.30) facing=south yaw=2.0 pitch=10.0 health=20.0 food=20 dim=minecraft:overworld
+```
+While a move is running it appends a live progress tail; once finished it shows the outcome:
+
+```
+pos=(124.10, 71.00, -4.90) facing=southeast yaw=-44.0 pitch=0.0 health=20.0 food=20 dim=minecraft:overworld  | moving -> (130.0,-2.0) wp 7/19 dist 8.6
+...
+pos=(130.00, 71.00, -2.00) ...  | last move: arrived
+```
+
+> **How the instruction file reads this:** `moving -> (x,z) wp i/N dist D` means waypoint `i` of
+> `N`, `D` blocks from the goal -- poll it to watch progress. `arrived` = done. `blocked` /
+> `timeout` = stuck: **stop, re-scan, pick a new target** -- do not re-fire the same move.
+
+**`look` example** -- reports the block (or entity) under the crosshair, the face hit, and the
+distance; `look: nothing in reach` if the crosshair is on nothing:
+
+```
+look: block minecraft:oak_log at (15,71,-8) face=north dist=2.4
+```
+
+**`scan` example** -- four labelled sections, **line-of-sight only** (it never sees through walls;
+you cannot path to what you cannot see):
+
+```
+SCAN pos=(120,71,-8) facing=SOUTH r=32 (line-of-sight)
+BOUNDS  N:stone 1  S:open >32  E:oak_log 3  W:stone 1  UP:open >32  DOWN:stone 1
+VISIBLE oak_log (15,71,-8) E 3 +more | oak_leaves (14,73,-9) E 4 | water (122,69,3) S 11
+MOBS   cow x2 (124,71,-4) SE 5 | zombie (139,72,2) SE 19
+ITEMS  oak_log (15,71,-8) E 3
+```
+
+Reading the non-obvious bits (this is exactly what the instruction file teaches an agent):
+
+* **`BOUNDS`** is the nearest surface straight along each of the 6 axes (N S E W UP DOWN), with
+  distance -- your "am I boxed in / what's the floor and ceiling" read. **`open >32`** means
+  nothing was hit within range that way. `BOUNDS UP: open >32` is the standard "I'm outside / under
+  open sky" check.
+* **`VISIBLE`** lists notable blocks in sight, grouped and sorted nearest-first, each as
+  `name (x,y,z) BEARING dist`. Common filler (stone, dirt, grass, gravel, sand, leaves-grass,
+  etc.) is **hidden here on purpose** -- use `BOUNDS` for those. **`+more`** means you also saw
+  other blocks of that same type (only the nearest is listed). Coordinates are absolute -- feed
+  them straight into `goto`.
+* **`MOBS` / `ITEMS`** are living entities and dropped items in sight. **`xN`** is the count of
+  that kind (e.g. `cow x2`).
+* **Bearings** are absolute compass: `N S E W NE NW SE SW`, or `UP` / `DOWN` when something is
+  essentially straight above/below.
+
+**Targeted scan** -- `scan <name>` returns the nearest visible block or entity whose id contains
+`<name>`; `scan <r>` overrides the radius:
+
+```
+scan logs   ->   oak_log (15,71,-8) E 3 +more
+scan diamond ->  scan diamond: none visible within 32
+scan 16     ->   (a full SCAN, but only out to 16 blocks)
+```
+
+**`inv` example** -- `held: hotbar[N]` is your selected hotbar slot; items are listed by a
+**stable** inventory index (see slot numbering below):
+
+```
+held: hotbar[0] = 1x Wooden Axe
+items:
+  [0] 1x Wooden Axe
+  [9] 12x Oak Log
+  [10] 6x Oak Planks
+```
+
+**`cmd` example** -- sends a server command as if you typed `/...` (cheats required):
+
+```
+cmd time set 6000   ->   OK sent: /time set 6000
+```
+
+### Movement
+
+| Command | What it does |
+|---|---|
+| `moveto <x> <z>` | Pathfind + walk to x,z (Y follows terrain). |
+| `goto <x> <y> <z>` | Pathfind + walk to full coordinates. |
+| `move <dir> <n>` | Pathfind + walk `n` blocks in a compass direction. |
+| `face <dir\|yaw [pitch]\|x y z>` | Set facing: a compass word, a raw yaw (+optional pitch), or look-at a coordinate. |
+| `stop` | Stop moving (and stop mining). |
+
+All three move verbs run **M1's own pathfinder** (`nav own`, the default; `nav vanilla` falls back
+to the borrowed vanilla A*). It is built for a PLAYER body, not a mob: it **opens fence gates and
+doors itself** mid-route, walks over **rails**, **walks up stairs** (rather than jumping), routes
+**around walls**, and reaches **any distance** by planning in 16-block segments (a destination
+millions of blocks away is fine -- it only ever computes ~18 blocks ahead). Name a solid block as
+the target and it retargets to a standable cell beside it. Progress + honest failure reasons arrive
+as `[agent] nav:` lines. You do not time key-holds and you do not jump yourself.
+
+```
+move se 8     ->   OK move se -> (126.3,-2.3) via 9 waypoints. poll 'where'.
+moveto 130 -2 ->   OK moveto -> (130.0,-2.0) via 19 waypoints. poll 'where'.
+goto 15 71 -8 ->   OK goto -> (15.0,-8.0) via 12 waypoints (partial, will re-route). poll 'where'.
+```
+
+> Obscure outputs: **`via N waypoints`** = path length found. **`(partial, will re-route)`** means
+> only part of the route was reachable up front; the mod will recompute as it goes. If the target
+> is unreachable you get **`no path to (x,z) -- re-scan and pick a closer/clearer point`** straight
+> away -- the instruction file treats that as a hard "pick a different target" signal.
+
+`face` examples:
+
+```
+face south        ->   OK facing south (yaw 0.0)
+face 90           ->   OK yaw=90.0
+face 15 71 -8     ->   OK looking at (15.0,71.0,-8.0) yaw=-12.3 pitch=8.7
+```
+> Compass mapping in this engine: **yaw 0 = south**, and dirs are
+> `north/south/east/west/ne/nw/se/sw`. Resting view is `face 0 0` (level, facing south).
+
+### Mining
+
+| Command | What it does |
+|---|---|
+| `mine [x y z]` | Mine the crosshair block, or the block at `x y z` (faces it for you first). |
+
+```
+mine 15 71 -8   ->   OK mining minecraft:oak_log at (15,71,-8). poll 'inv'/'look'.
+mine            ->   mine: not looking at a block (face it first, or 'mine x y z')
+```
+> Mining holds the *attack* key function, which only breaks blocks when the game window has the
+> mouse grabbed (true on a focused in-game window) and no menu is open.
+
+### Inventory & crafting
+
+| Command | What it does |
+|---|---|
+| `openinv` | Open the inventory screen (the 2x2 crafting grid). |
+| `close` | Close the open screen. |
+| `hold <0-8>` | Select a hotbar slot (0-based; `hold 0` = hotbar slot 1). |
+| `equip <item>` \| `equip all` | Auto-route by NAME or id: armor -> its slot, shield -> off-hand, backpack -> worn, else to hand. `equip all` kits you out in one command. |
+| `place` | Use/place the held item on the block you are looking at (places a block, opens a table, presses a button, uses a bed, etc.). |
+| `craft planks\|sticks\|table\|axe` | Craft an item (asynchronous; poll `inv`). |
+| `slot <id> [btn] [pickup\|quick\|swap]` | Low-level raw slot click by the **open menu's** index. |
+
+```
+openinv            ->   OK inventory open (2x2 grid, containerId=2)
+hold 0             ->   OK hold hotbar 0 = 1x Wooden Axe
+equip crafting_table -> OK equipped crafting_table to hotbar 0
+place              ->   OK place/use -> SUCCESS
+craft planks       ->   OK crafting planks (poll 'inv')
+slot 1 0 quick     ->   OK slot 1 btn 0 QUICK_MOVE
+```
+
+> **Crafting is grid-aware and tick-driven.** `planks` and `table` work in the 2x2 inventory grid;
+> `sticks` and `axe` need a placed crafting table open (3x3). A result appears about one tick after
+> ingredients are placed and only moves out with an empty hand -- the `craft` command handles that
+> timing for you, so just poll `inv`.
+
+### Agent layer, combat, storage, inventory verbs & composites (0.6-0.9)
+
+The `agent` verb queues **autonomous, tick-stepped actions** on M1's agent engine: each subcommand
+returns `queued ...` immediately, runs over later in-world ticks, and reports back asynchronously as
+`[agent] <seq> <CLASS>: <text>` lines on subsequent replies. Poll `agent status`.
+
+| Command | What it does |
+|---|---|
+| `agent status` / `agent ping` | Engine status / end-to-end probe. |
+| `agent goto <x y z>` / `agent moveto <x z>` / `agent patrol <x z ...>` | Queued pathfinding movement. |
+| `agent look <x y z\|yaw [pitch]>` / `agent mine <x y z>` / `agent use` / `agent place` | Aim, break, use/place. |
+| `agent hold <0-8>` / `agent equip <item>` / `agent slot <id> [btn] [mode]` | Inventory verbs as plan steps. |
+| `agent drop [all]` | Drop 1 (or the stack) of the held item on the ground. |
+| `agent jump` / `agent sneak [on\|off]` / `agent sprint [on\|off]` | Movement-key leaves (KeyMapping-driven). |
+| `agent openinv` / `agent close` | Open the 2x2 inventory / close the screen, as plan steps. |
+| `attack [nearest\|<id>\|crosshair] [crit\|normal\|ranged]` | Universal combat: **auto-equips the best weapon**, walks in, times crits. `ranged` draws a bow (ballistic aim); a held spear stabs at 2-4.5 blocks. Per-enemy tactics built in (creeper hit-and-back, skeleton shield-advance, flyers prefer the bow). |
+| `agent follow <player> [dist]` | Lock onto a player and keep pace (sprint catch-up, portals) until `stop`. |
+| `defend [on\|off\|status\|auto\|<player>]` | Auto-defense reflex: if you or the protectee is hit, the mod engages the attacker, then resumes the previous plan. |
+| `agent shield [ticks]` | Raise/hold a shield. |
+| `agent stop` / `stop` | Clear the plan, stop moving/mining, release sneak/sprint. |
+
+**Bank Vault storage** (requires the [Bank Vault](https://modrinth.com/mod/bank-vault) mod, 26.x):
+`vault mark [x y z]` (remember the vault block), `vault status`, `vault contents [filter]` (reads the
+open vault and records a **per-world storage memory**), `vault withdraw <n> <item>`,
+`vault deposit rows|all|<item>` (`rows` never touches the hotbar -- the hotbar is the keep-list),
+`vault find <item>` / `vault memory` (query what was last seen where), and **`agent vault close`** --
+a guarded close that reopens the marked vault, verifies worn trinkets against the session snapshot,
+and re-equips anything the known Trinkets eject-on-close bug knocked into the inventory.
+
+**Generic crafting** (26.x): `cancraft <item>` answers "can I make this right now?" from the live
+recipe book -- YES with the recipe, or NO with per-ingredient HAVE/NEED lines annotated
+`(in vault: <id>)` and `(craftable)`. `agent craft <item> [count]` crafts ANY recipe-book recipe:
+open the 2x2 or a crafting table, and it picks a satisfiable recipe, auto-fills the grid, collects
+the result, and **auto-withdraws missing ingredients from your Bank Vault** when storage memory
+knows they are there. (Furnace/smithing/stonecutter and auto-crafting of intermediates are planned.)
+
+**SAFE-MOB doctrine.** `attack nearest` never pre-emptively targets a neutral mob (zombified
+piglins, endermen, wolves, bees, iron golems, ...) -- self-defense only, and the mod will not defend
+you/the master against one (joining angers the group). You may still target one explicitly.
+
+**High-level inventory verbs (names, not indices).** These take item names and human slot words and
+do the slot mechanics for you (auto-opening the inventory if a container is up): `equip all` (wear
+best armor + shield to off-hand + best weapon), `equip <item>` (auto-routed: armor -> its slot,
+shield -> off-hand, backpack -> worn, else hand), `organize hotbar` (standard layout: sword/pickaxe/
+axe/shovel/hoe/food), `takeall` (empty an open container), `stash junk` (junk off the hotbar),
+`moveitem <item> to <hb1-9\|offhand\|head\|chest\|legs\|feet>`.
+
+**Composites.** `sleep` -- find a bed (or deploy a Travelers-Backpack sleeping bag), walk beside it,
+sleep, with a concrete reason on failure. `recover` -- clear a death grave-site (name sign + chest +
+armor stand) in one command: break the sign, empty the chest, break the stand, collect drops, then
+`equip all` + `organize hotbar`.
+
+**Travelers Backpack** (requires the mod): `pack on` wears a backpack from your inventory at the code
+level (no GUI); `pack contents [f]` / `pack put <item\|all\|junk>` / `pack take <item> [n]` read and
+batch-move its storage.
+
+**Automatic screen + death reflexes.** Right-clicking a sign opens its edit dialog -- M1
+auto-dismisses it (mine/attack a sign to remove it). On death you auto-respawn (the death spot is
+reported). `where` warns `screen OPEN: ...` when a menu is holding your movement -- send `close`.
+
+The AI_Brain command card (`m1_ai_brain/10_command_card.md`, shipped in the jar) is the always-current
+syntax reference for everything above.
+
+### Gear / auto armor-upgrade
+
+| Command | What it does |
+|---|---|
+| `openpack` | Open your worn Travelers Backpack (fires its keybind in isolation). |
+| `upgrades` | Re-show any pending auto-armor-upgrade messages. |
+| `autoupgrade on\|off` | Toggle automatic armor upgrading (default on). |
+
+**Auto-upgrade runs by itself** every ~5 s with no GUI open: it equips the best armor you are
+carrying per slot, by the tree
+`nothing < gold(bare-slot-only) < leather < copper < chainmail < iron < diamond < netherite`
+(ties break on more remaining durability; gold only fills an empty slot and is replaced as soon as
+a real tier is found). You do **not** manage armor. When it swaps something it tells you on your
+**next** reply:
+
+```
+[auto-upgrade] CHEST: leather_chestplate -> iron_chestplate
+[auto-upgrade] FEET: nothing -> golden_boots
+```
+```
+upgrades        ->   no upgrades pending
+autoupgrade off ->   OK auto-upgrade OFF
+```
+
+> `openpack` exists because a worn backpack's screen is opened by a keybind, not a widget. M1 finds
+> the backpack key mapping and triggers it **in isolation** (temporarily rebinding it to a scratch
+> key) so a shared physical key -- e.g. a minimap and the backpack both bound to `B` -- does not
+> co-fire. Reply: `OK triggered key.travelersbackpack.inventory in isolation -- poll 'describe'`.
+
+### Utility
+
+| Command | What it does |
+|---|---|
+| `screenshot [name]` (`shot`) | Save a PNG of the current frame via the game's own writer. |
+| `help` | Print the command list. |
+| `quit` / `exit` | Close this connection (does not stop the client). |
+
+```
+screenshot scene1 -> OK screenshot scene1.png (148213 bytes) path=<gameDir>/screenshots/scene1.png
+```
+
+---
+
+## 6. Slot numbering
+
+There are **two** numbering schemes and mixing them up is the most common slot bug.
+
+**`inv` indices are STABLE** -- they never change, no matter what screen is open. Use them for
+`hold` / `equip` and for knowing what you carry:
+
+```
+0-8    hotbar, left to right   (hotbar slot N in-game = inv index N-1)
+9-35   main storage (9-17 top row, 18-26 middle, 27-35 bottom)
+36 boots | 37 leggings | 38 chestplate | 39 helmet | 40 off-hand
+```
+
+**`slots` indices RENUMBER for every open container** -- always run `slots` to read them live,
+never assume. Your own storage is re-indexed and appended **after** the container's own slots:
+
+```
+Inventory open (openinv, 2x2):  0 result | 1-4 the 2x2 grid | 5 helmet 6 chest 7 legs 8 boots
+                                | 9-35 main | 36-44 hotbar | 45 off-hand
+Crafting table open (3x3):      0 result | 1-9 the 3x3 grid | 10-36 main | 37-45 hotbar
+Any other container:            container slots first (0..N-1), then main (27), then hotbar (9)
+```
+
+`slot <id> ...` clicks by the **open menu's** index (from `slots`), not the `inv` index. The
+craft grids exist only while a screen is open, so they appear in `slots`, never in `inv`.
+
+---
+
+## 7. Operating notes & safety
+
+* **Client-only.** M1 never runs server-side logic. `cmd` is just sending a normal client-to-server
+  command, exactly like a player typing `/time`.
+* **Never cold-kill a loaded world.** To leave a world, `pause` then `click` "Save and Quit to
+  Title" -- that saves first.
+* **Asynchronous commands** (`move*`, `goto`, `mine`, `craft`) return immediately; poll
+  `where` / `inv` / `look`. `stop` aborts movement and mining.
+* **Coverage ceiling, honestly:** M1 enumerates well-structured, widget/container-based GUIs.
+  Mods that hand-draw their UI in immediate mode (paint a texture, hit-test a hardcoded rectangle)
+  have no widget object to list -- the visible window is the instrument for spotting those gaps.
+
+---
+
+## 8. Repo layout
+
+`main` is the entry point (this README). The unified buildable source -- one tree spanning MC
+1.20 - 26.x for Fabric + NeoForge -- lives on branch
+[`minecraft-1.20-26.3`](https://github.com/Kishku7/m1/tree/minecraft-1.20-26.3):
+
+* `shared_minecraft/` -- the MC-coupled observe+actuate engine (single source of truth), `srcDir`'d
+  into the per-loader `Fabric*/` and `NeoForge*/` cells.
+* `shared_common/` -- MC-agnostic code + resources, including the **AI_Brain** operating brief that
+  ships inside every jar and extracts, on first run, to `config/M1_AI_Brain/<MAJOR.MINOR>/`
+  (relative to the game/instance dir -- e.g. `config/M1_AI_Brain/0.9/`), create-once per minor:
+  https://github.com/Kishku7/m1/tree/minecraft-1.20-26.3/shared_common/src/main/resources/m1_ai_brain
+* Build with `build-all-fabric.ps1` / `build-all-neoforge.ps1`; jars land in `dist/`.
