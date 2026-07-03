@@ -1,5 +1,5 @@
 # Safety & etiquette
-<!-- Valid as of: M1 v0.5.0 | MC 1.20 - 26.3 | updated 2026-06-29 -->
+<!-- Valid as of: M1 v0.9.1 | MC 1.20 - 26.3 | updated 2026-07-02 -->
 **Covers:** conduct rules -- protect the user's stuff, and behave on shared servers.
 
 ## The user's worlds and builds
@@ -24,3 +24,10 @@
 - Stay within the task. Do not wander off to unrelated objectives.
 - When something feels destructive or irreversible and the user has not clearly approved it, the
   correct move is to ask -- not to proceed and hope.
+
+## Neutral mobs -- SAFE-MOB doctrine (hard rule)
+Never pre-emptively attack a neutral mob -- zombified piglins, endermen, wolves, bees, iron golems,
+polar bears, llamas, pandas. `attack nearest` already skips them; do not target one explicitly just
+to farm drops, and do not "help" the master fight one -- joining angers the whole group and gets you
+both swarmed. Engage a neutral ONLY in genuine self-defense (it hit you first) or on the master's
+explicit order for that specific mob.

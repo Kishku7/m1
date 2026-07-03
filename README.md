@@ -9,6 +9,30 @@ release from **1.20 through 26.x** for **Fabric** and **NeoForge** (plus Forge o
 NeoForge has none). The full reference manual -- complete command set, `scan`/inventory semantics,
 worked examples -- lives in the [`main` branch README](https://github.com/Kishku7/m1/blob/main/README.md).
 
+## What M1 can do (v0.9.0)
+
+Everything is text in / text out over the socket. Highlights of the current command surface:
+
+* **Perception:** `describe` (any screen), `scan` (line-of-sight world), `where`, `look`, `inv`,
+  `slots` (role-labelled).
+* **Navigation -- M1's own pathfinder:** `moveto`/`goto` to any coordinate at any distance; it
+  opens gates + doors itself, walks rails and stairs, and routes in 16-block segments. `nav
+  own|vanilla` picks the engine.
+* **Combat (universal):** `attack [nearest|<id>|crosshair] [crit|normal|ranged]` -- auto-equips the
+  best weapon, times crits, bow ballistics, spear stab, per-enemy tactics; `shield`, `follow`,
+  `defend`. A SAFE-MOB doctrine never pre-empts neutral mobs (piglins, endermen, ...).
+* **Inventory verbs (names, not indices):** `equip all`, `equip <item>`, `organize hotbar`,
+  `takeall`, `stash junk`, `moveitem <item> to <hb1-9|offhand|head|chest|legs|feet>`.
+* **Composites:** `sleep` (bed or backpack sleeping bag), `recover` (clear a death grave-site),
+  generic `craft <item>` (RecipeManager-driven, vault-sourced).
+* **Storage:** Bank Vault (`vault ...`, enchanted-gear `id#hash` withdraw) and Travelers Backpack
+  (`pack on|contents|put|take`, code-level wear + batch move).
+* **Autonomy:** the `agent` layer queues actions that run in-world and report back async; chat
+  master control (`Who is your daddy` -> take orders from that player).
+
+The exhaustive syntax + semantics live in the AI_Brain (below) and the [`main` branch
+README](https://github.com/Kishku7/m1/blob/main/README.md).
+
 ## Connecting
 
 The modded client opens a TCP server on **`localhost:26000`**, bound on BOTH `127.0.0.1` and `::1`

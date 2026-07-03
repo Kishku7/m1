@@ -1,5 +1,5 @@
 # 03 -- Join a multiplayer / LAN world
-<!-- Valid as of: M1 v0.5.0 | MC 1.20 - 26.3 | updated 2026-06-29 -->
+<!-- Valid as of: M1 v0.9.1 | MC 1.20 - 26.3 | updated 2026-07-02 -->
 **Covers:** picking and joining a server (saved entry, direct connect, or an open LAN game), and what
 to confirm with the user first.
 

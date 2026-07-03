@@ -1,5 +1,5 @@
 # Command card (exact syntax cheat-sheet)
-<!-- Valid as of: M1 v0.9.0 | MC 1.20 - 26.3 | updated 2026-07-02 (Travelers Backpack: wear + batch store; sleeping-bag detect) -->
+<!-- Valid as of: M1 v0.9.1 | MC 1.20 - 26.3 | updated 2026-07-02 (Travelers Backpack: wear + batch store; sleeping-bag detect) -->
 **Covers:** every M1 command with syntax + a one-line note, so you can reload just the syntax cheaply.
 Concepts behind these live in `01_drive_m1.md`.
 

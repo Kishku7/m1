@@ -1,5 +1,5 @@
 # Recovery & troubleshooting (when something goes wrong)
-<!-- Valid as of: M1 v0.5.0 | MC 1.20 - 26.3 | updated 2026-06-29 -->
+<!-- Valid as of: M1 v0.9.1 | MC 1.20 - 26.3 | updated 2026-07-02 -->
 **Covers:** detecting and recovering from failure. Read this the moment something is not working --
 do not keep firing the command that failed.
 
@@ -39,3 +39,10 @@ toward `BOUNDS ... open`.
 After two genuine, different attempts at the same goal have failed, stop and report what you tried and
 what you saw -- do not grind. Connection failures, version mismatches, and anything destructive are
 immediate stop-and-ask (see `20_ask_the_user.md`).
+
+## Handled for you now (not manual recovery cases)
+- **Death:** you AUTO-RESPAWN and the death spot is reported (`DIED at x,y,z`). Do not try to click
+  the death screen yourself.
+- **Sign-edit dialog:** right-clicking a sign opens its editor; M1 auto-dismisses it. To remove a
+  sign, mine/attack it.
+- **A menu froze your movement?** `where` says `screen OPEN: ...` -- send `close` and retry.

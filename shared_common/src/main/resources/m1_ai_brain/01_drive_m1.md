@@ -95,7 +95,43 @@ Every ~5 s, with no menu open, M1 auto-equips the best armor you carry per slot:
 `nothing < gold(empty-slot-only) < leather < copper < chainmail < iron < diamond < netherite`
 (ties break on durability). You never equip armor yourself. On a swap you get
 `[auto-upgrade] CHEST: leather_chestplate -> iron_chestplate` on your next reply. `upgrades`
-re-shows pending notes; `autoupgrade off` disables it for a task. `openpack` opens a worn Travelers Backpack.
+re-shows pending notes; `autoupgrade off` disables it for a task.
+
+### High-level inventory verbs (prefer these over raw `slot`/`slots`)
+You rarely need slot surgery -- these take NAMES and human slot words, and the mod does the mechanics
+(they auto-open your inventory if a container screen is up):
+- `equip all` -- wear the best armor you carry + shield to off-hand + best weapon to hand, one shot.
+- `equip <item>` -- by name/id, auto-routed (armor -> its slot, shield -> off-hand, backpack -> worn,
+  else to hand).
+- `organize hotbar` -- standard layout: hb1 sword, hb2 pickaxe, hb3 axe, hb4 shovel, hb5 hoe, hb9 food.
+- `takeall` -- empty the OPEN container (chest/vault) into your inventory in one shot.
+- `stash junk` -- move junk (rotten flesh / bones / spider eyes) off your hotbar.
+- `moveitem <item> to <hb1..hb9|offhand|head|chest|legs|feet>` -- a named move using HUMAN slot words
+  (hb1..hb9 are 1-based, as you would say them). Use this instead of computing menu indices.
+
+### Sleep
+`sleep` is one verb: it finds a usable bed nearby, walks BESIDE it (never onto it), and sleeps -- or,
+if no bed and you carry a Travelers-Backpack sleeping bag, deploys the bag. It reports a concrete
+reason on failure (daytime, none found, unreachable). Do not hand-drive beds with face+place anymore.
+
+### Grave recovery
+`recover` handles a death grave-site (chest + armor stand on top + a name sign) in one command: it
+breaks the sign, empties the chest, breaks the armor stand, collects the drops, then `equip all` +
+`organize hotbar`. Run it while standing at the grave.
+
+### Storage: Bank Vault + Travelers Backpack
+- **Bank Vault** (`vault ...`): your player-bound bank. `vault mark` (once, before closing), `vault
+  contents [f]`, `vault withdraw <item> [n]` (plain id OR an `id#hash` key for enchanted gear, either
+  arg order), `vault deposit rows|all|<item>`, `vault find <item>`, `agent vault close` (guarded).
+  Open it by walking to the completed vault and `place` (use) with an empty hand.
+- **Travelers Backpack** (`pack ...`): `pack on` wears a backpack from your inventory (code-level, no
+  GUI); `pack contents [f]`, `pack put <item|all|junk>`, `pack take <item> [n]` read/stash in batches.
+  `openpack` opens the worn backpack's GUI if you need it.
+
+### Screen + death reflexes (automatic -- you do not act)
+Right-clicking a SIGN opens its edit dialog; M1 auto-dismisses it (to remove a sign, mine/attack it).
+On DEATH you auto-respawn and the death spot is reported (`DIED at x,y,z`). `where` warns
+`screen OPEN: ...` when a menu is up and movement is held -- `close` to exit.
 
 ## 8a. Combat, follow, and damage awareness
 - **Attack is one command:** `attack [nearest|<id>|crosshair] [crit|normal]`. It WALKS to the target itself, then strikes with cooldown-timed crits -- you do NOT approach first. It runs on the agent engine, so progress arrives as `[agent] ...` lines; the mob is dead only when a `scan` no longer lists it. `attack normal` = no crit.

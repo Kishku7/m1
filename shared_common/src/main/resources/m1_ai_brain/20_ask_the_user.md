@@ -1,5 +1,5 @@
 # Ask the user (shared interaction contract)
-<!-- Valid as of: M1 v0.5.0 | MC 1.20 - 26.3 | updated 2026-06-29 -->
+<!-- Valid as of: M1 v0.9.1 | MC 1.20 - 26.3 | updated 2026-07-02 -->
 **Covers:** when to ask vs decide yourself, and how to ask. Used by `02_create_world.md`,
 `03_join_multiplayer.md`, and any open-ended task.
 

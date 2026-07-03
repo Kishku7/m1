@@ -1,5 +1,5 @@
 # 02 -- Create a single-player world
-<!-- Valid as of: M1 v0.5.0 | MC 1.20 - 26.3 | updated 2026-06-29 -->
+<!-- Valid as of: M1 v0.9.1 | MC 1.20 - 26.3 | updated 2026-07-02 -->
 **Covers:** driving the Create World menus from the title screen -- gathering the user's choices,
 setting the options (including Allow Commands), and confirming you land in the world.
 
