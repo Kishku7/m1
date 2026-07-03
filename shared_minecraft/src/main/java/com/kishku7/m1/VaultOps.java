@@ -259,6 +259,7 @@ public final class VaultOps {
         }
         b.append(" | marked: ").append(vaultPos == null ? "none" : vaultPos.toShortString());
         b.append(" | api: ").append(VaultNet.inJvm() ? "in-jvm" : "chat-or-none");
+        b.append(" | sysline: ").append(VaultNet.debug());
         return b.toString();
     }
 

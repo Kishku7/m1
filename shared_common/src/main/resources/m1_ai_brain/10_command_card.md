@@ -76,7 +76,11 @@ CRAFT
 
 STORAGE (Bank Vault -- vault = your player-bound bank; needs the bank-vault mod.
          BV 1.4.0+ api verbs return ONE machine-readable line: "BV|op|OK|..." or
-         "BV|op|ERR|reason"; keys are plain ids or "id#hash" specials. NO screen needed)
+         "BV|op|ERR|reason"; keys are plain ids or "id#hash" specials. NO screen needed.
+         SINGLEPLAYER: the BV| line comes back immediately as the reply. MULTIPLAYER: the
+         verb returns "OK sent ..." at once and the BV| line is PUSHED shortly after as a
+         "[bv] BV|..." report line (read it from the same reply, the next command's reply,
+         or a bare listen). No [bv] line = the server's Bank Vault predates 1.4.0)
   vault snapshot       bank totals: BV|snapshot|OK|total=..|unique=..|cap=..|upgrades=..|members=..
   vault list [page]    full bank listing, 50 keys/page: BV|list|OK|page=1/N|key=count;...
   vault count <key>    exact count of a key; a plain id also lists its id#hash variants
