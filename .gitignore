@@ -26,3 +26,7 @@ docs/
 
 # Local tooling (machine-specific paths, e.g. the sync-aibrain mirror dest); not for the repo
 scripts/
+
+# Matrix definition (internal build metadata; not public)
+matrix.json
+MATRIX.md
