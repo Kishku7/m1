@@ -29,17 +29,20 @@ tasks.withType(JavaCompile).configureEach {
     options.compilerArgs += ['-Xlint:all,-deprecation']
 }
 
-// No mixins, no access transformer (Minecraft.screen / setScreen are public on 1.20.1), so no
-// refmap / AT manifest. ${file.jarVersion} in mods.toml resolves at runtime from the manifest.
+// No mixins, no access transformer. ${file.jarVersion} in mods.toml resolves at runtime from the manifest.
 jar {
     manifest {
         attributes 'Implementation-Version': project.mod_version
     }
 }
 
-sourceSets.main.java.srcDir "../../shared_minecraft/src/main/java"
-
-// AI_Brain (MC-agnostic java + resources, shipped in jar)
-sourceSets.main.java.srcDir "../../shared_common/src/main/java"
+// SRG-RUNTIME FIX (2026-07-04): Forge 47.x / MC 1.20.1 runs SRG (f_xxxxx_ / m_xxxxx_) names at RUNTIME,
+// so the reflection-by-mojmap *Compat facades in shared_minecraft MISS (M1Compat.screen() returned null
+// -> the client smoketest hung at screen=none, never entered the world). This is the SAME failure mode as
+// pre-26 Fabric (intermediary runtime). Fall through to Cog/direct: build from the cog-generated gen/ tree
+// (DIRECT compiled MC access, which Forge remaps mojmap->SRG at load). Regenerate gen/ with:
+//   ./cog-gen.ps1 -Cell Forge/1.20.1 -McVer 1.20.1 -Loader forge
+// cog-gen robocopies shared_minecraft + shared_common java into gen/ then overwrites the *Compat classes
+// with cog'd direct versions -- so gen/ already bundles shared_common java; add only its resources srcDir.
+sourceSets.main.java.srcDir "gen"
 sourceSets.main.resources.srcDir "../../shared_common/src/main/resources"
-

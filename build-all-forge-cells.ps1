@@ -1,9 +1,13 @@
-# build-all-forge-cells.ps1 -- build the Forge cells (FG6, mojmap facade, no cog) from the shared source.
+# build-all-forge-cells.ps1 -- build the Forge cells (FG6) from the shared source.
 #
-# Forge is mojmap on 1.20.1+, so the reflection *Compat facades resolve at runtime -- no Cog step. Each
-# Forge/<ver> cell is a thin FG6 project that srcDir's the shared source and carries a per-version
-# M1Forge entrypoint (TickEvent through 1.21.5; EventBus-7 TickEvent.ClientTickEvent.Post.BUS at 1.21.8+).
-# Forge/FG6 ceiling = 1.21.8. Walks Forge/<ver>, builds each, records PASS/FAIL + warning count.
+# Most Forge cells (1.21.1+) run a MOJMAP runtime, so the reflection *Compat facades resolve at runtime --
+# a straight gradle build from shared_minecraft. EXCEPTION (2026-07-04): Forge 47.x / MC 1.20.1 runs SRG
+# (f_xxxxx_/m_xxxxx_) names at RUNTIME, so reflection-by-mojmap MISSES (M1Compat.screen() returned null).
+# That cell falls through to Cog/direct and its build.gradle srcDir's "gen". So: for ANY cell whose
+# build.gradle srcDir's "gen", regenerate its cog tree first (cog-gen.ps1 -Loader forge) before building.
+# Each Forge/<ver> cell is a thin FG6 project + per-version M1Forge entrypoint (TickEvent through 1.21.5;
+# EventBus-7 ClientTickEvent.Post.BUS at 1.21.8+). Forge/FG6 ceiling = 1.21.11 (forge 61.x). Walks
+# Forge/<ver>, builds each, records PASS/FAIL + warning count.
 param([string[]]$Only)
 $ErrorActionPreference = 'Continue'
 $root = $PSScriptRoot
@@ -20,6 +24,12 @@ foreach ($cell in $cells) {
   $sw   = [Diagnostics.Stopwatch]::StartNew()
   try {
     $blog = Join-Path $env:TEMP "m1_fgbuild_$name.log"
+    # SRG-runtime cells (e.g. 1.20.1) build from a cog-generated DIRECT-access gen/ tree; regenerate it
+    # from _codegen so a clean checkout (gen/ is gitignored) is reproducible.
+    if ((Get-Content "$dir\build.gradle" -Raw) -match 'srcDir\s+"gen"') {
+      & "$root\cog-gen.ps1" -Cell "Forge/$name" -McVer $mv -Loader forge *> (Join-Path $env:TEMP "m1_coggen_forge_$name.log")
+      if ($LASTEXITCODE -ne 0) { "FAIL  $name (mc=$mv)  cog-gen failed (see m1_coggen_forge_$name.log)" | Add-Content $status; continue }
+    }
     Push-Location $dir
     & "$dir\gradlew.bat" build --console=plain *> $blog
     $ok = ($LASTEXITCODE -eq 0)

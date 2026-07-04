@@ -6,8 +6,8 @@ and accepts text commands to drive it -- so a human at a terminal, or an AI over
 operate Minecraft entirely by typing. No GUI mouse/keyboard is required and nothing needs to be
 "looked at" on screen; the window is there purely for observability.
 
-Loaders / versions: Fabric + NeoForge, MC 26.x (this `main` branch is the entry point; the unified
-source tree (MC 1.20 - 26.x, Fabric + NeoForge) lives on branch `minecraft-1.20-26.3`). Current: **v0.9.x**.
+Loaders / versions: Fabric, NeoForge, and Forge, MC 1.20 - 26.x (this `main` branch is the entry point; the unified
+source tree (MC 1.20 - 26.x, Fabric + NeoForge + Forge) lives on branch `minecraft-1.20-26.3`). Current: **v0.12.0** (one source tree builds every MC 1.20.0 - 26.3 across all applicable loaders).
 
 > **New here? Read [the AI_Brain (`00_Index.md`)](https://github.com/Kishku7/m1/tree/minecraft-1.20-26.3/shared_common/src/main/resources/m1_ai_brain) first.** That is the file an AI agent
 > is expected to load before a play session. This README is the reference manual behind it.
@@ -22,7 +22,7 @@ Voyager), or research stacks pinned to ancient versions (Malmo, MineRL). Because
 the real client, **they are blind to anything the client draws -- mod GUIs simply do not exist to
 them**, and a version or mod mismatch breaks them.
 
-M1 *is* the real client. It loads as an ordinary Fabric/NeoForge mod, reads every real screen, and
+M1 *is* the real client. It loads as an ordinary Fabric / NeoForge / Forge mod, reads every real screen, and
 drives the game the way you would. That unlocks what the protocol bots cannot touch:
 
 1. **Mod development & real-client testing.** Test your mod the way a player actually experiences
