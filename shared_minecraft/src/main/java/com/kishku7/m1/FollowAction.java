@@ -86,7 +86,7 @@ public final class FollowAction implements MinecraftAction {
                 ctx.report(ReportClass.STATUS, "follow: passed through END portal -- AUTO-STOP (holding position)");
                 return StepResult.DONE;
             }
-            ctx.report(ReportClass.STATUS, "follow: arrived in " + dim.identifier() + "; re-acquiring " + who);
+            ctx.report(ReportClass.STATUS, "follow: arrived in " + M1Compat.keyId(dim) + "; re-acquiring " + who);
             lostTicks = -(PORTAL_GRACE_TICKS - LOST_GRACE_TICKS); // extended grace on the far side
             everSeen = false;
             return StepResult.RUNNING;

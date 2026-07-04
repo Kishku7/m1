@@ -1,72 +1,43 @@
 package com.kishku7.m1;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.screens.recipebook.RecipeCollection;
-import net.minecraft.core.Holder;
-import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.util.context.ContextMap;
-import net.minecraft.world.entity.player.StackedItemContents;
-import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
-import net.minecraft.world.item.crafting.display.RecipeDisplayEntry;
-import net.minecraft.world.item.crafting.display.SlotDisplayContext;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
 /**
- * Generic crafting driven by the LIVE recipe book -- no hardcoded recipe list. The synced
- * {@link RecipeDisplayEntry} set is the client's authoritative "what can be made" catalog
- * (vanilla + datapack + modded recipes all included for free), {@code canCraft} answers
- * feasibility against the player's actual inventory, and
- * {@code MultiPlayerGameMode.handlePlaceRecipe} does the authoritative server-side grid fill
- * (the recipe-book click a player makes). 26.x API (RecipeDisplayEntry model).
+ * Generic crafting driven by the LIVE recipe book -- no hardcoded recipe list. The synced recipe
+ * set is the client's authoritative "what can be made" catalog (vanilla + datapack + modded for
+ * free); {@code canCraft} answers feasibility against the player's real inventory, and
+ * {@link RecipeCompat#placeRecipe} does the authoritative server-side grid fill.
  *
- * NOTE (RULE 3, features first): this class uses 26-only recipe APIs DIRECTLY. Pre-26 cells will
- * not compile it -- the Cog/facade port happens at the 1.0 port pass, per m1.md PROJECT RULE 3.
+ * All recipe-book access goes through {@link RecipeCompat}, which bridges the 1.21.2 recipe rewrite
+ * (RecipeDisplayEntry 1.21.2+ vs RecipeHolder pre-1.21.2). Entry handles are opaque {@code Object}.
  */
 public final class RecipeOps {
 
     private RecipeOps() {
     }
 
-    @SuppressWarnings("deprecation") // Ingredient.items() is deprecated on 26.x with NO public
-    // replacement (the backing HolderSet 'values' is private). Sole accessor, kept in one place.
-    static java.util.stream.Stream<Holder<Item>> ingredientItems(Ingredient ing) {
-        return ing.items();
-    }
-
-    /** All recipe-book entries (every collection flattened). */
-    static List<RecipeDisplayEntry> entries(Minecraft mc) {
-        List<RecipeDisplayEntry> out = new ArrayList<>();
-        for (RecipeCollection c : mc.player.getRecipeBook().getCollections()) {
-            out.addAll(c.getRecipes());
-        }
-        return out;
+    /** All recipe-book entry handles (opaque; RecipeDisplayEntry or RecipeHolder per version). */
+    static List<Object> entries(Minecraft mc) {
+        return RecipeCompat.entries(mc);
     }
 
     /** Result item id ("namespace:path") of an entry, or "" when unresolvable. */
-    static String resultId(Minecraft mc, RecipeDisplayEntry e) {
-        try {
-            ContextMap ctx = SlotDisplayContext.fromLevel(mc.level);
-            List<ItemStack> rs = e.resultItems(ctx);
-            if (rs.isEmpty() || rs.get(0).isEmpty()) {
-                return "";
-            }
-            return BuiltInRegistries.ITEM.getKey(rs.get(0).getItem()).toString();
-        } catch (Exception ex) {
-            return "";
-        }
+    static String resultId(Minecraft mc, Object e) {
+        return RecipeCompat.resultId(mc, e);
     }
 
     /** Entries whose result id matches 'item' (exact path or full id first, else substring). */
-    static List<RecipeDisplayEntry> producersOf(Minecraft mc, String item) {
+    static List<Object> producersOf(Minecraft mc, String item) {
         String want = item.toLowerCase(Locale.ROOT).trim();
-        List<RecipeDisplayEntry> exact = new ArrayList<>();
-        List<RecipeDisplayEntry> partial = new ArrayList<>();
-        for (RecipeDisplayEntry e : entries(mc)) {
+        List<Object> exact = new ArrayList<>();
+        List<Object> partial = new ArrayList<>();
+        for (Object e : entries(mc)) {
             String id = resultId(mc, e);
             if (id.isEmpty()) {
                 continue;
@@ -81,22 +52,15 @@ public final class RecipeOps {
         return exact.isEmpty() ? partial : exact;
     }
 
-    static StackedItemContents playerContents(Minecraft mc) {
-        StackedItemContents sic = new StackedItemContents();
-        mc.player.getInventory().fillStackedContents(sic);
-        return sic;
-    }
-
-    /** Human summary of one ingredient: first acceptable item path (+N alternatives). */
+    /** Human summary of one ingredient: first acceptable item path (+alts). */
     static String ingredientLabel(Ingredient ing) {
-        List<String> ids = new ArrayList<>();
-        ingredientItems(ing).limit(4).forEach((Holder<Item> h) ->
-                ids.add(BuiltInRegistries.ITEM.getKey(h.value()).getPath()));
+        List<String> ids = RecipeCompat.ingredientItemIds(ing);
         if (ids.isEmpty()) {
             return "?";
         }
         String first = ids.get(0);
-        return ids.size() > 1 ? first + "(+alts)" : first;
+        String path = first.substring(first.indexOf(':') + 1);
+        return ids.size() > 1 ? path + "(+alts)" : path;
     }
 
     /** Does the player hold something this ingredient accepts? */
@@ -113,17 +77,12 @@ public final class RecipeOps {
 
     /** Is anything this ingredient accepts remembered in vault storage (last-seen)? */
     static String vaultSourceFor(Minecraft mc, Ingredient ing) {
-        List<String> found = new ArrayList<>();
-        ingredientItems(ing).limit(12).forEach((Holder<Item> h) -> {
-            if (!found.isEmpty()) {
-                return;
-            }
-            String id = BuiltInRegistries.ITEM.getKey(h.value()).toString();
+        for (String id : RecipeCompat.ingredientItemIds(ing)) {
             if (!StorageMemory.find(mc, id).isEmpty()) {
-                found.add(id);
+                return id;
             }
-        });
-        return found.isEmpty() ? null : found.get(0);
+        }
+        return null;
     }
 
     /**
@@ -138,25 +97,25 @@ public final class RecipeOps {
         if (item.isEmpty()) {
             return "ERR usage: cancraft <item>";
         }
-        List<RecipeDisplayEntry> prods = producersOf(mc, item);
+        List<Object> prods = producersOf(mc, item);
         if (prods.isEmpty()) {
             return "cancraft " + item + ": NO recipe known to the recipe book";
         }
-        StackedItemContents sic = playerContents(mc);
-        for (RecipeDisplayEntry e : prods) {
-            if (e.canCraft(sic)) {
+        for (Object e : prods) {
+            if (RecipeCompat.canCraft(mc, e)) {
                 return "cancraft " + item + ": YES via " + resultId(mc, e)
-                        + " (recipe " + e.id().index() + ", " + prods.size() + " producer(s))";
+                        + " (" + RecipeCompat.label(e) + ", " + prods.size() + " producer(s))";
             }
         }
         // not craftable -- report the first producer's missing ingredients
-        RecipeDisplayEntry best = prods.get(0);
-        if (best.craftingRequirements().isEmpty()) {
+        Object best = prods.get(0);
+        List<Ingredient> reqs = RecipeCompat.requirements(best);
+        if (reqs.isEmpty()) {
             return "cancraft " + item + ": recipe found but its requirements are not synced";
         }
         StringBuilder b = new StringBuilder("cancraft " + item + ": NO -- recipe "
                 + resultId(mc, best) + " needs:");
-        for (Ingredient ing : best.craftingRequirements().get()) {
+        for (Ingredient ing : reqs) {
             String label = ingredientLabel(ing);
             if (holdsIngredient(mc, ing)) {
                 b.append("\n  HAVE ").append(label);
@@ -168,12 +127,10 @@ public final class RecipeOps {
                 b.append(" (in vault: ").append(vaultId).append(')');
             }
             // depth-1 craftability of the first concrete option
-            List<Holder<Item>> one = new ArrayList<>();
-            ingredientItems(ing).limit(1).forEach(one::add);
-            if (!one.isEmpty()) {
-                String subId = BuiltInRegistries.ITEM.getKey(one.get(0).value()).toString();
-                for (RecipeDisplayEntry se : producersOf(mc, subId)) {
-                    if (se.canCraft(sic)) {
+            List<String> opts = RecipeCompat.ingredientItemIds(ing);
+            if (!opts.isEmpty()) {
+                for (Object se : producersOf(mc, opts.get(0))) {
+                    if (RecipeCompat.canCraft(mc, se)) {
                         b.append(" (craftable)");
                         break;
                     }

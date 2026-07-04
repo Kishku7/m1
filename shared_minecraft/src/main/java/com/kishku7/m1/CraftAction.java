@@ -7,13 +7,11 @@ import com.kishku7.m1.agent.StepResult;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.world.entity.player.StackedItemContents;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.CraftingMenu;
 import net.minecraft.world.inventory.InventoryMenu;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
-import net.minecraft.world.item.crafting.display.RecipeDisplayEntry;
 
 import java.util.List;
 import java.util.Locale;
@@ -21,7 +19,7 @@ import java.util.Locale;
 /**
  * Generic craft leaf: {@code agent craft <item> [count]}. Recipe-book driven (see
  * {@link RecipeOps}): picks a producing recipe the player can satisfy, fills the open crafting
- * grid with the authoritative recipe-book fill ({@code gameMode.handlePlaceRecipe}), collects the
+ * grid via {@link RecipeCompat#placeRecipe} (the authoritative recipe-book click), collects the
  * result with {@link CraftHarvest}, and repeats until {@code count} is reached.
  *
  * Grid: works in the vanilla recipe-book menus -- the 2x2 inventory grid or a crafting table
@@ -29,10 +27,10 @@ import java.util.Locale;
  * RecipeBookMenu; the server ignores place-recipe packets for it -- vault = storage source.)
  *
  * Vault sourcing: if an ingredient is missing but storage memory says it is in the bank vault,
- * the action withdraws it via {@code /bank withdraw} and retries (the vault is player-bound, so
- * the withdraw works while crafting anywhere in the world).
+ * the action withdraws it via {@code /bank withdraw} and retries.
  *
- * NOTE (RULE 3): 26-only recipe APIs used directly; the pre-26 port is deferred to 1.0.
+ * All recipe-book access goes through {@link RecipeCompat} (opaque Object handles), so this builds
+ * and crafts on every version -- the 1.21.2 recipe rewrite is bridged there.
  */
 public final class CraftAction implements MinecraftAction {
 
@@ -49,7 +47,7 @@ public final class CraftAction implements MinecraftAction {
     private int startCount = -1;
     private int placedRounds;
     private int lastCount = -1;
-    private RecipeDisplayEntry entry;
+    private Object entry;           // opaque recipe handle (RecipeDisplayEntry or RecipeHolder)
     private String resultId = "";
 
     public CraftAction(String item, int count) {
@@ -83,15 +81,14 @@ public final class CraftAction implements MinecraftAction {
                     wait--;
                     return StepResult.RUNNING;
                 }
-                List<RecipeDisplayEntry> prods = RecipeOps.producersOf(mc, item);
+                List<Object> prods = RecipeOps.producersOf(mc, item);
                 if (prods.isEmpty()) {
                     ctx.report(ReportClass.STATUS, "craft: no recipe for '" + item + "' in the recipe book");
                     return StepResult.FAILED;
                 }
-                StackedItemContents sic = RecipeOps.playerContents(mc);
                 entry = null;
-                for (RecipeDisplayEntry e : prods) {
-                    if (e.canCraft(sic)) {
+                for (Object e : prods) {
+                    if (RecipeCompat.canCraft(mc, e)) {
                         entry = e;
                         break;
                     }
@@ -114,7 +111,7 @@ public final class CraftAction implements MinecraftAction {
                 return StepResult.RUNNING;
             }
             case 1: {
-                mc.gameMode.handlePlaceRecipe(menu.containerId, entry.id(), true);
+                RecipeCompat.placeRecipe(mc, menu.containerId, entry, true);
                 placedRounds++;
                 state = 2;
                 wait = 2;   // grid fill + server result need a tick or two
@@ -154,11 +151,12 @@ public final class CraftAction implements MinecraftAction {
     }
 
     /** Try to withdraw ONE missing ingredient from the bank vault (storage-memory guided). */
-    private boolean sourceFromVault(Minecraft mc, ActionContext ctx, RecipeDisplayEntry best) {
-        if (best.craftingRequirements().isEmpty() || mc.getConnection() == null) {
+    private boolean sourceFromVault(Minecraft mc, ActionContext ctx, Object best) {
+        List<Ingredient> reqs = RecipeCompat.requirements(best);
+        if (reqs.isEmpty() || mc.getConnection() == null) {
             return false;
         }
-        for (Ingredient ing : best.craftingRequirements().get()) {
+        for (Ingredient ing : reqs) {
             if (RecipeOps.holdsIngredient(mc, ing)) {
                 continue;
             }
@@ -177,8 +175,7 @@ public final class CraftAction implements MinecraftAction {
     private static int resultSlotOf(AbstractContainerMenu menu) {
         // Only the vanilla recipe-book crafting menus: handlePlaceRecipe is server-handled ONLY
         // for RecipeBookMenu subclasses. The Bank Vault menu has a 3x3 grid but is NOT one --
-        // its grid ignores the place-recipe packet (verified live 2026-07-02). The vault is a
-        // storage source here; sourcing works with ANY screen (the bank is player-bound).
+        // its grid ignores the place-recipe packet. The vault is a storage source here.
         if (menu instanceof CraftingMenu || menu instanceof InventoryMenu) {
             return 0;
         }

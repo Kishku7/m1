@@ -2,16 +2,12 @@ package com.kishku7.m1;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
-import net.minecraft.core.Holder;
-import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
-import net.minecraft.world.item.enchantment.Enchantment;
-import net.minecraft.world.item.enchantment.ItemEnchantments;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -58,14 +54,14 @@ public final class ItemInfo {
                 .append(st.getCount()).append("x \"").append(st.getHoverName().getString()).append("\"\n");
         b.append("id: ").append(BuiltInRegistries.ITEM.getKey(st.getItem())).append("\n");
 
-        Component custom = st.get(DataComponents.CUSTOM_NAME);
+        Component custom = M1Compat.customName(st);
         if (custom != null) {
             b.append("custom name: \"").append(custom.getString()).append("\"\n");
         }
 
         // Enchantments (worn/held gear) + stored enchantments (books).
-        String en = enchLine(st.getOrDefault(DataComponents.ENCHANTMENTS, ItemEnchantments.EMPTY));
-        String stored = enchLine(st.getOrDefault(DataComponents.STORED_ENCHANTMENTS, ItemEnchantments.EMPTY));
+        String en = M1Compat.enchantmentsLine(st, false);
+        String stored = M1Compat.enchantmentsLine(st, true);
         if (!en.isEmpty()) {
             b.append("enchantments: ").append(en).append("\n");
         }
@@ -85,7 +81,7 @@ public final class ItemInfo {
         // Vault key guidance: default-component items vault under their plain id; anything with a
         // component patch (custom name, enchants, damage, ...) vaults under id#hash -- the exact
         // key comes from the vault itself.
-        if (st.getComponentsPatch().isEmpty()) {
+        if (!M1Compat.hasComponentPatch(st)) {
             b.append("vault key: ").append(Crafting.itemId(st)).append(" (plain -- no custom components)\n");
         } else {
             b.append("vault key: ").append(Crafting.itemId(st))
@@ -95,7 +91,7 @@ public final class ItemInfo {
 
         // Advanced tooltip -- everything the player would see, plus ids/durability.
         try {
-            List<Component> tip = st.getTooltipLines(Item.TooltipContext.of(mc.level), p, TooltipFlag.ADVANCED);
+            List<Component> tip = M1Compat.tooltipLines(mc, p, st);
             if (!tip.isEmpty()) {
                 b.append("tooltip:\n");
                 for (Component c : tip) {
@@ -111,15 +107,7 @@ public final class ItemInfo {
 
         // NON-DEFAULT components only (the patch) -- exactly WHY an item is special. The full
         // prototype map is noise (a plain sword carries ~18 default components).
-        List<String> comps = new ArrayList<>();
-        for (var e : st.getComponentsPatch().entrySet()) {
-            String key = String.valueOf(BuiltInRegistries.DATA_COMPONENT_TYPE.getKey(e.getKey()));
-            String val = e.getValue().map(String::valueOf).orElse("(removed)");
-            if (val.length() > 60) {
-                val = val.substring(0, 57) + "...";
-            }
-            comps.add(key + "=" + val);
-        }
+        List<String> comps = M1Compat.componentPatchList(st);
         if (!comps.isEmpty()) {
             b.append("non-default components: ").append(String.join(", ", comps)).append("\n");
         }
@@ -128,19 +116,6 @@ public final class ItemInfo {
         return b.toString();
     }
 
-    /** "mending 1, unbreaking 3" (registry paths + levels); "" when none. */
-    private static String enchLine(ItemEnchantments e) {
-        if (e == null || e.isEmpty()) {
-            return "";
-        }
-        List<String> parts = new ArrayList<>();
-        for (Holder<Enchantment> h : e.keySet()) {
-            String id = h.unwrapKey().map(k -> k.identifier().getPath()).orElse("?");
-            parts.add(id + " " + e.getLevel(h)
-                    + " (\"" + Enchantment.getFullname(h, e.getLevel(h)).getString() + "\")");
-        }
-        return String.join(", ", parts);
-    }
 
     /** Human label showing BOTH slot spaces. */
     static String label(int idx) {

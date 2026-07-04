@@ -1,8 +1,18 @@
 package com.kishku7.m1;
 
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.tags.TagKey;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
 import com.mojang.blaze3d.pipeline.RenderTarget;
 //[[[cog
 //import sys; sys.path.insert(0, codegen); import compat
@@ -15,7 +25,8 @@ import com.mojang.blaze3d.pipeline.RenderTarget;
  * cell's MC version (-D mcver=...). Emits DIRECT access per version -- which resolves on BOTH the
  * intermediary runtime (pre-26 Fabric; Loom remaps mojmap->intermediary) and the mojmap runtime
  * (MC 26+, NeoForge, Forge/FG6 1.20.1+), unlike reflection-by-mojmap-name (which misses on intermediary).
- * Fall-through rule: facade -> Cog -> segregated; this is the Cog layer.
+ * Fall-through rule: facade -> Cog -> segregated; this is the Cog layer. Keep the method surface
+ * identical to the reflection twin at shared_minecraft/.../M1Compat.java.
  */
 public final class M1Compat {
     private M1Compat() {}
@@ -48,6 +59,131 @@ public final class M1Compat {
     public static EntityType<?> zombie() {
         //[[[cog
         //for ln in compat.zombie(mcver): cog.outl(ln)
+        //]]]
+        //[[[end]]]
+    }
+
+    // 1.21.9 rename: ResourceKey.location() -> identifier(). Full id string.
+    public static String keyId(ResourceKey<?> key) {
+        //[[[cog
+        //for ln in compat.key_id(mcver): cog.outl(ln)
+        //]]]
+        //[[[end]]]
+    }
+
+    // 1.21.9 rename: path segment of a ResourceKey's value.
+    public static String keyPath(ResourceKey<?> key) {
+        //[[[cog
+        //for ln in compat.key_path(mcver): cog.outl(ln)
+        //]]]
+        //[[[end]]]
+    }
+
+    // 1.21.9 rename: ResourceLocation -> Identifier. Build an item TagKey from a namespaced id.
+    public static TagKey<Item> itemTag(String ns, String path) {
+        //[[[cog
+        //for ln in compat.item_tag(mcver): cog.outl(ln)
+        //]]]
+        //[[[end]]]
+    }
+
+    // 1.21.9: PIERCING_WEAPON data component (spear). Absent pre-1.21.9.
+    public static boolean isPiercingWeapon(ItemStack s) {
+        //[[[cog
+        //for ln in compat.is_piercing(mcver): cog.outl(ln)
+        //]]]
+        //[[[end]]]
+    }
+
+    // 1.21.9: spear stab via the PIERCING_WEAPON component; no-op false pre-1.21.9.
+    public static boolean tryPiercingAttack(Minecraft mc, LocalPlayer p) {
+        //[[[cog
+        //for ln in compat.try_piercing(mcver): cog.outl(ln)
+        //]]]
+        //[[[end]]]
+    }
+
+    // 1.21.9: Button.onPress() -> onPress(InputWithModifiers).
+    public static void pressButton(Button b) {
+        //[[[cog
+        //for ln in compat.press_button(mcver): cog.outl(ln)
+        //]]]
+        //[[[end]]]
+    }
+
+    // 1.21.5: Level.isBrightOutside() vs isDay() (pre).
+    public static boolean isBrightOutside(net.minecraft.world.level.Level lvl) {
+        //[[[cog
+        //for ln in compat.is_bright_outside(mcver): cog.outl(ln)
+        //]]]
+        //[[[end]]]
+    }
+
+    // 1.21.2 EQUIPPABLE component vs pre LivingEntity.getEquipmentSlotForItem.
+    public static EquipmentSlot equipSlot(Minecraft mc, ItemStack s) {
+        //[[[cog
+        //for ln in compat.equip_slot(mcver): cog.outl(ln)
+        //]]]
+        //[[[end]]]
+    }
+
+    // 1.20.5 FOOD component vs pre Item.getFoodProperties().
+    public static double foodValue(ItemStack s) {
+        //[[[cog
+        //for ln in compat.food_value(mcver): cog.outl(ln)
+        //]]]
+        //[[[end]]]
+    }
+
+    // 1.20.5 ItemEnchantments component (Holder-arg 1.21+); pre-1.20.5 EnchantmentHelper.
+    public static String enchantmentsLine(ItemStack s, boolean stored) {
+        //[[[cog
+        //for ln in compat.ench_line(mcver): cog.outl(ln)
+        //]]]
+        //[[[end]]]
+    }
+
+    // 1.20.5 component: TB sleeping-bag attached; false pre-1.20.5.
+    public static boolean hasAttachedSleepingBag(ItemStack s, String ns) {
+        //[[[cog
+        //for ln in compat.has_attached_bag(mcver): cog.outl(ln)
+        //]]]
+        //[[[end]]]
+    }
+
+    // 1.20.5 CUSTOM_NAME component vs pre hasCustomHoverName.
+    public static net.minecraft.network.chat.Component customName(ItemStack s) {
+        //[[[cog
+        //for ln in compat.custom_name(mcver): cog.outl(ln)
+        //]]]
+        //[[[end]]]
+    }
+
+    public static boolean hasComponentPatch(ItemStack s) {
+        //[[[cog
+        //for ln in compat.has_component_patch(mcver): cog.outl(ln)
+        //]]]
+        //[[[end]]]
+    }
+
+    public static java.util.List<String> componentPatchList(ItemStack s) {
+        //[[[cog
+        //for ln in compat.component_patch_list(mcver): cog.outl(ln)
+        //]]]
+        //[[[end]]]
+    }
+
+    // 1.20.5 TooltipContext signature change.
+    public static java.util.List<net.minecraft.network.chat.Component> tooltipLines(Minecraft mc, net.minecraft.world.entity.player.Player p, ItemStack s) {
+        //[[[cog
+        //for ln in compat.tooltip_lines(mcver): cog.outl(ln)
+        //]]]
+        //[[[end]]]
+    }
+
+    public static boolean sameItemSameComponents(ItemStack a, ItemStack b) {
+        //[[[cog
+        //for ln in compat.same_item_components(mcver): cog.outl(ln)
         //]]]
         //[[[end]]]
     }

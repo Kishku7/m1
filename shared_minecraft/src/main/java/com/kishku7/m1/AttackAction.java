@@ -7,14 +7,12 @@ import com.kishku7.m1.agent.StepResult;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
-import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.monster.Enemy;
 import net.minecraft.world.item.Items;
-import net.minecraft.world.item.component.PiercingWeapon;
 import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.Vec3;
 
@@ -208,10 +206,7 @@ public final class AttackAction implements MinecraftAction {
             // Attempt the stab whenever charged and plausibly in range -- the server judges the
             // 2.0-4.5 reach along the ray (center-distance is NOT the same measure; do not over-gate).
             if (charge >= 0.99f && dist <= SPEAR_MAX + 0.5) {
-                PiercingWeapon pw = p.getMainHandItem().get(DataComponents.PIERCING_WEAPON);
-                if (pw != null) {
-                    mc.gameMode.piercingAttack(pw);
-                    p.swing(InteractionHand.MAIN_HAND);
+                if (M1Compat.tryPiercingAttack(mc, p)) {
                     hits++;
                 }
                 // fall through: if inside the minimum we ALSO manage distance below

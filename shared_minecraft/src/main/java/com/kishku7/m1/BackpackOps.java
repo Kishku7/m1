@@ -93,8 +93,7 @@ final class BackpackOps {
     }
 
     private static final net.minecraft.tags.TagKey<net.minecraft.world.item.Item> BACK_TAG =
-            net.minecraft.tags.TagKey.create(net.minecraft.core.registries.Registries.ITEM,
-                    net.minecraft.resources.Identifier.fromNamespaceAndPath("trinkets", "chest/back"));
+            M1Compat.itemTag("trinkets", "chest/back");
 
     static boolean isBackpackItem(ItemStack s) {
         if (s == null || s.isEmpty()) {
@@ -497,7 +496,7 @@ final class BackpackOps {
             for (int i = 0; i < st.getContainerSize() && !stack.isEmpty(); i++) {
                 ItemStack in = st.getItem(i);
                 if (pass == 0) {
-                    if (in.isEmpty() || !ItemStack.isSameItemSameComponents(in, stack)) {
+                    if (in.isEmpty() || !M1Compat.sameItemSameComponents(in, stack)) {
                         continue;
                     }
                     int room = Math.min(st.getMaxStackSize(), in.getMaxStackSize()) - in.getCount();

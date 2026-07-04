@@ -274,7 +274,7 @@ public final class VaultOps {
         }
         // record to per-world storage memory (marked pos, else a player-pos placeholder)
         BlockPos rec = (vaultPos != null) ? vaultPos : mc.player.blockPosition();
-        String dim = mc.level.dimension().identifier().toString();
+        String dim = M1Compat.keyId(mc.level.dimension());
         StorageMemory.record(mc, rec, dim, "bank_vault", m);
 
         String f = filter.toLowerCase(Locale.ROOT);

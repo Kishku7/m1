@@ -6,15 +6,12 @@ import java.util.Locale;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
-import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.entity.EquipmentSlot;
-import net.minecraft.world.food.FoodProperties;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import net.minecraft.world.item.equipment.Equippable;
 
 /**
  * HIGH-LEVEL inventory verbs (Master directive after 702d: "way too much confusion on some key
@@ -61,14 +58,14 @@ final class InventoryOps {
         for (EquipmentSlot es : new EquipmentSlot[]{EquipmentSlot.HEAD, EquipmentSlot.CHEST,
                 EquipmentSlot.LEGS, EquipmentSlot.FEET}) {
             int armorSlot = armorMenuSlot(es);
-            double worn = armorScore(m.getSlot(armorSlot).getItem(), es);
+            double worn = armorScore(mc, m.getSlot(armorSlot).getItem(), es);
             int best = -1;
             double bestScore = worn;
             for (int i = MAIN_START; i <= OFFHAND; i++) {
                 if (i == armorSlot) {
                     continue;
                 }
-                double sc = armorScore(m.getSlot(i).getItem(), es);
+                double sc = armorScore(mc, m.getSlot(i).getItem(), es);
                 if (sc > bestScore) {
                     bestScore = sc;
                     best = i;
@@ -129,9 +126,10 @@ final class InventoryOps {
             return "equip: no '" + name + "' found (id or display name)";
         }
         ItemStack s = m.getSlot(src).getItem();
-        Equippable eq = s.get(DataComponents.EQUIPPABLE);
-        if (eq != null && eq.slot().isArmor()) {
-            int armorSlot = armorMenuSlot(eq.slot());
+        EquipmentSlot eq = M1Compat.equipSlot(mc, s);
+        if (eq != null && (eq == EquipmentSlot.HEAD || eq == EquipmentSlot.CHEST
+                || eq == EquipmentSlot.LEGS || eq == EquipmentSlot.FEET)) {
+            int armorSlot = armorMenuSlot(eq);
             if (m.getSlot(armorSlot).getItem().isEmpty()) {
                 Crafting.click(mc, src, 0, ContainerCompat.Mode.QUICK_MOVE);
             } else {
@@ -139,7 +137,7 @@ final class InventoryOps {
                 Crafting.click(mc, armorSlot, 0, ContainerCompat.Mode.PICKUP);
                 Crafting.click(mc, src, 0, ContainerCompat.Mode.PICKUP);
             }
-            return "OK equipped " + idOf(m.getSlot(armorSlot).getItem()) + " to " + eq.slot().getName();
+            return "OK equipped " + idOf(m.getSlot(armorSlot).getItem()) + " to " + eq.getName();
         }
         if (s.is(Items.SHIELD)) {
             Crafting.click(mc, src, 0, ContainerCompat.Mode.PICKUP);
@@ -382,12 +380,12 @@ final class InventoryOps {
         }
     }
 
-    private static double armorScore(ItemStack s, EquipmentSlot es) {
+    private static double armorScore(Minecraft mc, ItemStack s, EquipmentSlot es) {
         if (s.isEmpty()) {
             return 0;
         }
-        Equippable eq = s.get(DataComponents.EQUIPPABLE);
-        if (eq == null || eq.slot() != es) {
+        EquipmentSlot eq = M1Compat.equipSlot(mc, s);
+        if (eq == null || eq != es) {
             return 0;
         }
         return 1 + tierScore(s);
@@ -410,11 +408,10 @@ final class InventoryOps {
         if (s.isEmpty()) {
             return 0;
         }
-        FoodProperties f = s.get(DataComponents.FOOD);
-        if (f == null || isJunk(s)) {
+        if (isJunk(s)) {
             return 0; // junk food (rotten flesh, spider eye) never counts as "best food"
         }
-        return f.nutrition() + f.saturation();
+        return M1Compat.foodValue(s);
     }
 
     private static int findByPredicate(AbstractContainerMenu m, java.util.function.Predicate<ItemStack> p) {

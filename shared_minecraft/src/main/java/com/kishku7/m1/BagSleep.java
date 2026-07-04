@@ -2,9 +2,7 @@ package com.kishku7.m1;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
-import net.minecraft.core.component.TypedDataComponent;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.Identifier;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.item.ItemStack;
 
@@ -113,7 +111,7 @@ final class BagSleep {
         if (s == null || s.isEmpty()) {
             return false;
         }
-        Identifier id = BuiltInRegistries.ITEM.getKey(s.getItem());
+        var id = BuiltInRegistries.ITEM.getKey(s.getItem());
         return id != null && TB.equals(id.getNamespace()) && id.getPath().endsWith("sleeping_bag");
     }
 
@@ -122,14 +120,7 @@ final class BagSleep {
         if (s == null || s.isEmpty()) {
             return false;
         }
-        for (TypedDataComponent<?> comp : s.getComponents()) {
-            Identifier id = BuiltInRegistries.DATA_COMPONENT_TYPE.getKey(comp.type());
-            if (id != null && TB.equals(id.getNamespace()) && id.getPath().contains("sleeping_bag")) {
-                Object v = comp.value();
-                return !(v instanceof Integer i) || i >= 0;
-            }
-        }
-        return false;
+        return M1Compat.hasAttachedSleepingBag(s, TB);
     }
 
     /** Whether the worn backpack has an attached bag (probe the SERVER player's worn stack). */

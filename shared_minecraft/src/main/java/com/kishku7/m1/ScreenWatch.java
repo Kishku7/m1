@@ -9,7 +9,6 @@ import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.DeathScreen;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.AbstractSignEditScreen;
-import net.minecraft.client.input.InputWithModifiers;
 import net.minecraft.core.BlockPos;
 
 /**
@@ -52,24 +51,14 @@ final class ScreenWatch {
             if (!deathHandled && mc.player != null) {
                 deathHandled = true;
                 lastDeathPos = mc.player.blockPosition();
-                lastDeathDim = (mc.level != null) ? mc.level.dimension().identifier().toString() : "?";
+                lastDeathDim = (mc.level != null) ? M1Compat.keyId(mc.level.dimension()) : "?";
                 report("DIED at " + lastDeathPos.toShortString() + " in " + lastDeathDim
                         + " -- auto-respawning (death spot recorded; drops are there unless keepInventory)");
             }
             for (var child : s.children()) {
                 if (child instanceof Button b && b.getMessage() != null
                         && b.getMessage().getString().toLowerCase(Locale.ROOT).contains("respawn")) {
-                    b.onPress(new InputWithModifiers() {
-                        @Override
-                        public int input() {
-                            return 257; // Enter
-                        }
-
-                        @Override
-                        public int modifiers() {
-                            return 0;
-                        }
-                    });
+                    M1Compat.pressButton(b);
                     return;
                 }
             }

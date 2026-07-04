@@ -61,7 +61,7 @@ public final class SleepAction implements MinecraftAction {
 
         switch (st) {
             case FIND: {
-                if (lvl.isBrightOutside() && !lvl.isThundering()) {
+                if (M1Compat.isBrightOutside(lvl) && !lvl.isThundering()) {
                     ctx.report(ReportClass.STATUS, "sleep: cannot sleep now (daytime, no thunderstorm)");
                     return StepResult.FAILED;
                 }
@@ -146,7 +146,7 @@ public final class SleepAction implements MinecraftAction {
                         faceTicks = 0;
                         return StepResult.RUNNING;
                     }
-                    String why = lvl.isBrightOutside() && !lvl.isThundering() ? "it turned day"
+                    String why = M1Compat.isBrightOutside(lvl) && !lvl.isThundering() ? "it turned day"
                             : "monsters nearby, or the bed is obstructed/too far";
                     ctx.report(ReportClass.STATUS, "sleep: bed use had no effect (" + why + ")");
                     return StepResult.FAILED;

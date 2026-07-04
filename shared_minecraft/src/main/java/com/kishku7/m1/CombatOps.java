@@ -2,7 +2,6 @@ package com.kishku7.m1;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
-import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.NeutralMob;
@@ -78,7 +77,7 @@ final class CombatOps {
         double bestScore = 0;
         for (int i = 0; i <= 8; i++) {
             ItemStack s = p.getInventory().getItem(i);
-            if (excludeSpear && s.has(DataComponents.PIERCING_WEAPON)) {
+            if (excludeSpear && M1Compat.isPiercingWeapon(s)) {
                 continue;
             }
             double sc = meleeScore(s);
@@ -115,7 +114,7 @@ final class CombatOps {
 
     /** True if the held main-hand item is a spear (component-driven, version-honest). */
     static boolean holdingSpear(LocalPlayer p) {
-        return p.getMainHandItem().has(DataComponents.PIERCING_WEAPON);
+        return M1Compat.isPiercingWeapon(p.getMainHandItem());
     }
 
     /** Select hotbar slot via the proven path; true on success. */
