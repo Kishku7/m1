@@ -1,0 +1,25 @@
+modLoader="javafml"
+loaderVersion="[48,)"
+license="ARR"
+issueTrackerURL="https://github.com/Kishku7/m1/issues"
+
+[[mods]]
+modId="m1"
+version="${file.jarVersion}"
+displayName="M1 - Machine One AI Interface"
+authors="Kishku7"
+description='''Exposes the real Minecraft client through a localhost text channel for local automation/AI control. (1.20 core build.)'''
+
+[[dependencies.m1]]
+    modId="forge"
+    mandatory=true
+    versionRange="[48,)"
+    ordering="NONE"
+    side="CLIENT"
+
+[[dependencies.m1]]
+    modId="minecraft"
+    mandatory=true
+    versionRange="[1.20.2,1.20.3)"
+    ordering="NONE"
+    side="CLIENT"
