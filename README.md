@@ -6,8 +6,8 @@ and accepts text commands to drive it -- so a human at a terminal, or an AI over
 operate Minecraft entirely by typing. No GUI mouse/keyboard is required and nothing needs to be
 "looked at" on screen; the window is there purely for observability.
 
-Loaders / versions: Fabric + NeoForge, MC 26.x (this `main` branch is the entry point; the unified
-source tree (MC 1.20 - 26.x, Fabric + NeoForge) lives on branch `minecraft-1.20-26.3`). Current: **v0.9.x**.
+Loaders / versions: Fabric, NeoForge, and Forge, MC 1.20 - 26.x (this `main` branch is the entry point; the unified
+source tree (MC 1.20 - 26.x, Fabric + NeoForge + Forge) lives on branch `minecraft-1.20-26.3`). Current: **v0.12.0** (one source tree builds every MC 1.20.0 - 26.3 across all applicable loaders).
 
 > **New here? Read [the AI_Brain (`00_Index.md`)](https://github.com/Kishku7/m1/tree/minecraft-1.20-26.3/shared_common/src/main/resources/m1_ai_brain) first.** That is the file an AI agent
 > is expected to load before a play session. This README is the reference manual behind it.
@@ -22,13 +22,13 @@ Voyager), or research stacks pinned to ancient versions (Malmo, MineRL). Because
 the real client, **they are blind to anything the client draws -- mod GUIs simply do not exist to
 them**, and a version or mod mismatch breaks them.
 
-M1 *is* the real client. It loads as an ordinary Fabric/NeoForge mod, reads every real screen, and
+M1 *is* the real client. It loads as an ordinary Fabric / NeoForge / Forge mod, reads every real screen, and
 drives the game the way you would. That unlocks what the protocol bots cannot touch:
 
 1. **Mod development & real-client testing.** Test your mod the way a player actually experiences
    it -- open its screens, click its buttons, read its inventories, drive its menus, grab
    screenshots -- all by text. M1 has served as the live test harness across **20+ release builds
-   spanning many Minecraft versions and both loaders**, so you validate a mod across the whole
+   spanning many Minecraft versions and all three loaders**, so you validate a mod across the whole
    range, not one pinned version.
 2. **AI agents that genuinely play.** Point any LLM at a text socket and let it go -- proven
    end-to-end: spawn, find a tree, mine, craft, and build a wooden axe, entirely over the wire --
@@ -598,14 +598,43 @@ craft grids exist only while a screen is open, so they appear in `slots`, never 
 
 ## 8. Repo layout
 
-`main` is the entry point (this README). The unified buildable source -- one tree spanning MC
-1.20 - 26.x for Fabric + NeoForge -- lives on branch
+`main` is the entry point (this README). The unified buildable source -- one tree spanning MC 1.20 - 26.x for Fabric, NeoForge, and Forge -- lives on branch
 [`minecraft-1.20-26.3`](https://github.com/Kishku7/m1/tree/minecraft-1.20-26.3):
 
 * `shared_minecraft/` -- the MC-coupled observe+actuate engine (single source of truth), `srcDir`'d
-  into the per-loader `Fabric*/` and `NeoForge*/` cells.
+  into the per-loader `Fabric*/`, `NeoForge*/`, and `Forge*/` cells.
 * `shared_common/` -- MC-agnostic code + resources, including the **AI_Brain** operating brief that
   ships inside every jar and extracts, on first run, to `config/M1_AI_Brain/<MAJOR.MINOR>/`
   (relative to the game/instance dir -- e.g. `config/M1_AI_Brain/0.9/`), create-once per minor:
   https://github.com/Kishku7/m1/tree/minecraft-1.20-26.3/shared_common/src/main/resources/m1_ai_brain
-* Build with `build-all-fabric.ps1` / `build-all-neoforge.ps1`; jars land in `dist/`.
+* Each per-version cell is a standalone Gradle build (`cd <Loader>/<mc-version> && ./gradlew build`); jars land in `dist/`.
+
+---
+
+## Version coverage & gaps (v0.12.0)
+
+One jar per supported (loader, MC-line). Coverage is honestly bounded by what each loader shipped:
+
+| Loader   | Covered MC versions |
+|----------|---------------------|
+| Fabric   | 1.20 - 26.3 (every line) |
+| NeoForge | 1.20.6 - 26.2 |
+| Forge    | 1.20.1, 1.20.5-1.20.6, 1.21-1.21.1, 1.21.5, 1.21.7-1.21.11 (FG6) |
+
+Deliberate gaps and their reasons (verified 2026-07-05):
+
+* **Forge 1.21.2** -- Forge never shipped a 1.21.2 build (1.21.1 -> 1.21.3). Real loader gap.
+* **Forge 1.21.3 / 1.21.4** -- forge 53/54 are orphan builds not currently covered; the Forge line
+  resumes at 1.21.5.
+* **Forge 1.21.6** -- forge 56 rewrote the Forge EventBus and dropped the overlay-registration API;
+  a jar cannot span the 1.21.5 -> 1.21.6 boundary. Real loader gap. (1.21.7 rides the post-rewrite
+  1.21.8 cell.)
+* **Forge 1.20.2 - 1.20.4** -- not yet built (forge 48/49 exist; low priority -- Fabric 1.20 covers
+  these MC versions).
+* **NeoForge 1.20.1** -- served by the Forge 1.20.1 jar (early NeoForge is Forge-API compatible); no
+  separate NeoForge 1.20.1 cell.
+* **NeoForge 26.3** -- NeoForge has not released a build for MC 26.3 (Fabric 26.3 only for now).
+* **26.x is Fabric + NeoForge only** -- Forge (FG6) cannot build the unobfuscated 26.x line.
+
+The 1.21 and 1.21.1 lines are served by a single 1.21 cell per loader (they share the same API window;
+the 1.21 cell declares `[1.21,1.21.2)`).
