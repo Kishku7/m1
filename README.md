@@ -619,22 +619,16 @@ One jar per supported (loader, MC-line). Coverage is honestly bounded by what ea
 |----------|---------------------|
 | Fabric   | 1.20 - 26.3 (every line) |
 | NeoForge | 1.20.6 - 26.2 |
-| Forge    | 1.20.1, 1.20.5-1.20.6, 1.21-1.21.1, 1.21.5, 1.21.7-1.21.11 (FG6) |
+| Forge    | 1.20.1 - 1.20.4, 1.20.6, 1.21 - 1.21.1, 1.21.3 - 1.21.11 (FG6) |
 
-Deliberate gaps and their reasons (verified 2026-07-05):
+The only real gaps (verified 2026-07-05) are structural loader absences:
 
-* **Forge 1.21.2** -- Forge never shipped a 1.21.2 build (1.21.1 -> 1.21.3). Real loader gap.
-* **Forge 1.21.3 / 1.21.4** -- forge 53/54 are orphan builds not currently covered; the Forge line
-  resumes at 1.21.5.
-* **Forge 1.21.6** -- forge 56 rewrote the Forge EventBus and dropped the overlay-registration API;
-  a jar cannot span the 1.21.5 -> 1.21.6 boundary. Real loader gap. (1.21.7 rides the post-rewrite
-  1.21.8 cell.)
-* **Forge 1.20.2 - 1.20.4** -- not yet built (forge 48/49 exist; low priority -- Fabric 1.20 covers
-  these MC versions).
-* **NeoForge 1.20.1** -- served by the Forge 1.20.1 jar (early NeoForge is Forge-API compatible); no
-  separate NeoForge 1.20.1 cell.
+* **Forge 1.20.5 and 1.21.2** -- Forge never shipped a build for these MC versions (1.20.4 -> 1.20.6,
+  1.21.1 -> 1.21.3). Permanently skipped.
+* **Forge 26.x** -- FG6 cannot build the unobfuscated 26.x line (26.x is Fabric + NeoForge only).
+* **NeoForge 1.20.2 - 1.20.4** -- ModDevGradle's mod-bundle floor is NeoForge 20.5, so these are
+  un-buildable; **NeoForge 1.20.1** is covered by the Forge 1.20.1 jar (early NeoForge is Forge-API compatible).
 * **NeoForge 26.3** -- NeoForge has not released a build for MC 26.3 (Fabric 26.3 only for now).
-* **26.x is Fabric + NeoForge only** -- Forge (FG6) cannot build the unobfuscated 26.x line.
+* **Forge 1.20.0** -- not built (trivial; the Fabric 1.20 jar already covers 1.20.0).
 
-The 1.21 and 1.21.1 lines are served by a single 1.21 cell per loader (they share the same API window;
-the 1.21 cell declares `[1.21,1.21.2)`).
+The 1.21 and 1.21.1 lines are served by a single 1.21 cell per loader (they share the same API window).
