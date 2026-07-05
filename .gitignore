@@ -1,6 +1,7 @@
 # Build output / caches
 build/
 .gradle/
+gen/
 bin/
 out/
 *.classpath
