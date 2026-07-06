@@ -6,8 +6,9 @@ and accepts text commands to drive it -- so a human at a terminal, or an AI over
 operate Minecraft entirely by typing. No GUI mouse/keyboard is required and nothing needs to be
 "looked at" on screen; the window is there purely for observability.
 
-Loaders / versions: Fabric, NeoForge, and Forge, MC 1.20 - 26.x (this `main` branch is the entry point; the unified
-source tree (MC 1.20 - 26.x, Fabric + NeoForge + Forge) lives on branch `minecraft-1.20-26.3`). Current: **v0.12.0** (one source tree builds every MC 1.20.0 - 26.3 across all applicable loaders).
+Ships as a **Fabric, NeoForge, and Forge** mod spanning **Minecraft 1.20 through 26.x**. Current release: **v0.12.0**.
+
+**[Download on Modrinth](https://modrinth.com/mod/m1-machine-one-ai-interface)**  ·  **[Source code / build & setup guide](https://github.com/Kishku7/m1/tree/minecraft-1.20-26.3)**  ·  **[Report an issue / get support](https://github.com/Kishku7/mod_support/issues)**
 
 > **New here? Read [the AI_Brain (`00_Index.md`)](https://github.com/Kishku7/m1/tree/minecraft-1.20-26.3/shared_common/src/main/resources/m1_ai_brain) first.** That is the file an AI agent
 > is expected to load before a play session. This README is the reference manual behind it.
@@ -42,63 +43,24 @@ drives the game the way you would. That unlocks what the protocol bots cannot to
 No protocol reverse-engineering, no pixel pipeline, no RL training, no lock-in to one AI model or
 one Minecraft version -- just plain text into the real game.
 
----
-
-## 2. Quick start -- drive Minecraft from Claude Desktop
-
-Three pieces: **(1)** the M1 mod in your game, **(2)** the **MCP-Minecraft** bridge (in this repo
-under [`mcp-minecraft/`](https://github.com/Kishku7/m1/tree/minecraft-1.20-26.3/mcp-minecraft)),
-**(3)** Claude Desktop (or any MCP client) pointed at the bridge.
-
-**1. Install the mod.** Get the jar for your loader + MC version (a release, or build it -- see the
-[source branch](https://github.com/Kishku7/m1/tree/minecraft-1.20-26.3)). Drop it in your instance's
-`mods/` folder with the matching loader (Fabric Loader + Fabric API, or NeoForge). Launch and load a
-world. M1 is **client-side only** -- no server mod needed. On load it opens its socket on
-`127.0.0.1:26000` and, first run, extracts the AI_Brain docs (see section 3).
-
-**2. Run the MCP-Minecraft bridge.** Clone this repo and build the Node bridge:
-
-```bash
-git clone https://github.com/Kishku7/m1.git
-cd m1/mcp-minecraft
-npm install && npm run build
-```
-
-Configure it for M1 (copy `.env.example` to `.env`):
-
-```
-TARGET_PORT=26000
-REPLY_SENTINEL=<<END
-CONNECT_INIT=RAW ON
-DISCARD_CONNECT_BANNER=true
-```
-
-Start it with `npm start`. It auto-connects when the game socket opens and reconnects if the game
-restarts, so start order does not matter. It prints its endpoint (default `http://localhost:26001/mcp`)
-and a `/health` URL. Full options + running as a service: [`mcp-minecraft/README.md`](https://github.com/Kishku7/m1/tree/minecraft-1.20-26.3/mcp-minecraft).
-
-**3. Add it to Claude Desktop.** Edit `claude_desktop_config.json` (Settings -> Developer -> Edit
-Config). The bridge serves Streamable HTTP, so bridge it with `mcp-remote`:
-
-```json
-{
-  "mcpServers": {
-    "mcp-minecraft": {
-      "command": "npx",
-      "args": ["-y", "mcp-remote", "http://localhost:26001/mcp"]
-    }
-  }
-}
-```
-
-Restart Claude Desktop. You get three tools -- `send_command`, `listen` (streams `[chat]`/`[alert]`/
-`[agent]` events), and `connection_status`. Ask Claude to send `where`; if you are in a world it
-reports your position, and you are driving Minecraft from chat.
-
-> Bridge on a different machine than Claude Desktop? Set `BIND_HOST=0.0.0.0` and use that machine's
-> LAN address in the URL. There is **no authentication** -- trusted network only.
+**M1 plays fair -- it does not cheat or x-ray.** A `scan` perceives only what a player looking at
+the screen could: it never sees raw ores buried inside unexposed rock, and -- apart from living
+entities, which it detects all around -- it reports only what is **in front of** the player, never
+through or behind walls. An AI driving M1 works from exactly the information a human at the keyboard
+would have.
 
 ---
+
+## 2. Getting M1 running
+
+M1 is **client-side only** (no server mod). Drop the jar for your loader + MC version in your
+instance's `mods/` folder, launch a world, and on load M1 opens its text socket on
+`127.0.0.1:26000` and extracts the AI_Brain docs.
+
+To drive it from **Claude Desktop** (or any MCP client) you also run the small **MCP-Minecraft**
+bridge shipped in the source repo. **Full step-by-step setup -- install, the bridge, and the Claude
+Desktop wiring -- is in the [build & setup guide on the `minecraft-1.20-26.3`
+branch](https://github.com/Kishku7/m1/tree/minecraft-1.20-26.3).**
 
 ## 3. Connecting
 
@@ -339,6 +301,10 @@ Reading the non-obvious bits (this is exactly what the instruction file teaches 
   etc.) is **hidden here on purpose** -- use `BOUNDS` for those. **`+more`** means you also saw
   other blocks of that same type (only the nearest is listed). Coordinates are absolute -- feed
   them straight into `goto`.
+* **No x-ray, front-only (M1 does not cheat).** `VISIBLE` is line-of-sight from the player's eye in
+  the **facing** direction -- only **exposed** block faces are seen (never ore hidden inside solid
+  rock), and only what is **in front of** you. `MOBS` (living entities) are the one exception: they
+  are detected all around, not just ahead.
 * **`MOBS` / `ITEMS`** are living entities and dropped items in sight. **`xN`** is the count of
   that kind (e.g. `cow x2`).
 * **Bearings** are absolute compass: `N S E W NE NW SE SW`, or `UP` / `DOWN` when something is
@@ -596,38 +562,11 @@ craft grids exist only while a screen is open, so they appear in `slots`, never 
 
 ---
 
-## 8. Repo layout
-
-`main` is the entry point (this README). The unified buildable source -- one tree spanning MC 1.20 - 26.x for Fabric, NeoForge, and Forge -- lives on branch
-[`minecraft-1.20-26.3`](https://github.com/Kishku7/m1/tree/minecraft-1.20-26.3):
-
-* `shared_minecraft/` -- the MC-coupled observe+actuate engine (single source of truth), `srcDir`'d
-  into the per-loader `Fabric*/`, `NeoForge*/`, and `Forge*/` cells.
-* `shared_common/` -- MC-agnostic code + resources, including the **AI_Brain** operating brief that
-  ships inside every jar and extracts, on first run, to `config/M1_AI_Brain/<MAJOR.MINOR>/`
-  (relative to the game/instance dir -- e.g. `config/M1_AI_Brain/0.9/`), create-once per minor:
-  https://github.com/Kishku7/m1/tree/minecraft-1.20-26.3/shared_common/src/main/resources/m1_ai_brain
-* Each per-version cell is a standalone Gradle build (`cd <Loader>/<mc-version> && ./gradlew build`); jars land in `dist/`.
-
 ---
 
-## Version coverage & gaps (v0.12.0)
+## Repo & building
 
-One jar per supported (loader, MC-line). Coverage is honestly bounded by what each loader shipped:
-
-| Loader   | Covered MC versions |
-|----------|---------------------|
-| Fabric   | 1.20 - 26.3 (every line) |
-| NeoForge | 1.20.1 - 1.20.4, 1.20.6 - 26.2 |
-| Forge    | 1.20.1 - 1.20.4, 1.20.6, 1.21 - 1.21.1, 1.21.3 - 1.21.11 (FG6) |
-
-The only real gaps are structural loader absences:
-
-* **Forge 1.20.5 and 1.21.2** -- Forge never shipped a build (1.20.4 -> 1.20.6, 1.21.1 -> 1.21.3). Permanently skipped.
-* **Forge 26.x** -- FG6 cannot build the unobfuscated 26.x line (26.x is Fabric + NeoForge only).
-* **NeoForge 1.20.5** -- NeoForge 20.5 is beta-only and does not resolve; skipped.
-* **NeoForge 26.3** -- NeoForge has not released a build for MC 26.3 (Fabric 26.3 only for now).
-* **Forge 1.20.0** -- M1 fails to load on forge 46 (broken mod state); junked (trivial -- Fabric 1.20 covers 1.20.0).
-
-Early NeoForge (1.20.2-1.20.4) builds with **NeoGradle** (ModDevGradle needs a moddev-bundle only published from
-neo 20.4 up). The 1.21 and 1.21.1 lines are served by a single 1.21 cell per loader.
+Source, setup steps, and full build instructions live on the
+**[`minecraft-1.20-26.3` build & setup branch](https://github.com/Kishku7/m1/tree/minecraft-1.20-26.3)**
+(mod + bridge setup, toolchain per loader, the version-coverage matrix, and how the code generation
+works). Internal tooling; all rights reserved (ARR).
