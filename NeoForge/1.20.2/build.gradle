@@ -1,0 +1,32 @@
+plugins {
+    id 'eclipse'
+    id 'net.neoforged.gradle.userdev' version '7.0.192'
+}
+
+version = "${mod_version}+${minecraft_version}-neoforge"
+group = 'com.kishku7'
+base { archivesName = 'm1' }
+
+java.toolchain.languageVersion = JavaLanguageVersion.of(17)
+
+dependencies {
+    implementation 'net.neoforged:neoforge:20.2.93'
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+    options.release = 17
+    // Early NeoForge (20.4, MC 1.20.4) runs SRG at runtime, so reflection-by-mojmap *Compat facades
+    // MISS -- we build from the cog-generated gen/ tree (direct compiled MC access, NeoGradle remaps
+    // mojmap->SRG at load), exactly like the Forge/1.20.1 cell. -deprecation scoped out for this cell.
+    options.compilerArgs += ['-Xlint:all', '-deprecation']
+}
+
+jar {
+    manifest { attributes 'Implementation-Version': project.mod_version }
+}
+
+// gen/ = cog-generated shared_minecraft + shared_common + cog'd *Compat (direct access).
+// M1NeoForge.java loader glue stays in the default src/main/java.
+sourceSets.main.java.srcDir "gen"
+sourceSets.main.resources.srcDir "../../shared_common/src/main/resources"

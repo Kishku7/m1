@@ -618,17 +618,17 @@ One jar per supported (loader, MC-line). Coverage is honestly bounded by what ea
 | Loader   | Covered MC versions |
 |----------|---------------------|
 | Fabric   | 1.20 - 26.3 (every line) |
-| NeoForge | 1.20.6 - 26.2 |
+| NeoForge | 1.20.2 - 1.20.4, 1.20.6 - 26.2 |
 | Forge    | 1.20.1 - 1.20.4, 1.20.6, 1.21 - 1.21.1, 1.21.3 - 1.21.11 (FG6) |
 
-The only real gaps (verified 2026-07-05) are structural loader absences:
+The only real gaps are structural loader absences:
 
-* **Forge 1.20.5 and 1.21.2** -- Forge never shipped a build for these MC versions (1.20.4 -> 1.20.6,
-  1.21.1 -> 1.21.3). Permanently skipped.
+* **Forge 1.20.5 and 1.21.2** -- Forge never shipped a build (1.20.4 -> 1.20.6, 1.21.1 -> 1.21.3). Permanently skipped.
 * **Forge 26.x** -- FG6 cannot build the unobfuscated 26.x line (26.x is Fabric + NeoForge only).
-* **NeoForge 1.20.2 - 1.20.4** -- ModDevGradle's mod-bundle floor is NeoForge 20.5, so these are
-  un-buildable; **NeoForge 1.20.1** is covered by the Forge 1.20.1 jar (early NeoForge is Forge-API compatible).
+* **NeoForge 1.20.1** -- covered by the Forge 1.20.1 jar (early NeoForge is Forge-API compatible); no separate cell.
+* **NeoForge 1.20.5** -- NeoForge 20.5 is beta-only and does not resolve; skipped.
 * **NeoForge 26.3** -- NeoForge has not released a build for MC 26.3 (Fabric 26.3 only for now).
 * **Forge 1.20.0** -- not built (trivial; the Fabric 1.20 jar already covers 1.20.0).
 
-The 1.21 and 1.21.1 lines are served by a single 1.21 cell per loader (they share the same API window).
+Early NeoForge (1.20.2-1.20.4) builds with **NeoGradle** (ModDevGradle needs a moddev-bundle only published from
+neo 20.4 up). The 1.21 and 1.21.1 lines are served by a single 1.21 cell per loader.
