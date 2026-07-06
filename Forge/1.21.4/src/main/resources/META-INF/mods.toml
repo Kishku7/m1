@@ -1,7 +1,7 @@
 modLoader="javafml"
 loaderVersion="[53,)"
 license="ARR"
-issueTrackerURL="https://github.com/Kishku7/m1/issues"
+issueTrackerURL="https://github.com/Kishku7/mod_support/issues"
 
 [[mods]]
 modId="m1"

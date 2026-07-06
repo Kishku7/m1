@@ -2,6 +2,7 @@ modLoader = "javafml"
 loaderVersion = "[1,)"
 license = "ARR"
 
+issueTrackerURL="https://github.com/Kishku7/mod_support/issues"
 [[mods]]
     modId = "m1"
     version = "${mod_version}"
