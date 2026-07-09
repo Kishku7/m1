@@ -54,7 +54,8 @@ public final class M1SrvNet {
                 announced = true;
                 pushReport("[m1s] M1-Server present on this world -- extra info available on demand via the "
                         + "'m1srv <query>' verb: seed, spawn, worldborder, difficulty, time, weather, gamerules, "
-                        + "players, locate structure|biome <id>.");
+                        + "players, serverinfo, playerdir, lookingat, recipe <id>, advancement <id>, "
+                        + "looked-at block/entity NBT, locate structure|biome <id>.");
             }
             pushReport("[m1s] " + query + " = " + payload);
         }
