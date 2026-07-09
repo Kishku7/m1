@@ -7,6 +7,8 @@ import com.kishku7.m1.MoveControl;
 import com.kishku7.m1.PickupUpgrade;
 import net.minecraft.client.Minecraft;
 import net.minecraftforge.api.distmarker.Dist;
+import com.kishku7.m1.M1SrvNet;
+import net.minecraftforge.client.event.ClientChatReceivedEvent;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.fml.common.Mod;
@@ -29,6 +31,7 @@ public class M1Forge {
         if (FMLEnvironment.dist == Dist.CLIENT) {
             M1Server.start();
             MinecraftForge.EVENT_BUS.addListener(this::onClientTick);
+            MinecraftForge.EVENT_BUS.addListener(this::onSystemChat);
         }
     }
 
@@ -50,5 +53,11 @@ public class M1Forge {
         MineControl.tick(mc);
         CraftHarvest.tick(mc);
         PickupUpgrade.tick(mc);
+        M1SrvNet.tick(mc);
+    }
+
+    // M1-Server system-chat replies captured via the shared facade; no-op if M1-Server absent.
+    private void onSystemChat(ClientChatReceivedEvent event) {
+        M1SrvNet.onChatMessage(event.getMessage());
     }
 }
