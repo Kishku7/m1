@@ -11,6 +11,8 @@ import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.loading.FMLEnvironment;
+import com.kishku7.m1.M1SrvNet;
+import net.neoforged.neoforge.client.event.ClientChatReceivedEvent;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.common.NeoForge;
 
@@ -31,6 +33,7 @@ public class M1NeoForge {
         if (FMLEnvironment.dist == Dist.CLIENT) {
             M1Server.start();
             NeoForge.EVENT_BUS.addListener(this::onClientTick);
+            NeoForge.EVENT_BUS.addListener(this::onSystemChat);
         }
     }
 
@@ -46,5 +49,11 @@ public class M1NeoForge {
         MineControl.tick(mc);
         CraftHarvest.tick(mc);
         PickupUpgrade.tick(mc);
+        M1SrvNet.tick(mc);
+    }
+
+    // M1-Server system-chat replies (M1S|...) captured via the shared facade; no-op if M1-Server absent.
+    private void onSystemChat(ClientChatReceivedEvent.System event) {
+        M1SrvNet.onChatMessage(event.getMessage());
     }
 }

@@ -107,6 +107,7 @@ public final class ScreenOps {
             case "inv":
             case "inventory": return inv(mc);
             case "cmd":       return runCmd(mc, rest);
+            case "m1srv":     return M1SrvNet.requestOne(mc, rest);
             case "say":       return say(mc, rest);
             case "pause":     return pause(mc);
             case "face":      return face(mc, rest);
