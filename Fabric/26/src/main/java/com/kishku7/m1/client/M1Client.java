@@ -6,6 +6,7 @@ import com.kishku7.m1.CraftHarvest;
 import com.kishku7.m1.DamageWatch;
 import com.kishku7.m1.HungerWatch;
 import com.kishku7.m1.M1Server;
+import com.kishku7.m1.M1SrvNet;
 import com.kishku7.m1.MineControl;
 import com.kishku7.m1.MoveControl;
 import com.kishku7.m1.PickupUpgrade;
@@ -26,6 +27,7 @@ public class M1Client implements ClientModInitializer {
             AgentRuntime.tick(mc);
             DamageWatch.tick(mc);
             HungerWatch.tick(mc);
+            M1SrvNet.tick(mc);
         });
         ClientReceiveMessageEvents.CHAT.register((message, signedMessage, sender, params, receptionTimestamp) -> {
             String nm = (sender != null) ? sender.name() : null;
@@ -34,10 +36,12 @@ public class M1Client implements ClientModInitializer {
                     : ((message != null) ? message.getString() : "");
             ChatWatch.onChat(nm, content);
         });
-        // System messages (command feedback): Bank Vault's "/bank api" replies arrive here.
+        // System messages (command feedback): Bank Vault's "/bank api" and M1-Server's "/m1srv q" replies arrive here.
         ClientReceiveMessageEvents.GAME.register((message, overlay) -> {
             if (!overlay && message != null) {
-                VaultNet.onSystemLine(message.getString());
+                String s = message.getString();
+                VaultNet.onSystemLine(s);
+                M1SrvNet.onSystemLine(s);
             }
         });
     }

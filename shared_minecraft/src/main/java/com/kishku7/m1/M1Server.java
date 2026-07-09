@@ -130,6 +130,8 @@ public final class M1Server {
                 if (!chat.isEmpty()) { out.write(chat); out.write("\n"); }
                 String bv = VaultNet.drainReports();
                 if (!bv.isEmpty()) { out.write(bv); out.write("\n"); }
+                String m1s = M1SrvNet.drainReports();
+                if (!m1s.isEmpty()) { out.write(m1s); out.write("\n"); }
                 String alerts = DamageWatch.drainReports();
                 if (!alerts.isEmpty()) { out.write(alerts); out.write("\n"); }
                 String ups = PickupUpgrade.drainReports();
@@ -165,6 +167,8 @@ public final class M1Server {
         if (!ch.isEmpty()) { out.write(ch); out.write("\n"); any = true; }
         String bvp = VaultNet.drainReports();
         if (!bvp.isEmpty()) { out.write(bvp); out.write("\n"); any = true; }
+        String m1sp = M1SrvNet.drainReports();
+        if (!m1sp.isEmpty()) { out.write(m1sp); out.write("\n"); any = true; }
         String al = DamageWatch.drainReports();
         if (!al.isEmpty()) { out.write(al); out.write("\n"); any = true; }
         String ups = PickupUpgrade.drainReports();

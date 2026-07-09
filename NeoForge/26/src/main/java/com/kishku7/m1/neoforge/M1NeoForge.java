@@ -2,6 +2,7 @@ package com.kishku7.m1.neoforge;
 
 import com.kishku7.m1.CraftHarvest;
 import com.kishku7.m1.M1Server;
+import com.kishku7.m1.M1SrvNet;
 import com.kishku7.m1.MineControl;
 import com.kishku7.m1.MoveControl;
 import com.kishku7.m1.PickupUpgrade;
@@ -32,12 +33,15 @@ public class M1NeoForge {
         MineControl.tick(mc);
         CraftHarvest.tick(mc);
         PickupUpgrade.tick(mc);
+        M1SrvNet.tick(mc);
     }
 
-    /** System messages (command feedback): Bank Vault's "/bank api" replies arrive here. */
+    /** System messages (command feedback): Bank Vault's "/bank api" and M1-Server's "/m1srv q" replies arrive here. */
     private void onSystemChat(ClientChatReceivedEvent.System event) {
         if (event.getMessage() != null) {
-            VaultNet.onSystemLine(event.getMessage().getString());
+            String s = event.getMessage().getString();
+            VaultNet.onSystemLine(s);
+            M1SrvNet.onSystemLine(s);
         }
     }
 }
