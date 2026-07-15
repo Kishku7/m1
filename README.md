@@ -1,4 +1,5 @@
 # M1 -- Machine One AI Interface
+# PLEASE review the branches above for the source code tree.
 
 **M1 is a client-side Minecraft mod that exposes the real, running game client over a plain
 localhost text socket.** It describes whatever screen or world is in front of the client as text,
