@@ -874,10 +874,20 @@ public final class ScreenOps {
         for (net.minecraft.client.KeyMapping km : mc.options.keyMappings) used.add(km.saveString());
         for (int sym = 302; sym <= 313; sym++) {
             com.mojang.blaze3d.platform.InputConstants.Key k =
-                com.mojang.blaze3d.platform.InputConstants.Type.KEYSYM.getOrCreate(sym);
+                keyboardType().getOrCreate(sym);
             if (!used.contains(k.getName())) return k;
         }
-        return com.mojang.blaze3d.platform.InputConstants.Type.KEYSYM.getOrCreate(313);
+        return keyboardType().getOrCreate(313);
+    }
+
+    // KEYSYM (<=26.2) was renamed to KEYBOARD in the 26.3-snapshot-3 input refactor (SCANCODE also dropped).
+    // Resolve by name so this compiles + runs on both without a version facade (rare path; 2-element enum scan).
+    private static com.mojang.blaze3d.platform.InputConstants.Type keyboardType() {
+        for (com.mojang.blaze3d.platform.InputConstants.Type t : com.mojang.blaze3d.platform.InputConstants.Type.values()) {
+            String n = t.name();
+            if (n.equals("KEYBOARD") || n.equals("KEYSYM")) return t;
+        }
+        return com.mojang.blaze3d.platform.InputConstants.Type.values()[0];
     }
 
     // Trigger Minecraft's OWN screenshot writer. IMPORTANT: this MUST NOT run on / block the

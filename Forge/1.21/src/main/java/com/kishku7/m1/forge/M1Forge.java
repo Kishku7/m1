@@ -28,6 +28,8 @@ import net.minecraftforge.fml.loading.FMLEnvironment;
 @Mod("m1")
 public class M1Forge {
     public M1Forge() {
+        com.kishku7.m1.M1SrvConfig.get();
+        MinecraftForge.EVENT_BUS.addListener(this::onRegisterCommands);
         if (FMLEnvironment.dist == Dist.CLIENT) {
             M1Server.start();
             MinecraftForge.EVENT_BUS.addListener(this::onClientTick);
@@ -37,6 +39,10 @@ public class M1Forge {
 
     // TickEvent.Phase is deprecated-for-removal on this Forge version but is the working client-tick API
     // (the Pre/Post replacement is used by the 1.21+ cells); suppress per-cell.
+    // M1-Server: register the read-only /m1srv command server-side (runs on dedicated + integrated servers).
+    private void onRegisterCommands(net.minecraftforge.event.RegisterCommandsEvent event) {
+        event.getDispatcher().register(com.kishku7.m1.M1SrvCommand.build());
+    }
     @SuppressWarnings({"deprecation", "removal"})
     private void onClientTick(TickEvent.ClientTickEvent event) {
         if (event.phase != TickEvent.Phase.END) {

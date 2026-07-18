@@ -28,11 +28,19 @@ import net.neoforged.neoforge.common.NeoForge;
 @Mod("m1")
 public class M1NeoForge {
     public M1NeoForge(IEventBus bus, ModContainer mod) {
+        com.kishku7.m1.M1SrvConfig.get();
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(this::onRegisterCommands);
         if (FMLEnvironment.dist == Dist.CLIENT) {
             M1Server.start();
             NeoForge.EVENT_BUS.addListener(this::onClientTick);
         }
     }
+    // M1-Server: register the read-only /m1srv command server-side (dedicated + integrated servers).
+    private void onRegisterCommands(net.neoforged.neoforge.event.RegisterCommandsEvent event) {
+        event.getDispatcher().register(com.kishku7.m1.M1SrvCommand.build());
+    }
+
+    @SuppressWarnings({"deprecation", "removal"}) // NeoForge TickEvent.phase deprecated-for-removal (pre-ClientTickEvent.Post)
 
     private void onClientTick(TickEvent.ClientTickEvent event) {
         if (event.phase != TickEvent.Phase.END) { return; }

@@ -10,6 +10,7 @@ base { archivesName = 'm1' }
 java.toolchain.languageVersion = JavaLanguageVersion.of(17)
 
 dependencies {
+    compileOnly "com.google.errorprone:error_prone_annotations:2.36.0"
     implementation 'net.neoforged:neoforge:20.2.93'
 }
 

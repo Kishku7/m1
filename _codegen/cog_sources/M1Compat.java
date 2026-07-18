@@ -80,6 +80,7 @@ public final class M1Compat {
     }
 
     // 1.21.9 rename: ResourceLocation -> Identifier. Build an item TagKey from a namespaced id.
+    @SuppressWarnings({"deprecation","removal"})
     public static TagKey<Item> itemTag(String ns, String path) {
         //[[[cog
         //for ln in compat.item_tag(mcver): cog.outl(ln)
@@ -128,6 +129,7 @@ public final class M1Compat {
     }
 
     // 1.20.5 FOOD component vs pre Item.getFoodProperties().
+    @SuppressWarnings("deprecation")
     public static double foodValue(ItemStack s) {
         //[[[cog
         //for ln in compat.food_value(mcver): cog.outl(ln)

@@ -17,6 +17,7 @@ minecraft {
 }
 
 dependencies {
+    compileOnly "com.google.errorprone:error_prone_annotations:2.36.0"
     minecraft "net.minecraftforge:forge:${forge_version}"
 }
 

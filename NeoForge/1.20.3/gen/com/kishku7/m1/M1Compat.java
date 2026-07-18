@@ -140,6 +140,7 @@ public final class M1Compat {
     }
 
     // 1.20.5 FOOD component vs pre Item.getFoodProperties().
+    @SuppressWarnings("deprecation")
     public static double foodValue(ItemStack s) {
         //[[[cog
         //for ln in compat.food_value(mcver): cog.outl(ln)

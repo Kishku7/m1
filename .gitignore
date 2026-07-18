@@ -6,6 +6,7 @@ out/
 *.classpath
 *.project
 natives/
+gen/
 
 # Distributables (built jars are release artifacts, not source)
 dist/

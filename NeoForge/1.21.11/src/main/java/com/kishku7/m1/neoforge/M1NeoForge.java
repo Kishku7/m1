@@ -29,11 +29,17 @@ import net.neoforged.neoforge.common.NeoForge;
 @Mod("m1")
 public class M1NeoForge {
     public M1NeoForge(IEventBus bus, ModContainer mod, Dist dist) {
+        com.kishku7.m1.M1SrvConfig.get();
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(this::onRegisterCommands);
         if (dist.isClient()) {
             M1Server.start();
             NeoForge.EVENT_BUS.addListener(this::onClientTick);
             NeoForge.EVENT_BUS.addListener(this::onSystemChat);
         }
+    }
+    // M1-Server: register the read-only /m1srv command server-side (dedicated + integrated servers).
+    private void onRegisterCommands(net.neoforged.neoforge.event.RegisterCommandsEvent event) {
+        event.getDispatcher().register(com.kishku7.m1.M1SrvCommand.build());
     }
 
     private void onClientTick(ClientTickEvent.Post event) {

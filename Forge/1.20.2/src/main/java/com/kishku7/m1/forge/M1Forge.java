@@ -28,12 +28,20 @@ import net.minecraftforge.fml.loading.FMLEnvironment;
 @Mod("m1")
 public class M1Forge {
     public M1Forge() {
+        com.kishku7.m1.M1SrvConfig.get();
+        MinecraftForge.EVENT_BUS.addListener(this::onRegisterCommands);
         if (FMLEnvironment.dist == Dist.CLIENT) {
             M1Server.start();
             MinecraftForge.EVENT_BUS.addListener(this::onClientTick);
             MinecraftForge.EVENT_BUS.addListener(this::onSystemChat);
         }
     }
+    // M1-Server: register the read-only /m1srv command server-side (runs on dedicated + integrated servers).
+    private void onRegisterCommands(net.minecraftforge.event.RegisterCommandsEvent event) {
+        event.getDispatcher().register(com.kishku7.m1.M1SrvCommand.build());
+    }
+
+    @SuppressWarnings({"deprecation", "removal"}) // Forge TickEvent.phase deprecated-for-removal; no non-deprecated pre-EventBus7 equivalent
 
     private void onClientTick(TickEvent.ClientTickEvent event) {
         if (event.phase != TickEvent.Phase.END) {

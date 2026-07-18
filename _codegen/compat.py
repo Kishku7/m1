@@ -374,3 +374,139 @@ def same_item_components(ver):  # M1Compat.sameItemSameComponents(ItemStack a, I
     if food_component(V(ver)):
         return ["return net.minecraft.world.item.ItemStack.isSameItemSameComponents(a, b);"]
     return ["return net.minecraft.world.item.ItemStack.isSameItemSameTags(a, b);"]
+
+
+# ================================================================================================
+# M1-SERVER MERGE (2026-07-17): server-authority read drift for cog_sources/Queries.java.
+# DIRECT compiled access, version-selected; universal across intermediary/SRG/mojmap runtimes.
+# Boundaries verified from the on-disk MC-Java decompiles (m1-server, 2026-07-09..17).
+# ================================================================================================
+def data_components(v): return v >= (1, 20, 5)    # BlockEntity.saveWithoutMetadata gains HolderLookup.Provider arg
+def value_output(v):    return v >= (1, 21, 6)    # Entity.saveWithoutId takes ValueOutput; CompoundTag below
+def spawn_respawn(v):   return v >= (1, 21, 10)   # ServerLevel.getRespawnData().pos() ; getSharedSpawnPos() below
+def time_overworld(v):  return v[0] == 26         # Level.getOverworldClockTime() ; getDayTime() below
+def gr_new(v):          return v >= (1, 21, 11)   # world.level.gamerules.GameRules + KEEP_INVENTORY names + get(GameRule)
+def id_ident(v):        return v >= (1, 21, 11)   # resources.Identifier rename (1.21.10 still ResourceLocation)
+def id_parse_static(v): return v >= (1, 21, 0)    # ResourceLocation.parse(String) (1.21+) ; new ResourceLocation below
+def recipe_rk(v):       return v >= (1, 21, 2)    # RecipeManager.byKey/RecipeBook.contains take ResourceKey<Recipe<?>>
+def adv_holder(v):      return v >= (1, 20, 2)    # ServerAdvancementManager.get(id)->AdvancementHolder ; getAdvancement below
+def player_level(v):    return v >= (1, 21, 6)    # ServerPlayer.level() (1.21.6+) ; serverLevel() below
+def tps_nanos(v):       return v >= (1, 20, 3)    # getAverageTickTimeNanos() from 1.20.3 ; float getAverageTickTime() below
+
+def q_id_parse(ver, arg):
+    v = V(ver)
+    if id_ident(v):
+        return "net.minecraft.resources.Identifier.parse(%s)" % arg
+    if id_parse_static(v):
+        return "net.minecraft.resources.ResourceLocation.parse(%s)" % arg
+    return "new net.minecraft.resources.ResourceLocation(%s)" % arg
+
+def q_level(ver):
+    lvl = "player.level()" if player_level(V(ver)) else "player.serverLevel()"
+    return ["        ServerPlayer player = src.getPlayer();",
+            "        return player != null ? %s : src.getServer().overworld();" % lvl]
+
+def q_spawn(ver):
+    pos = "lvl.getRespawnData().pos()" if spawn_respawn(V(ver)) else "lvl.getSharedSpawnPos()"
+    return ["        ServerLevel lvl = level(src);",
+            "        BlockPos pos = %s;" % pos,
+            '        return pos.getX() + "," + pos.getY() + "," + pos.getZ();']
+
+def q_time(ver):
+    clock = "lvl.getOverworldClockTime()" if time_overworld(V(ver)) else "lvl.getDayTime()"
+    return ["        ServerLevel lvl = level(src);",
+            "        long clock = %s;" % clock,
+            '        return "day=" + (clock / 24000L)',
+            '                + " daytime=" + (clock % 24000L)',
+            '                + " gametime=" + lvl.getLevelData().getGameTime();']
+
+def q_gamerules(ver):
+    v = V(ver)
+    if gr_new(v):
+        gr = "net.minecraft.world.level.gamerules.GameRules"; acc = "get"
+        rules = [("keepInventory", "KEEP_INVENTORY"), ("advanceTime", "ADVANCE_TIME"),
+                 ("advanceWeather", "ADVANCE_WEATHER"), ("mobGriefing", "MOB_GRIEFING"),
+                 ("spawnMobs", "SPAWN_MOBS")]
+    else:
+        gr = "net.minecraft.world.level.GameRules"; acc = "getBoolean"
+        rules = [("keepInventory", "RULE_KEEPINVENTORY"), ("advanceTime", "RULE_DAYLIGHT"),
+                 ("advanceWeather", "RULE_WEATHER_CYCLE"), ("mobGriefing", "RULE_MOBGRIEFING"),
+                 ("spawnMobs", "RULE_DOMOBSPAWNING")]
+    out = ["        var rules = level(src).getGameRules();",
+           '        StringJoiner sj = new StringJoiner(" ");']
+    for label, field in rules:
+        out.append('        sj.add("%s=" + rules.%s(%s.%s));' % (label, acc, gr, field))
+    out.append("        return sj.toString();")
+    return out
+
+def q_locate_structure(ver):
+    return ["        var id = %s;" % q_id_parse(ver, "idStr"),
+            "        TagKey<Structure> tag = TagKey.create(Registries.STRUCTURE, id);",
+            "        BlockPos origin = BlockPos.containing(src.getPosition());",
+            "        BlockPos found = level(src).findNearestMapStructure(tag, origin, 100, false);",
+            '        return found != null ? (found.getX() + "," + found.getY() + "," + found.getZ()) : "notfound";']
+
+def q_locate_biome(ver):
+    return ["        var id = %s;" % q_id_parse(ver, "idStr"),
+            "        ResourceKey<Biome> key = ResourceKey.create(Registries.BIOME, id);",
+            "        BlockPos origin = BlockPos.containing(src.getPosition());",
+            "        Pair<BlockPos, Holder<Biome>> result = level(src).findClosestBiome3d(h -> h.is(key), origin, 6400, 32, 64);",
+            '        return result != null ? (result.getFirst().getX() + "," + result.getFirst().getY() + "," + result.getFirst().getZ()) : "notfound";']
+
+def q_recipe(ver):
+    v = V(ver)
+    out = ["        var id = %s;" % q_id_parse(ver, "idStr")]
+    if recipe_rk(v):
+        out += ["        ResourceKey<net.minecraft.world.item.crafting.Recipe<?>> key = ResourceKey.create(Registries.RECIPE, id);",
+                "        boolean exists = src.getServer().getRecipeManager().byKey(key).isPresent();",
+                "        ServerPlayer p = src.getPlayer();",
+                '        String unlocked = (p != null) ? Boolean.toString(p.getRecipeBook().contains(key)) : "n/a";']
+    else:
+        out += ["        boolean exists = src.getServer().getRecipeManager().byKey(id).isPresent();",
+                "        ServerPlayer p = src.getPlayer();",
+                '        String unlocked = (p != null) ? Boolean.toString(p.getRecipeBook().contains(id)) : "n/a";']
+    out.append('        return "id=" + id + " exists=" + exists + " unlocked=" + unlocked;')
+    return out
+
+def q_advancement(ver):
+    v = V(ver)
+    out = ["        var id = %s;" % q_id_parse(ver, "idStr")]
+    holder_var = "holder" if adv_holder(v) else "adv"
+    getter = "get" if adv_holder(v) else "getAdvancement"
+    out += ["        var %s = src.getServer().getAdvancements().%s(id);" % (holder_var, getter),
+            '        if (%s == null) { return "id=" + id + " exists=false"; }' % holder_var,
+            "        ServerPlayer p = src.getPlayer();",
+            '        if (p == null) { return "id=" + id + " exists=true done=n/a"; }',
+            "        var prog = p.getAdvancements().getOrStartProgress(%s);" % holder_var,
+            '        return "id=" + id + " exists=true done=" + prog.isDone() + " percent=" + Math.round(prog.getPercent() * 100.0F) + "%";']
+    return out
+
+def q_serverinfo(ver):
+    v = V(ver)
+    out = ["        MinecraftServer server = src.getServer();"]
+    if tps_nanos(v):
+        out += ["        long avgNanos = server.getAverageTickTimeNanos();",
+                "        double mspt = avgNanos / 1_000_000.0D;",
+                "        double tps = avgNanos > 0L ? Math.min(20.0D, 1_000_000_000.0D / avgNanos) : 20.0D;"]
+    else:
+        out += ["        double mspt = server.getAverageTickTime();",
+                "        double tps = mspt > 0.0D ? Math.min(20.0D, 1000.0D / mspt) : 20.0D;"]
+    out += ['        return "motd=\\"" + server.getMotd() + "\\""',
+            '                + " tps=" + String.format(Locale.ROOT, "%.1f", tps)',
+            '                + " mspt=" + String.format(Locale.ROOT, "%.1f", mspt)',
+            '                + " players=" + server.getPlayerCount() + "/" + server.getPlayerList().getMaxPlayers();']
+    return out
+
+def q_be_snapshot(ver):
+    if data_components(V(ver)):
+        return ["        return be.saveWithoutMetadata(lvl.registryAccess());"]
+    return ["        return be.saveWithoutMetadata();"]
+
+def q_entity_snapshot(ver):
+    if value_output(V(ver)):
+        return ["        net.minecraft.world.level.storage.TagValueOutput out ="
+                " net.minecraft.world.level.storage.TagValueOutput.createWithContext("
+                "net.minecraft.util.ProblemReporter.DISCARDING, lvl.registryAccess());",
+                "        entity.saveWithoutId(out);",
+                "        return out.buildResult();"]
+    return ["        return entity.saveWithoutId(new net.minecraft.nbt.CompoundTag());"]

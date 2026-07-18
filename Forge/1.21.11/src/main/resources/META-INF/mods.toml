@@ -15,11 +15,11 @@ description='''Exposes the real Minecraft client through a localhost text channe
     mandatory=true
     versionRange="[61,)"
     ordering="NONE"
-    side="CLIENT"
+    side="BOTH"
 
 [[dependencies.m1]]
     modId="minecraft"
     mandatory=true
     versionRange="[1.21.11,1.21.12)"
     ordering="NONE"
-    side="CLIENT"
+    side="BOTH"

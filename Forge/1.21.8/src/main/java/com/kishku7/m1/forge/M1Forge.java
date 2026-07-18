@@ -32,11 +32,17 @@ import net.minecraftforge.fml.loading.FMLEnvironment;
 @Mod("m1")
 public class M1Forge {
     public M1Forge() {
+        com.kishku7.m1.M1SrvConfig.get();
+        net.minecraftforge.event.RegisterCommandsEvent.BUS.addListener(this::onRegisterCommands);
         if (FMLEnvironment.dist == Dist.CLIENT) {
             M1Server.start();
             TickEvent.ClientTickEvent.Post.BUS.addListener(this::onClientTickPost);
             ClientChatReceivedEvent.BUS.addListener(this::onSystemChat);
         }
+    }
+    // M1-Server: register the read-only /m1srv command server-side (runs on dedicated + integrated servers).
+    private void onRegisterCommands(net.minecraftforge.event.RegisterCommandsEvent event) {
+        event.getDispatcher().register(com.kishku7.m1.M1SrvCommand.build());
     }
 
     private void onClientTickPost(TickEvent.ClientTickEvent.Post event) {

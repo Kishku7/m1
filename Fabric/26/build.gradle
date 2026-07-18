@@ -9,8 +9,10 @@ base { archivesName = project.archives_base_name }
 
 // Shared MC-coupled core (single source of truth).
 sourceSets.main.java.srcDir "../../shared_minecraft/src/main/java"
+sourceSets.main.java.srcDir "gen"  // M1-Server Queries (cog-direct, per-MC) -- see cog-gen.ps1
 
 dependencies {
+    compileOnly "com.google.errorprone:error_prone_annotations:2.36.0"
     minecraft "com.mojang:minecraft:${project.minecraft_version}"
     compileOnly localRuntime("net.fabricmc:fabric-loader:${project.loader_version}")
     compileOnly localRuntime("net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}")

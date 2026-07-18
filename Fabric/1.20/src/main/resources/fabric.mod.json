@@ -8,8 +8,11 @@
     "Kishku7"
   ],
   "license": "ARR",
-  "environment": "client",
+  "environment": "*",
   "entrypoints": {
+    "main": [
+      "com.kishku7.m1.M1Main"
+    ],
     "client": [
       "com.kishku7.m1.client.M1Client"
     ]

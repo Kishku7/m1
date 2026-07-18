@@ -62,6 +62,7 @@ public final class RecipeCompat {
         //[[[end]]]
     }
 
+    @SuppressWarnings("deprecation")
     public static List<String> ingredientItemIds(Ingredient ing) {
         //[[[cog
         //for ln in compat.rc_ingredient_ids(mcver): cog.outl(ln)

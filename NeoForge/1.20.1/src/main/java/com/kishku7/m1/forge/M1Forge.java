@@ -28,12 +28,19 @@ import net.minecraftforge.fml.loading.FMLEnvironment;
 @Mod("m1")
 public class M1Forge {
     public M1Forge() {
+        com.kishku7.m1.M1SrvConfig.get();
+        MinecraftForge.EVENT_BUS.addListener(this::onRegisterCommands);
         if (FMLEnvironment.dist == Dist.CLIENT) {
             M1Server.start();
             MinecraftForge.EVENT_BUS.addListener(this::onClientTick);
             MinecraftForge.EVENT_BUS.addListener(this::onSystemChat);
         }
     }
+    private void onRegisterCommands(net.minecraftforge.event.RegisterCommandsEvent event) {
+        event.getDispatcher().register(com.kishku7.m1.M1SrvCommand.build());
+    }
+
+    @SuppressWarnings({"deprecation", "removal"}) // Forge TickEvent.phase deprecated-for-removal
 
     private void onClientTick(TickEvent.ClientTickEvent event) {
         if (event.phase != TickEvent.Phase.END) {
