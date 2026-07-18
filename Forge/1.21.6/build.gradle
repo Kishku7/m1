@@ -1,6 +1,7 @@
 plugins {
+    id 'java'
     id 'eclipse'
-    id 'net.minecraftforge.gradle' version '[6.0,6.2)'
+    id 'net.minecraftforge.gradle' version '7.0.31'
 }
 
 version = "${mod_version}+${minecraft_version}-forge"
@@ -12,13 +13,21 @@ base {
 
 java.toolchain.languageVersion = JavaLanguageVersion.of(21)
 
-minecraft {
-    mappings channel: 'official', version: '1.21.6'
+// FG7: plugins come from the Gradle Plugin Portal (no Forge-maven pluginManagement block).
+// The Minecraft Mavenizer runs automatically at configuration time when minecraft.dependency(...)
+// resolves (first run ~5-6 min: decompile+patch+recompile Forge into a local MC maven, cached after).
+repositories {
+    minecraft.mavenizer(it)
+    maven fg.forgeMaven
+    maven fg.minecraftLibsMaven
+    mavenCentral()
 }
 
 dependencies {
     compileOnly "com.google.errorprone:error_prone_annotations:2.36.0"
-    minecraft "net.minecraftforge:forge:${forge_version}"
+    // This cell runs a MOJMAP runtime -> no renamer; the plain jar is the production artifact.
+    // M1 bundles no libraries, so no jarjar/JiJ is needed.
+    implementation minecraft.dependency("net.minecraftforge:forge:${forge_version}")
 }
 
 tasks.withType(JavaCompile).configureEach {
