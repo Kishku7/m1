@@ -1,17 +1,17 @@
 # M1 -- Machine One AI Interface
 # PLEASE review the branches above for the source code tree.
 
-**M1 is a client-side Minecraft mod that exposes the real, running game client over a plain
+**M1 is a Minecraft mod that exposes the real, running game client over a plain
 localhost text socket.** It describes whatever screen or world is in front of the client as text,
 and accepts text commands to drive it -- so a human at a terminal, or an AI over a socket, can
 operate Minecraft entirely by typing. No GUI mouse/keyboard is required and nothing needs to be
 "looked at" on screen; the window is there purely for observability.
 
-Ships as a **Fabric, NeoForge, and Forge** mod spanning **Minecraft 1.20 through 26.x**. Current release: **v0.12.0**.
+Ships as a **Fabric, NeoForge, and Forge** mod spanning **Minecraft 1.20 through 26.x**, as a client agent plus an optional server-side `/m1srv` command (needs neither side present).
 
-**[Download on Modrinth](https://modrinth.com/mod/m1-machine-one-ai-interface)**  ·  **[Source code / build & setup guide](https://github.com/Kishku7/m1/tree/minecraft-1.20-26.3)**  ·  **[Report an issue / get support](https://github.com/Kishku7/mod_support/issues)**
+**[Source code / build & setup guide](https://github.com/Kishku7/m1/tree/minecraft-1.20-26.3)** | **[Report an issue / get support](https://github.com/Kishku7/mod_support/issues)**
 
-> **New here? Read [the AI_Brain (`00_Index.md`)](https://github.com/Kishku7/m1/tree/minecraft-1.20-26.3/shared_common/src/main/resources/m1_ai_brain) first.** That is the file an AI agent
+> **New here? Read [the AI_Brain (`00_Index.md`)](https://github.com/Kishku7/m1/tree/minecraft-1.20-26.3/_codegen/cog_sources/shared_resources/m1_ai_brain) first.** That is the file an AI agent
 > is expected to load before a play session. This README is the reference manual behind it.
 
 ---
@@ -148,7 +148,7 @@ loopback-only by design.
 
 ## 4. The AI_Brain
 
-[the AI_Brain (`00_Index.md`)](https://github.com/Kishku7/m1/tree/minecraft-1.20-26.3/shared_common/src/main/resources/m1_ai_brain) (in this branch) is the **standing brief an AI reads in
+[the AI_Brain (`00_Index.md`)](https://github.com/Kishku7/m1/tree/minecraft-1.20-26.3/_codegen/cog_sources/shared_resources/m1_ai_brain) (in this branch) is the **standing brief an AI reads in
 before a session.** It is deliberately on `main` so it travels with every branch and version, and
 so any operator can read it. It is portable -- it contains the transferable rules, not any one
 machine's launch/control specifics (those stay in internal infra docs).
@@ -436,7 +436,7 @@ returns `queued ...` immediately, runs over later in-world ticks, and reports ba
 | `agent shield [ticks]` | Raise/hold a shield. |
 | `agent stop` / `stop` | Clear the plan, stop moving/mining, release sneak/sprint. |
 
-**Bank Vault storage** (requires the [Bank Vault](https://modrinth.com/mod/bank-vault) mod, 26.x):
+**Bank Vault storage** (requires the Bank Vault mod, 26.x):
 `vault mark [x y z]` (remember the vault block), `vault status`, `vault contents [filter]` (reads the
 open vault and records a **per-world storage memory**), `vault withdraw <n> <item>`,
 `vault deposit rows|all|<item>` (`rows` never touches the hotbar -- the hotbar is the keep-list),
