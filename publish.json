@@ -1,9 +1,9 @@
 {
   "modrinth_id": "7xdOhfw6",
-  "slug": "m1",
+  "slug": "m1-machine-one-ai-interface",
   "jar_prefix": "m1",
   "fabric_api_dep": "P7dR8mSH",
   "env": "client_or_server",
   "quilt_via_fabric_pre26": true,
-  "forge_jar_also_neoforge_below_mc": null
+  "forge_jar_also_neoforge_below_mc": "1.20.2"
 }

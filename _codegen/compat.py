@@ -30,7 +30,8 @@ def selected_accessor(v): return v >= (1, 21, 5)     # 1.21.5 made Inventory.sel
 def mouse_event(v):     return v >= (1, 21, 9)       # MouseButtonEvent record + mouseClicked(ev,bool): 1.21.9+ (re-intermediation) THROUGH 26
 def container_input(v): return v[0] == 26            # handleContainerInput+ContainerInput @26 vs handleInventoryMouseClick+ClickType
 def shot_int_arg(v):    return v >= (1, 21, 6)       # 5-arg grab(...,int downscale,...): 1.21.6+ THROUGH 26 (deobf-confirmed; 1.21.5 is the last 4-arg)
-def id_rename(v):       return v >= (1, 21, 9)       # 1.21.9 re-intermediation: ResourceLocation->Identifier, ResourceKey.location()->identifier(), net.minecraft.client.input package, PIERCING_WEAPON component. THROUGH 26.
+def id_rename(v):       return v >= (1, 21, 11)      # ResourceLocation->Identifier rename wave: ResourceKey.location()->identifier(), net.minecraft.resources.Identifier, DataComponents.PIERCING_WEAPON/PiercingWeapon. Deob-confirmed 1.21.11 (1.21.10 still location()/ResourceLocation, no PiercingWeapon). Mirrors id_ident. THROUGH 26.
+def press_input(v):     return v >= (1, 21, 9)       # client.input wave: Button.onPress(InputWithModifiers) + net.minecraft.client.input.InputWithModifiers arrive 1.21.9 (deob-confirmed; same wave as mouse_event; 1.21.8 still onPress()). THROUGH 26.
 def spawn_reason_enum(v):
     # MobSpawnType -> EntitySpawnReason. CONFIRMED via deobf: MobSpawnType through 1.21.1; EntitySpawnReason
     # from 1.21.2 (the 1.21.2 API-churn version). 26.x all use EntitySpawnReason.
@@ -152,27 +153,13 @@ def try_piercing(ver):        # M1Compat.tryPiercingAttack(Minecraft mc, LocalPl
     return ["return false;"]
 
 def press_button(ver):        # M1Compat.pressButton(Button b)
-    if id_rename(V(ver)):
+    if press_input(V(ver)):
         return ["b.onPress(new net.minecraft.client.input.InputWithModifiers() {",
                 "    @Override public int input() { return 257; }",
                 "    @Override public int modifiers() { return 0; }",
                 "});"]
     return ["b.onPress();"]
 
-# Self-test: `python compat.py` prints each drift across the matrix so boundaries are eyeballable.
-if __name__ == "__main__":
-    for ver in ["1.20", "1.20.6", "1.21", "1.21.2", "1.21.5", "1.21.8", "1.21.11", "26.1", "26.2", "26.3"]:
-        print("== %-8s ==" % ver)
-        print("  screen   :", screen_get(ver)[0])
-        print("  selected :", selected_get(ver)[0])
-        print("  click    :", container_click(ver)[-1])
-        print("  mouse    :", screen_click(ver)[0])
-        print("  spawn    :", spawn_natural(ver)[0])
-        print("  shot     :", screenshot_grab(ver)[-1])
-        print("  keyId    :", key_id(ver)[0])
-        print("  itemTag  :", item_tag(ver)[0])
-        print("  piercing :", is_piercing(ver)[0])
-        print("  button   :", press_button(ver)[0])
 
 def m1compat_imports(ver):
     """Extra imports M1Compat needs that do NOT exist on all versions (so must be version-gated by Cog).
@@ -188,7 +175,7 @@ def m1compat_imports(ver):
 # ---- recipe-book eras (RecipeCompat). RecipeDisplayEntry (1.21.2+); RecipeHolder<?> (1.20.2-1.21.1);
 #      Recipe<?> directly (1.20.0-1.20.1, pre-RecipeHolder). Fully-qualified; opaque Object 'entry'. ----
 def recipe_display(v):    return v >= (1, 21, 2)
-def ingredient_stream(v): return v >= (1, 21, 5)   # Ingredient.items() Stream (1.21.5+) vs List (1.21.2-1.21.4)
+def ingredient_stream(v): return v >= (1, 21, 4)   # Ingredient.items() Stream (1.21.4+) vs List (1.21.2-1.21.3). Deob-confirmed: 1.21.3 List, 1.21.4 Stream.
 def recipe_holder(v):     return v >= (1, 20, 2)   # RecipeHolder<?> wrapper; below = Recipe<?> directly
 
 def rc_entries(ver):
@@ -510,3 +497,20 @@ def q_entity_snapshot(ver):
                 "        entity.saveWithoutId(out);",
                 "        return out.buildResult();"]
     return ["        return entity.saveWithoutId(new net.minecraft.nbt.CompoundTag());"]
+
+
+# Self-test: `python compat.py` prints each drift across the matrix so boundaries are eyeballable.
+if __name__ == "__main__":
+    for ver in ["1.20", "1.20.6", "1.21", "1.21.2", "1.21.4", "1.21.5", "1.21.8", "1.21.10", "1.21.11", "26.1", "26.2", "26.3"]:
+        print("== %-8s ==" % ver)
+        print("  screen   :", screen_get(ver)[0])
+        print("  selected :", selected_get(ver)[0])
+        print("  click    :", container_click(ver)[-1])
+        print("  mouse    :", screen_click(ver)[0])
+        print("  spawn    :", spawn_natural(ver)[0])
+        print("  shot     :", screenshot_grab(ver)[-1])
+        print("  keyId    :", key_id(ver)[0])
+        print("  itemTag  :", item_tag(ver)[0])
+        print("  piercing :", is_piercing(ver)[0])
+        print("  button   :", press_button(ver)[0])
+        print("  ingr     :", rc_ingredient_ids(ver)[1])

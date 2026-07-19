@@ -46,4 +46,4 @@ jar {
 // cog-gen robocopies shared_minecraft + shared_common java into gen/ then overwrites the *Compat classes
 // with cog'd direct versions -- so gen/ already bundles shared_common java; add only its resources srcDir.
 sourceSets.main.java.srcDir "gen"
-sourceSets.main.resources.srcDir "../../shared_common/src/main/resources"
+sourceSets.main.resources.srcDir "../../_codegen/cog_sources/shared_resources"

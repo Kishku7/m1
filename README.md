@@ -4,7 +4,6 @@ This branch is the unified source tree for **M1 -- Machine One AI Interface**: o
 that builds every shipped jar -- Fabric, NeoForge, and Forge -- across Minecraft 1.20 - 26.x.
 
 - **What M1 is + the full command reference:** [landing page (`main`)](https://github.com/Kishku7/m1/tree/main)
-- **Download (players):** https://modrinth.com/mod/m1-machine-one-ai-interface
 - **Report issues / support:** https://github.com/Kishku7/mod_support/issues
 
 ---
@@ -78,17 +77,17 @@ protocol are on the [landing page](https://github.com/Kishku7/m1/tree/main).)
 
 ## Repo layout
 
-- `shared_minecraft/` -- the MC-coupled observe+actuate engine (single source of truth), `srcDir`'d
-  into the per-loader `Fabric/<ver>`, `NeoForge/<ver>`, and `Forge/<ver>` cells.
-- `shared_common/` -- MC-agnostic code + resources, including the **AI_Brain** operating brief that
-  ships in every jar and extracts to `config/M1_AI_Brain/<MAJOR.MINOR>/` on first run.
-- `_codegen/` -- the Cog drift brain (`compat.py`) + cog sources.
+- `_codegen/cog_sources/shared/` -- the ONE business source: the MC-coupled observe+actuate engine +
+  the MC-agnostic agent code, materialized into each cell's `gen/` by `cog-gen.ps1`.
+- `_codegen/cog_sources/shared_resources/` -- MC-agnostic resources, incl the **AI_Brain** operating brief
+  that ships in every jar and extracts to `config/M1_AI_Brain/<MAJOR.MINOR>/` on first run.
+- `_codegen/compat.py` -- the Cog drift brain; `_codegen/cog_sources/` -- the cog-direct `*Compat` + `Queries.java` + `entrypoints/` masters (the per-loader entrypoint source).
 - `<Loader>/<mc-version>/` -- thin per-version build cells. `scripts/` -- build helpers (gitignored).
   `dist/` -- built jars (gitignored).
 
 ---
 
-## Version coverage & gaps (v0.12.0)
+## Version coverage & gaps
 
 One jar per supported (loader, MC-line). Coverage is honestly bounded by what each loader shipped:
 
@@ -112,24 +111,24 @@ The 1.21 and 1.21.1 lines are served by a single 1.21 cell per loader (shared AP
 
 ## How the code generation works
 
-M1 keeps ONE business source (`shared_minecraft` + `shared_common`) and bridges per-version/loader API
-drift two ways:
+M1 keeps ONE business source in `_codegen/cog_sources` and generates every build cell from it -- there
+are no per-cell source copies and no reflection facades.
 
-- **Reflection facades (`*Compat`)** where the runtime is **mojmap** -- MC 26+ (all loaders), and
-  Forge/NeoForge from ~1.21 on. A mojmap-name lookup resolves directly, so the shared source compiles
-  and runs unchanged.
-- **Cog (`cogapp`) direct-access `gen/` trees** where the runtime is **NOT mojmap** -- pre-26 Fabric
-  (intermediary) and the early Forge / NeoForge 1.20.1 - 1.20.4 line (SRG). There a mojmap reflection
-  string MISSES at runtime, so `cog-gen.ps1` generates a direct-compiled `gen/` tree that the loader
-  remaps at load. Any cell whose `build.gradle` srcDir's `gen` is cog-generated before building.
+- **Cog (`cogapp`) direct-access.** `_codegen/compat.py` selects the correct direct-compiled body per MC
+  version, and `cog-gen.ps1` materializes each cell's `gen/` tree: the shared source, the cog-generated
+  `*Compat` drift files, `Queries.java`, and the loader entrypoint. Every cell `srcDir`'s `gen`, so every
+  cell is cog-generated before building.
+- **Direct access resolves on every runtime** -- Loom remaps mojmap->intermediary on pre-26 Fabric, the
+  early Forge / NeoForge 1.20.1 - 1.20.4 line remaps SRG, and it is native on mojmap (MC 26+, Forge/
+  NeoForge ~1.21+). One source builds and runs everywhere, with the boundaries pinned in `compat.py`.
 
 Toolchain per loader (the non-obvious part):
 
-- **Fabric:** loom. Pre-26 cells are cog-gen'd (intermediary runtime); 26.x builds direct (mojmap).
+- **Fabric:** loom. All cells are cog-gen'd; the same cog source resolves on pre-26 intermediary and 26.x mojmap.
 - **NeoForge:** **ModDevGradle** for neo >= 20.6; **NeoGradle 7.0.192** + legacy `META-INF/mods.toml`
   + cog `gen/` for the SRG early line neo 20.2 - 20.4 (MDG publishes no moddev-bundle below neo 20.4);
   **ForgeGradle 6** against the `net.neoforged:forge` artifact for NeoForge 1.20.1 (a Forge 1.20.1 fork).
-- **Forge:** ForgeGradle 6 (FG6). The 1.20.1 cell (SRG) is cog-gen'd; mojmap cells build direct.
+- **Forge:** ForgeGradle 6 / FG7. All cells are cog-gen'd (the 1.20.1-1.20.4 SRG cells and the mojmap cells alike).
 
 **Never Architectury.** Full per-version boundary + loader-floor tables live in the maintainer's
 `minecraft/version-gates.md`.

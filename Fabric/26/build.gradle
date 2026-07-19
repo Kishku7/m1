@@ -8,7 +8,6 @@ group = project.maven_group
 base { archivesName = project.archives_base_name }
 
 // Shared MC-coupled core (single source of truth).
-sourceSets.main.java.srcDir "../../shared_minecraft/src/main/java"
 sourceSets.main.java.srcDir "gen"  // M1-Server Queries (cog-direct, per-MC) -- see cog-gen.ps1
 
 dependencies {
@@ -37,8 +36,7 @@ java {
 }
 
 // AI_Brain (MC-agnostic resources, shipped in jar)
-sourceSets.main.resources.srcDir "../../shared_common/src/main/resources"
+sourceSets.main.resources.srcDir "../../_codegen/cog_sources/shared_resources"
 
 
-sourceSets.main.java.srcDir "../../shared_common/src/main/java"
 
