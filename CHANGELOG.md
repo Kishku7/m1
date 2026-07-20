@@ -1,8 +1,30 @@
-# Changelog
+﻿# Changelog
 
 All notable changes to M1 are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/); this project uses
 `<mod version>+<minecraft family>-<loader>` jar naming.
+
+## [0.13.1] - 2026-07-18
+
+### Fixed
+- **Forge 1.21.4 and 1.21.10** now build and run correctly. Two internal version-boundary
+  misclassifications (the ResourceLocation/Identifier + piercing-weapon API is 1.21.11, not 1.21.9;
+  the recipe-ingredient stream API is 1.21.4, not 1.21.5) were masked on those two Forge-only
+  versions and are corrected.
+- **26.3 menu clicks work again.** The single-source refactor below dropped a 26.3-only fix: on
+  26.3-snapshot-3+ the primary (left) click button is encoded 1, not 0, so a hardcoded 0 made every
+  in-game menu click a silent no-op. `screen_click` now emits the correct button per version (1 for
+  26.3+, 0 for 26.1/26.2 and 1.21.9+). Verified on the 26.3-snapshot-4 client cell.
+
+### Security
+- **Hardened the local control socket.** Inbound command lines are now length-capped, and the
+  `screenshot` command rejects file names containing path separators or `..` (the frame can only be
+  written under the screenshots folder). The socket remains bound to localhost only.
+
+### Changed
+- **Internal single-source build refactor (no gameplay change):** the mod is now generated from one
+  code source of truth per file, with every build cell and loader entrypoint produced from it.
+  Behavior is identical to 0.13.0 on every supported version.
 
 ## [0.13.0] - 2026-07-18
 

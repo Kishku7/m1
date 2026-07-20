@@ -1,4 +1,4 @@
-# M1 cross-version drift brain (Cog).
+﻿# M1 cross-version drift brain (Cog).
 #
 # Why this exists: M1's version drift was first solved with reflection-by-mojmap-name *Compat
 # facades. Those work where the RUNTIME is mojmap (MC 26+ all loaders; NeoForge; Forge/FG6 1.20.1+),
@@ -28,6 +28,7 @@ def gameRenderer_rt(v): return v >= (26, 2)          # 26.2 moved the render tar
 def zombie_registry(v): return v >= (26, 2)          # 26.2 dropped EntityType.ZOMBIE field for registry getValue
 def selected_accessor(v): return v >= (1, 21, 5)     # 1.21.5 made Inventory.selected private -> get/setSelectedSlot()
 def mouse_event(v):     return v >= (1, 21, 9)       # MouseButtonEvent record + mouseClicked(ev,bool): 1.21.9+ (re-intermediation) THROUGH 26
+def mouse_btn_base1(v): return v >= (26, 3)          # 26.3-snapshot-3 input rework: primary (left) click button encodes 1, not 0 (AbstractWidget.isValidClickButton flipped 0->1). 1.21.9..26.2 = 0; 26.3+ = 1. Hardcoded 0 makes 26.3+ menu clicks silent no-ops. Restored 2026-07-20 (dropped by the D16 refactor).
 def container_input(v): return v[0] == 26            # handleContainerInput+ContainerInput @26 vs handleInventoryMouseClick+ClickType
 def shot_int_arg(v):    return v >= (1, 21, 6)       # 5-arg grab(...,int downscale,...): 1.21.6+ THROUGH 26 (deobf-confirmed; 1.21.5 is the last 4-arg)
 def id_rename(v):       return v >= (1, 21, 11)      # ResourceLocation->Identifier rename wave: ResourceKey.location()->identifier(), net.minecraft.resources.Identifier, DataComponents.PIERCING_WEAPON/PiercingWeapon. Deob-confirmed 1.21.11 (1.21.10 still location()/ResourceLocation, no PiercingWeapon). Mirrors id_ident. THROUGH 26.
@@ -89,7 +90,8 @@ def container_click(ver):     # ContainerCompat.click(mc, containerId, slot, but
 
 def screen_click(ver):        # ScreenClickCompat.clickAt(Screen s, double x, double y) -> boolean
     if mouse_event(V(ver)):
-        return ["MouseButtonEvent ev = new MouseButtonEvent(x, y, new MouseButtonInfo(0, 0));",
+        btn = 1 if mouse_btn_base1(V(ver)) else 0
+        return ["MouseButtonEvent ev = new MouseButtonEvent(x, y, new MouseButtonInfo(" + str(btn) + ", 0));",
                 "boolean handled = s.mouseClicked(ev, false);",
                 "s.mouseReleased(ev);",
                 "return handled;"]
