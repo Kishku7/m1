@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "id": "m1",
+  "version": "${version}",
+  "name": "M1 - Machine One AI Interface",
+  "description": "Exposes the real Minecraft client through a localhost text channel: describes the current screen and world as text and accepts text commands to drive it. For local automation and AI control. (1.21 core build.)",
+  "authors": [
+    "Kishku7"
+  ],
+  "license": "ARR",
+  "environment": "*",
+  "entrypoints": {
+    "main": [
+      "com.kishku7.m1.M1Main"
+    ],
+    "client": [
+      "com.kishku7.m1.client.M1Client"
+    ]
+  },
+  "depends": {
+    "fabricloader": ">=0.14.0",
+    "minecraft": "${mcDep}",
+    "fabric-api": ">=0.100.0"
+  },
+  "contact": {
+    "issues": "https://github.com/Kishku7/mod_support/issues"
+  }
+}

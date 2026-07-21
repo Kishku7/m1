@@ -1,4 +1,4 @@
-﻿# M1 cross-version drift brain (Cog).
+# M1 cross-version drift brain (Cog).
 #
 # Why this exists: M1's version drift was first solved with reflection-by-mojmap-name *Compat
 # facades. Those work where the RUNTIME is mojmap (MC 26+ all loaders; NeoForge; Forge/FG6 1.20.1+),
@@ -372,7 +372,7 @@ def same_item_components(ver):  # M1Compat.sameItemSameComponents(ItemStack a, I
 # ================================================================================================
 def data_components(v): return v >= (1, 20, 5)    # BlockEntity.saveWithoutMetadata gains HolderLookup.Provider arg
 def value_output(v):    return v >= (1, 21, 6)    # Entity.saveWithoutId takes ValueOutput; CompoundTag below
-def spawn_respawn(v):   return v >= (1, 21, 10)   # ServerLevel.getRespawnData().pos() ; getSharedSpawnPos() below
+def spawn_respawn(v):   return v >= (1, 21, 9)    # ServerLevel.getRespawnData().pos() (RespawnData introduced 1.21.9, getSharedSpawnPos() removed same step); getSharedSpawnPos() below. Boundary corrected 1.21.10->1.21.9 2026-07-20 (was off-by-one; only the 1.21.10 cell had exercised it).
 def time_overworld(v):  return v[0] == 26         # Level.getOverworldClockTime() ; getDayTime() below
 def gr_new(v):          return v >= (1, 21, 11)   # world.level.gamerules.GameRules + KEEP_INVENTORY names + get(GameRule)
 def id_ident(v):        return v >= (1, 21, 11)   # resources.Identifier rename (1.21.10 still ResourceLocation)
