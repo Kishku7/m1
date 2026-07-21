@@ -341,11 +341,15 @@ def component_patch_list(ver):  # M1Compat.componentPatchList(ItemStack s) -> Li
     if food_component(V(ver)):
         return [
             "java.util.List<String> out = new java.util.ArrayList<>();",
-            "for (var e : s.getComponentsPatch().entrySet()) {",
-            "    String key = String.valueOf(net.minecraft.core.registries.BuiltInRegistries.DATA_COMPONENT_TYPE.getKey(e.getKey()));",
-            "    String val = e.getValue().map(String::valueOf).orElse(\"(removed)\");",
+            "var sr = s.getComponentsPatch().split();",
+            "for (var tc : sr.added()) {",
+            "    String key = String.valueOf(net.minecraft.core.registries.BuiltInRegistries.DATA_COMPONENT_TYPE.getKey(tc.type()));",
+            "    String val = String.valueOf(tc.value());",
             "    if (val.length() > 60) { val = val.substring(0, 57) + \"...\"; }",
             "    out.add(key + \"=\" + val);",
+            "}",
+            "for (var t : sr.removed()) {",
+            "    out.add(String.valueOf(net.minecraft.core.registries.BuiltInRegistries.DATA_COMPONENT_TYPE.getKey(t)) + \"=(removed)\");",
             "}",
             "return out;"]
     return [
