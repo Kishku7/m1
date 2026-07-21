@@ -1,0 +1,12 @@
+accessWidener v1 named
+
+# M1-Legacy 1.8.9 front-door access widener. Widens the protected GUI seams so Platform can
+# reference them DIRECTLY (loom remaps onto the intermediary runtime; reflecting by yarn names at
+# runtime would fail). Yarn build 604.
+
+accessible	field	net/minecraft/client/gui/screen/Screen	buttons	Ljava/util/List;
+accessible	method	net/minecraft/client/gui/screen/Screen	mouseClicked	(III)V
+accessible	method	net/minecraft/client/gui/screen/Screen	mouseReleased	(III)V
+accessible	method	net/minecraft/client/gui/screen/Screen	buttonClicked	(Lnet/minecraft/client/gui/widget/ButtonWidget;)V
+accessible	method	net/minecraft/client/gui/screen/Screen	keyPressed	(CI)V
+accessible	field	net/minecraft/client/gui/widget/ButtonWidget	height	I

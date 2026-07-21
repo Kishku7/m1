@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "id": "m1_legacy",
+  "version": "${version}",
+  "name": "M1 Legacy",
+  "description": "M1 agentic-player front door for legacy Minecraft (Legacy Fabric). Socket core + generic GUI describe/click/type/key engine.",
+  "authors": [
+    "Kishku7"
+  ],
+  "environment": "client",
+  "entrypoints": {
+    "client": [
+      "com.kishku7.m1.client.M1Client"
+    ]
+  },
+  "accessWidener": "m1.accesswidener",
+  "depends": {
+    "fabricloader": ">=0.18.3",
+    "minecraft": "1.8.9"
+  },
+  "recommends": {
+    "legacy-fabric-api": "*"
+  }
+}

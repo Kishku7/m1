@@ -1,0 +1,33 @@
+# Build output / caches
+build/
+.gradle/
+bin/
+out/
+*.classpath
+*.project
+natives/
+gen/
+
+# Distributables (built jars are release artifacts, not source)
+dist/
+
+# Local build logs / scratch
+_build_*.log
+_build_*.err
+_build_*.pid
+*.log
+
+# Internal operational docs (contain machine/infra paths; not for the repo)
+docs/
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# Local tooling (machine-specific paths, e.g. the sync-aibrain mirror dest); not for the repo
+scripts/
+
+# Matrix definition (internal build metadata; not public)
+matrix.json
+MATRIX.md
