@@ -4,6 +4,15 @@ All notable changes to M1 are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/); this project uses
 `<mod version>+<minecraft family>-<loader>` jar naming.
 
+## [0.13.2] - 2026-07-21
+
+### Fixed
+- **Minecraft 26.3-snapshot-5 support (Fabric).** 26.3-snapshot-5 removed `DataComponentPatch.entrySet()`;
+  the item-component listing (`M1Compat.componentPatchList`) now uses the surviving `split()` /
+  `SplitResult(added, removed)` API. The 26.3 Fabric build compiles and runs on 26.3-snapshot-5, verified
+  in-world on the headless client harness (world load + drive + render). `split()` is present across the
+  whole 1.20.5+ data-component era, so the change is behavior-preserving on every earlier version.
+
 ## [0.13.1] - 2026-07-18
 
 ### Fixed
