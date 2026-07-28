@@ -1,8 +1,14 @@
-﻿# Changelog
+# Changelog
 
 All notable changes to M1 are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/); this project uses
 `<mod version>+<minecraft family>-<loader>` jar naming.
+
+## [0.13.3] - 2026-07-27
+
+### Changed
+- NeoForge 26 cells rebuilt against the now-PUBLISHED NeoForge builds: 26.1 -> 26.1.2.87, 26.2 -> 26.2.0.35-beta (previously 26.1.2.78 / 26.2.0.8-beta). mavenLocal() removed from the NeoForge/26 cell.
+- No source or behaviour change. Redeployed to every smoketest server and client cell per the latest-M1-everywhere rule.
 
 ## [0.13.2] - 2026-07-21
 
