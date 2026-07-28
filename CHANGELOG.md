@@ -4,6 +4,26 @@ All notable changes to M1 are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/); this project uses
 `<mod version>+<minecraft family>-<loader>` jar naming.
 
+## [0.13.4] - 2026-07-27
+
+### Fixed
+- **Forge 1.21.7 could not load M1 at all.** The `Forge/1.21.8` cell declared minecraft
+  `[1.21.7,1.21.9)` while requiring forge `[58,)` -- but MC 1.21.7 runs Forge **57**, so the jar
+  claimed a version it could never load on (`Missing language javafml version [58,) ... found 57.0.3`).
+  That is a cell straddling a hard loader-major boundary. SPLIT per the standard: the 1.21.8 cell is
+  narrowed to `[1.21.8,1.21.9)`, and a new **`Forge/1.21.7` cell** (forge `1.21.7-57.0.3`, ranges
+  `[57,)` / `[1.21.7,1.21.8)`, pack_format 64) provides real 1.21.7 coverage. Both cells server-boot
+  smoketested green with zero mod errors.
+
+### Changed
+- `scripts/cog-gen.ps1` M1Forge shape table now maps 1.21.7 to `forge_eventbus7` (both neighbours,
+  1.21.6/forge-56 and 1.21.8/forge-58, already used that shape).
+- **`.gitignore` no longer hides the whole `scripts/` directory.** M1 was the only mod doing this, so
+  its build tooling -- `cog-gen.ps1`, every `build-all-*.ps1`, and the 26-cell loader pin map -- was
+  absent from the repo and builds were not reproducible from a clean clone. Now only the
+  credential-reading `_publish_*.py` / `_release_*.py` / `build-stage.ps1` / `_*.txt` are ignored,
+  matching every other mod and `mod-rules.md`.
+
 ## [0.13.3] - 2026-07-27
 
 ### Changed

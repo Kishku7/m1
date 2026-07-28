@@ -1,5 +1,5 @@
 modLoader="javafml"
-loaderVersion="[58,)"
+loaderVersion="[57,)"
 license="ARR"
 issueTrackerURL="https://github.com/Kishku7/mod_support/issues"
 
@@ -13,13 +13,13 @@ description='''Exposes the real Minecraft client through a localhost text channe
 [[dependencies.m1]]
     modId="forge"
     mandatory=true
-    versionRange="[58,)"
+    versionRange="[57,)"
     ordering="NONE"
     side="BOTH"
 
 [[dependencies.m1]]
     modId="minecraft"
     mandatory=true
-    versionRange="[1.21.8,1.21.9)"
+    versionRange="[1.21.7,1.21.8)"
     ordering="NONE"
     side="BOTH"

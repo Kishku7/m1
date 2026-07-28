@@ -26,7 +26,16 @@ docs/
 *.iml
 
 # Local tooling (machine-specific paths, e.g. the sync-aibrain mirror dest); not for the repo
-scripts/
+# Build tooling in scripts/ IS tracked (mod-rules.md: "Build tooling lives in scripts/").
+# Only the credential-reading publish/release helpers are ignored -- _publish_*.py reads the
+# Modrinth PAT path and carries a user path, so it must never be pushed. Blanket "scripts/"
+# was hiding cog-gen.ps1 + every build-all script, making builds non-reproducible from a
+# clean clone (found 2026-07-27 when the Forge/1.21.7 shape fix landed in an ignored file).
+scripts/_publish_*.py
+scripts/sync-aibrain.ps1
+scripts/_release_*.py
+scripts/build-stage.ps1
+scripts/_*.txt
 
 # Matrix definition (internal build metadata; not public)
 matrix.json

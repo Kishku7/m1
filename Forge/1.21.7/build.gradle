@@ -1,0 +1,51 @@
+plugins {
+    id 'java'
+    id 'eclipse'
+    id 'net.minecraftforge.gradle' version '7.0.31'
+}
+
+version = "${mod_version}+${minecraft_version}-forge"
+group = 'com.kishku7'
+
+base {
+    archivesName = 'm1'
+}
+
+java.toolchain.languageVersion = JavaLanguageVersion.of(21)
+
+// FG7: plugins come from the Gradle Plugin Portal (no Forge-maven pluginManagement block).
+// The Minecraft Mavenizer runs automatically at configuration time when minecraft.dependency(...)
+// resolves (first run ~5-6 min: decompile+patch+recompile Forge into a local MC maven, cached after).
+repositories {
+    minecraft.mavenizer(it)
+    maven fg.forgeMaven
+    maven fg.minecraftLibsMaven
+    mavenCentral()
+}
+
+dependencies {
+    compileOnly "com.google.errorprone:error_prone_annotations:2.36.0"
+    // This cell runs a MOJMAP runtime -> no renamer; the plain jar is the production artifact.
+    // M1 bundles no libraries, so no jarjar/JiJ is needed.
+    implementation minecraft.dependency("net.minecraftforge:forge:${forge_version}")
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+    options.release = 21
+    options.compilerArgs += ['-Xlint:all']
+}
+
+// No mixins, no access transformer (Minecraft.screen / setScreen are public on 1.20.1), so no
+// refmap / AT manifest. ${file.jarVersion} in mods.toml resolves at runtime from the manifest.
+jar {
+    manifest {
+        attributes 'Implementation-Version': project.mod_version
+    }
+}
+
+sourceSets.main.java.srcDir "gen"  // M1-Server Queries (cog-direct, per-MC) -- see cog-gen.ps1
+
+// AI_Brain (MC-agnostic java + resources, shipped in jar)
+sourceSets.main.resources.srcDir "../../_codegen/cog_sources/shared_resources"
+
