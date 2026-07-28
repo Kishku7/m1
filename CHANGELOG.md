@@ -4,6 +4,23 @@ All notable changes to M1 are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/); this project uses
 `<mod version>+<minecraft family>-<loader>` jar naming.
 
+## [0.13.5] - 2026-07-28
+
+### Changed
+- **Fabric 26.3 cell moved to MC 26.3-snapshot-6** (from snapshot-5): fabric-api
+  `0.155.3+26.3` -> `0.156.1+26.3`, pack_format `93` -> `94` (data 113, world_version 5005,
+  snapshot protocol 328). The declared MC range is unchanged (`>=26.3- <26.4`), so this jar
+  covers the whole 26.3 line including snapshot-6.
+
+### Notes
+- **No source change was required.** The snapshot-6 API deltas were checked against M1's cog
+  sources: `InputWithModifiers` still declares exactly `input()` + `modifiers()` as its only
+  abstract methods, so M1's anonymous implementation in `compat.press_button` is unaffected by
+  the removal of `getDigit()`/`NOT_DIGIT`; M1 touches none of the other snapshot-6 breaks
+  (worldgen noise overhaul, Entity invulnerability split, SharedSuggestionProvider filter
+  parameter, options-screen reshuffle, terrain multidraw path).
+- Built `-Xlint:all` with zero warnings.
+
 ## [0.13.4] - 2026-07-27
 
 ### Fixed
