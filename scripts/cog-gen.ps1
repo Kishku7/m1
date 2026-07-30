@@ -83,7 +83,7 @@ switch ($Loader) {
       $nm = switch ($McVer) {
         { $_ -in '1.20.2','1.20.3','1.20.4' }                  { 'M1NeoForge.neoforge_early.java';  break }
         { $_ -in '1.20.6','1.21','1.21.2','1.21.5','1.21.8' } { 'M1NeoForge.neoforge_modern.java'; break }
-        '1.21.11'                                              { 'M1NeoForge.neoforge_1211.java';   break }
+        { $_ -in '1.21.10','1.21.11' }                         { 'M1NeoForge.neoforge_1211.java';   break }  # 3-arg (IEventBus,ModContainer,Dist) ctor; NeoForge 21.10 uses it too -- the 1.21.11 jar was proven booting on neo 21.10.64 before the 1.21.10 cell existed
         { $_ -like '26*' }                                     { 'M1NeoForge.neoforge_26.java';     break }
         default { throw "no NeoForge M1NeoForge shape for McVer=$McVer" }
       }

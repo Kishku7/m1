@@ -1,0 +1,37 @@
+plugins {
+    id 'java-library'
+    id 'net.neoforged.moddev' version "${moddevgradle_version}"
+}
+
+repositories { mavenCentral() }
+
+version = "${mod_version}+${minecraft_version}-neoforge"
+group = 'com.kishku7'
+base { archivesName = 'm1' }
+
+java.toolchain.languageVersion = JavaLanguageVersion.of(21)
+
+neoForge {
+    version = project.neo_version
+    runs { client { client() } }
+    mods { m1 { sourceSet(sourceSets.main) } }
+}
+
+processResources {
+    def ep = [mod_version: mod_version, neoforgeRange: project.neoforge_range, mcRange: project.mc_range]
+    inputs.properties(ep)
+    filesMatching('META-INF/neoforge.mods.toml') { expand(ep) }
+}
+
+tasks.withType(JavaCompile).configureEach { options.encoding = 'UTF-8'; options.release = 21; options.compilerArgs += ['-Xlint:all'] }
+
+sourceSets.main.java.srcDir "gen"  // M1-Server Queries (cog-direct, per-MC) -- see cog-gen.ps1
+
+// AI_Brain (MC-agnostic java + resources, shipped in jar)
+sourceSets.main.resources.srcDir "../../_codegen/cog_sources/shared_resources"
+
+
+dependencies {
+    compileOnly "com.google.errorprone:error_prone_annotations:2.36.0"
+}
+
