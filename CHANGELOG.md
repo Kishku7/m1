@@ -4,6 +4,33 @@ All notable changes to M1 are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/); this project uses
 `<mod version>+<minecraft family>-<loader>` jar naming.
 
+## [0.13.6] - 2026-07-29
+
+### Fixed
+- **Four NeoForge cells whose claimed MC range crossed an API gate.** The /m1srv server
+  command tree (0.13.0) reads server state through compat-gated helpers; the gates in
+  compat.py were correct but the jar ranges were not, so three NeoForge jars advertised
+  versions on the far side of a gate and threw NoSuchMethodError while building the command
+  tree for a joining player. The Fabric line had already been split correctly; NeoForge had not
+  (classic cross-loader range asymmetry, mod-audit-doctrine D3a).
+  - NeoForge/1.21.5: was [1.21.5,1.21.8). Built at 1.21.5 it emits ServerPlayer.serverLevel(),
+    but player_level() switches to level() at 1.21.6 -- crashed 1.21.6/1.21.7. Narrowed to
+    [1.21.5,1.21.6).
+  - NeoForge/1.21.8: widened to [1.21.6,1.21.9), loader floor [21.6,). Built at 1.21.8 it is
+    on the same side of the 1.21.6 gate as 1.21.6/1.21.7 and no other gate falls in that window,
+    so it legitimately serves all three (21.6/21.7 are prerelease-only, so this is the
+    claim-via-adjacent-release rule, not a new cell).
+  - NeoForge/1.21.11: was [1.21.9,1.21.12). Built at 1.21.11 it emits the new
+    world.level.gamerules.GameRules API (gate at 1.21.11) -- crashed 1.21.10. Narrowed to
+    [1.21.11,1.21.12), floor [21.11,).
+  - NEW NeoForge/1.21.10 cell on neo 21.10.64 (a release; 21.9 is beta-only), claiming
+    [1.21.9,1.21.11) with floor [21.9,) -- mirrors what Fabric/1.21.9 already does.
+  - NeoForge/1.20.6: was [1.20.5,1.20.7) while requiring loader [20.6,) -- MC 1.20.5 runs
+    NeoForge 20.5.x, so the 1.20.5 claim was unsatisfiable. Narrowed to [1.20.6,1.20.7).
+
+### Changed
+- mod_version normalized to 0.13.6 across all 34 cells (had drifted to a mix of values across
+  cells that shipped at different times).
 ## [0.13.5] - 2026-07-28
 
 ### Changed
