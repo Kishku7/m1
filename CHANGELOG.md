@@ -4,6 +4,30 @@ All notable changes to M1 are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/); this project uses
 `<mod version>+<minecraft family>-<loader>` jar naming.
 
+## [0.13.7] - 2026-07-31
+
+### Added
+- **Player-chat relay (the "master" feature) now works on Forge and NeoForge, not just Fabric.**
+  M1's `ChatWatch` relay (which the AI uses to recognize a handshake and call `master <name>`)
+  was wired only into the Fabric client entrypoints. Wired the equivalent `ClientChatReceivedEvent.Player`
+  listener into all 5 Forge shapes and all 4 NeoForge shapes (including the "early" NeoForge shape,
+  which previously had no chat capture of any kind), resolving the sender's name via the client's
+  PlayerInfo/GameProfile, matching Fabric's behavior.
+
+### Fixed
+- **`com.mojang.authlib.GameProfile.getName()` does not exist on MC 1.21.9+.** GameProfile became a
+  Java record (`name()`/`id()`) in the same 1.21.9 re-intermediation wave as `mouse_event`/`press_input`.
+  Added a cog-gated `M1Compat.profileName(GameProfile)` helper and routed every chat-name lookup
+  (Fabric and the new Forge/NeoForge listeners) through it instead of calling `.getName()`/`.name()`
+  directly -- this broke compilation on 6 of 8 pre-26 Fabric cells when the chat-listener feature was
+  first added.
+- **`mod_version` had drifted to 0.13.9 on the Fabric/1.21.11 cell** while all other 33 cells were on
+  0.13.6 (single-source-of-truth violation). Normalized all 34 cells to 0.13.7.
+
+### Verified
+- Full 34-cell / 37-jar matrix rebuilt clean, `-Xlint:all` zero warnings, zero non-ASCII.
+- CRITICAL-tier client boot (Raider): Fabric/Forge/NeoForge at 1.20.1-1.20.6, 1.21.11 (the exact
+  boundary the GameProfile bug lives at), and 26.1.2 -- 8/8 PASS, world loaded, M1 driving normally.
 ## [0.13.6] - 2026-07-29
 
 ### Fixed
