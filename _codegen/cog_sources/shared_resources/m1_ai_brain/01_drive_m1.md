@@ -161,17 +161,31 @@ for fire-and-poll autonomy (goto/patrol/mine/attack/follow/shield); use the dire
 immediate step-by-step control -- do not drive both at the same target at once.
 
 ## 12. Master & chat control (take orders from a player)
-M1 watches in-game chat. You have NO master until a player says the EXACT phrase `Who is your daddy`
-(trimmed -- nothing before or after) in chat; when they do, a `[master] <name> is now master ...`
-line is pushed to you and that player becomes your master.
-- After a master is set, ONLY that player's chat is forwarded to you, as pushed `[chat] <master>:
-  <text>` lines (poll `listen`). Everyone else's chat is ignored by M1.
-- Each `[chat]` line is a natural-language request. YOU interpret it into M1 commands and execute
-  them. Keep STRICTLY to in-game Minecraft actions (move/follow/attack/mine/craft/scan/place/etc.).
-  If the master asks for anything outside the game, briefly decline with `say` -- do not act on it.
+M1 no longer decides who your master is by pattern-matching chat -- YOU do (design change
+2026-07-31: an exact hardcoded phrase was too brittle for natural typing, and was found to be
+entirely unwired on some MC versions). The mod is a relay + a slot you control with the `master`
+verb; recognizing a handshake in natural conversation is your job.
+- **Before a master is set:** EVERY player's chat is forwarded to you, as pushed `[chat] <name>:
+  <text>` lines (poll `listen`) -- not just from one expected phrase. Watch for someone asking to
+  take control (e.g. "who's your daddy", "who is your daddy", or anything with clearly equivalent
+  intent -- do not require exact wording).
+- When you decide a player should become master, issue `master <name>` yourself (their exact
+  in-game name, case-sensitive to how it's displayed). The mod then narrows chat relay to ONLY that
+  player -- everyone else's chat stops arriving -- and pushes a `[master] <name> is now master ...`
+  confirmation line back to you.
+- `master` (no argument) queries who is currently set, if you need to check. `master clear` releases
+  the current master and reopens relay to every player -- use it if asked to hand off, or if asked
+  by someone else while you have doubts about the current master's identity.
+- Each `[chat]` line (once narrowed to your master) is a natural-language request. YOU interpret it
+  into M1 commands and execute them. Keep STRICTLY to in-game Minecraft actions
+  (move/follow/attack/mine/craft/scan/place/etc.). If the master asks for anything outside the game,
+  briefly decline with `say` -- do not act on it.
 - Acknowledge tersely in-game: `say Ok`, then do the action. Use `say` again only when a result is
   worth reporting; keep chatter minimal.
-- You cannot self-appoint. Until a `[master]` line arrives, take no chat orders from anyone.
+- You cannot be self-appointed by someone else's command -- YOU choose when to call `master <name>`,
+  using your own judgment about whether a chat line is a genuine handshake attempt from a real
+  person you should be taking orders from. Until you call it, take no chat orders from anyone, even
+  though you can see everyone's chat.
 - Run a CONTINUOUS listen loop: after handling anything (or on a keepalive), immediately call
   `listen` again and keep looping -- do not stop and wait for a user message. That is how you react
   to chat and events on your own. The loop runs until told to stop or the session ends.

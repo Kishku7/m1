@@ -112,6 +112,15 @@ public final class M1Compat {
         //[[[end]]]
     }
 
+    // 1.21.9: com.mojang.authlib.GameProfile class(getName) -> record(name). Found 2026-07-31
+    // (M1Client chat-listener build failure, ChatWatch backport).
+    public static String profileName(com.mojang.authlib.GameProfile p) {
+        //[[[cog
+        //for ln in compat.profile_name(mcver): cog.outl(ln)
+        //]]]
+        //[[[end]]]
+    }
+
     // 1.21.5: Level.isBrightOutside() vs isDay() (pre).
     public static boolean isBrightOutside(net.minecraft.world.level.Level lvl) {
         //[[[cog

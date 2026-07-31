@@ -35,6 +35,7 @@ public class M1NeoForge {
             M1Server.start();
             NeoForge.EVENT_BUS.addListener(this::onClientTick);
             NeoForge.EVENT_BUS.addListener(this::onSystemChat);
+            NeoForge.EVENT_BUS.addListener(this::onPlayerChat);
         }
     }
     // M1-Server: register the read-only /m1srv command server-side (dedicated + integrated servers).
@@ -60,5 +61,15 @@ public class M1NeoForge {
     // M1-Server system-chat replies captured via the shared facade; no-op if M1-Server absent.
     private void onSystemChat(ClientChatReceivedEvent.System event) {
         M1SrvNet.onChatMessage(event.getMessage());
+    }
+
+    // Player chat relay for M1's master/ChatWatch feature (2026-07-31 backport parity).
+    private void onPlayerChat(ClientChatReceivedEvent.Player event) {
+        Minecraft mc = Minecraft.getInstance();
+        var info = (mc != null && mc.getConnection() != null) ? mc.getConnection().getPlayerInfo(event.getSender()) : null;
+        String nm = (info != null) ? com.kishku7.m1.M1Compat.profileName(info.getProfile()) : null;
+        var pcm = event.getPlayerChatMessage();
+        String content = (pcm != null) ? pcm.signedContent() : (event.getMessage() != null ? event.getMessage().getString() : "");
+        com.kishku7.m1.ChatWatch.onChat(nm, content);
     }
 }

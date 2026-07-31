@@ -33,6 +33,7 @@ def container_input(v): return v[0] == 26            # handleContainerInput+Cont
 def shot_int_arg(v):    return v >= (1, 21, 6)       # 5-arg grab(...,int downscale,...): 1.21.6+ THROUGH 26 (deobf-confirmed; 1.21.5 is the last 4-arg)
 def id_rename(v):       return v >= (1, 21, 11)      # ResourceLocation->Identifier rename wave: ResourceKey.location()->identifier(), net.minecraft.resources.Identifier, DataComponents.PIERCING_WEAPON/PiercingWeapon. Deob-confirmed 1.21.11 (1.21.10 still location()/ResourceLocation, no PiercingWeapon). Mirrors id_ident. THROUGH 26.
 def press_input(v):     return v >= (1, 21, 9)       # client.input wave: Button.onPress(InputWithModifiers) + net.minecraft.client.input.InputWithModifiers arrive 1.21.9 (deob-confirmed; same wave as mouse_event; 1.21.8 still onPress()). THROUGH 26.
+def game_profile_record(v): return v >= (1, 21, 9)  # com.mojang.authlib.GameProfile: class(getName/getId) -> record(name/id). Same re-intermediation wave as mouse_event/press_input. Found 2026-07-31 (M1Client chat-listener build failure, ChatWatch backport). THROUGH 26.
 def spawn_reason_enum(v):
     # MobSpawnType -> EntitySpawnReason. CONFIRMED via deobf: MobSpawnType through 1.21.1; EntitySpawnReason
     # from 1.21.2 (the 1.21.2 API-churn version). 26.x all use EntitySpawnReason.
@@ -161,6 +162,9 @@ def press_button(ver):        # M1Compat.pressButton(Button b)
                 "    @Override public int modifiers() { return 0; }",
                 "});"]
     return ["b.onPress();"]
+
+def profile_name(ver):        # M1Compat.profileName(GameProfile p) -> String
+    return ["return p.name();"] if game_profile_record(V(ver)) else ["return p.getName();"]
 
 
 def m1compat_imports(ver):

@@ -121,6 +121,10 @@ STORAGE (Bank Vault -- vault = your player-bound bank; needs the bank-vault mod.
 WORLD
   cmd <server command> run a slash-command (e.g. cmd time set day) -- needs cheats/permission
   say <text>           send an in-game CHAT message (use to acknowledge your master, e.g. say Ok)
+  master                query who is currently master (or "none set")
+  master <name>         YOU decide someone should be master (after recognizing a handshake in
+                         relayed chat) -- set it; narrows chat relay to that player only
+  master clear          release the current master; chat relay reopens to every player
   pause                open the pause menu (then click "Save and Quit to Title" to leave)
 
 GEAR

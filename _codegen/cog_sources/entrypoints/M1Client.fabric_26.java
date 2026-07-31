@@ -5,6 +5,7 @@ import com.kishku7.m1.ChatWatch;
 import com.kishku7.m1.CraftHarvest;
 import com.kishku7.m1.DamageWatch;
 import com.kishku7.m1.HungerWatch;
+import com.kishku7.m1.M1Compat;
 import com.kishku7.m1.M1Server;
 import com.kishku7.m1.M1SrvNet;
 import com.kishku7.m1.MineControl;
@@ -30,7 +31,7 @@ public class M1Client implements ClientModInitializer {
             M1SrvNet.tick(mc);
         });
         ClientReceiveMessageEvents.CHAT.register((message, signedMessage, sender, params, receptionTimestamp) -> {
-            String nm = (sender != null) ? sender.name() : null;
+            String nm = (sender != null) ? M1Compat.profileName(sender) : null;
             // Use the player's signed (raw) content -- the `message` component is decorated ("<name> ...").
             String content = (signedMessage != null) ? signedMessage.signedContent()
                     : ((message != null) ? message.getString() : "");

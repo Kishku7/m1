@@ -109,6 +109,7 @@ public final class ScreenOps {
             case "cmd":       return runCmd(mc, rest);
             case "m1srv":     return M1SrvNet.requestOne(mc, rest);
             case "say":       return say(mc, rest);
+            case "master":  return master(rest);
             case "pause":     return pause(mc);
             case "face":      return face(mc, rest);
             case "move":      return move(mc, rest);
@@ -593,6 +594,21 @@ public final class ScreenOps {
         return "OK said: " + t;
     }
 
+    /** "master" (query) | "master <name>" (set) | "master clear" (unset). The AI, not the mod,
+     *  decides WHO becomes master (see ChatWatch); this verb is how it tells the mod. */
+    private static String master(String rest) {
+        String t = (rest == null) ? "" : rest.trim();
+        if (t.isEmpty()) {
+            String m = ChatWatch.master();
+            return (m != null) ? "master: " + m : "master: (none set -- chat relay open to all players)";
+        }
+        if (t.equalsIgnoreCase("clear")) {
+            ChatWatch.clearMaster();
+            return "OK master cleared";
+        }
+        ChatWatch.setMaster(t);
+        return "OK master set to " + t;
+    }
     private static String pause(Minecraft mc) {
         if (mc.level == null) return "pause: not in world";
         M1Compat.setScreen(mc, new net.minecraft.client.gui.screens.PauseScreen(true));
