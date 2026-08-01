@@ -4,6 +4,64 @@ All notable changes to M1 are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/); this project uses
 `<mod version>+<minecraft family>-<loader>` jar naming.
 
+## [0.14.0] - 2026-08-01
+
+### Added
+- **Bulk mining -- `mine area <x1 y1 z1> <x2 y2 z2> [nocollect]`.** `mine [x y z]` was strictly one
+  block per socket command, so clearing a ~55-column x ~12-level slice cost 600+ round-trips and was
+  not a workflow an AI client could actually run (found live during an excavation task, 2026-08-01).
+  The new `MineAreaAction` is a single queued agent job that owns the whole volume:
+  - clears **top-down** (never mines out from under itself or a gravity block), nearest cell first
+    inside each layer;
+  - **skips air cells for free** -- the ridge that surfaced this was NOT solid, and mid-column air
+    pockets were exactly what forced per-block probing before;
+  - **repositions itself** (one pather approach per out-of-reach cell) and, if that fails, still
+    attempts the dig from range, since the crosshair ray tunnels through what is in between;
+  - **never stalls**: a cell it cannot break is retried once, then reported and skipped;
+  - never attempts bedrock/barrier (`getDestroySpeed < 0`) or liquids, which would burn the dig
+    budget for nothing;
+  - reports `[agent]` progress every 25 blocks (`N broken, N air, N unbreakable/liquid, N skipped,
+    N left`);
+  - finishes by **walking the drops in** (at range they land far away and despawn uncollected --
+    `nocollect` opts out);
+  - capped at 65536 cells and a 30-minute tick budget; `stop` cancels, re-issuing the same box
+    resumes what is left.
+- **`mine hold [on|off]`** -- the primitive behind Master's own description ("hold down the mine
+  button and move"). `MineControl` gained an untargeted HOLD mode that latches `keyAttack` without
+  touching facing, so `face` / `moveto` steer and the bot tunnels continuously. 5-minute safety cap;
+  `mine hold off` and `stop` both release it.
+- Both forms are also reachable as `agent mine area ...` / `agent mine hold ...`.
+
+### Fixed
+- **`attack` re-pathed forever on a vertically unreachable target.** A creeper in a pit ~4 blocks
+  below produced an endless re-path cycle (`nav: segment 1 -- 2 wp, 0.3 to go / arrived` repeating
+  ~200x) with no failure and no report. `AttackAction` now tracks the closest it has ever been to
+  the target: 5 s of closing no distance (or 12 re-paths, or a `startMove` that returns no path)
+  falls back to the bow when one is usable and otherwise FAILS with an actionable line --
+  `attack: CANNOT REACH <mob> id=N -- X.Xm away, dy=+/-Y.Y (<why>)`. The same guard is wired into
+  the creeper-charge and bow-reposition paths, which could loop the same way.
+- **`attack` clobbered the held item.** It auto-equips the best hotbar weapon and never put the
+  previous slot back, so mining silently resumed with a netherite sword (Master caught it, not the
+  mod). The pre-engagement hotbar slot is now recorded on the first auto-equip -- melee, creeper and
+  bow paths alike -- and restored in `release()`, which runs on DONE, FAILED, timeout and interrupt.
+- **`defend` thrashed against the leash.** When the master fought beyond the 16 m leash, defend
+  engaged and immediately broke off, over and over, spamming `[agent]` lines and never defending.
+  Two root causes, both fixed:
+  - the leash was measured **me-to-guard** when the rule it implements is "do not chase a mob far
+    from the person I protect" -- it is now measured **guard-to-target**;
+  - being out of position now means **regroup, not quit**: `DefendAction` walks to the guard,
+    keeps the threat targeted, and re-engages there, giving up only after 10 s of failing to close
+    on him. Every advisory fires at most once per engagement, and `ThreatWatch` no longer
+    re-announces an engagement on the same mob more than once per 5 s.
+
+### Verified
+- Fabric 26.1.2 (dev target, newest APIs) and Forge 1.20.1 (oldest cell, SRG runtime) both build
+  green with `-Xlint:all`, zero warnings -- so `LiquidBlock`, `BlockState.getDestroySpeed`,
+  `ItemEntity` and `AABB` all resolve across the full 1.20 - 26.3 range.
+- AI_Brain `10_command_card.md` + `30_capabilities_limits.md` updated in the same pass (the card's
+  own sync note), covering the two new verbs, the give-up report, the tool restore and the new
+  leash semantics.
+
 ## [0.13.8] - 2026-08-01
 
 ### Fixed

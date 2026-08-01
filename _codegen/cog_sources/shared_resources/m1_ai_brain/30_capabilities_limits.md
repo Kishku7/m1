@@ -1,5 +1,5 @@
 # Capabilities & limits (what M1 can and cannot do)
-<!-- Valid as of: M1 v0.9.1 | MC 1.20 - 26.3 | updated 2026-07-02 -->
+<!-- Valid as of: M1 v0.14.0 | MC 1.20 - 26.3 | updated 2026-08-01 (bulk mining; unreachable-target give-up) -->
 **Covers:** an honest boundary list so you do not attempt impossible things or loop on them.
 
 ## CAN
@@ -10,11 +10,17 @@
   walks rails and stairs, and reaches any distance in 16-block segments (a target millions of blocks
   away is fine). `nav own|vanilla|status` picks the engine (own is default).
 - `mine`, `place`, `hold`, `equip`, generic `craft` (RecipeManager-driven, vault-sourced).
+- **Bulk excavation, one command:** `mine area <x1 y1 z1> <x2 y2 z2>` clears a whole box (top-down,
+  air gaps free, self-repositioning, [agent] progress, then collects the drops), and
+  `mine hold on` holds the mine button so walking forward tunnels. Per-block `mine` is now only
+  for single, precise blocks -- do NOT loop it over a volume.
 - **High-level inventory verbs:** `equip all`, `equip <item>` (auto-routed), `organize hotbar`,
   `takeall`, `stash junk`, `moveitem <item> to <human slot>` -- names + human slots, no index math.
 - **Combat, universal:** `attack [nearest|<id>|crosshair] [crit|normal|ranged]` -- auto-equips the
-  best weapon, walks in, times crits; bow ballistics; spear stab; per-enemy tactics (creeper
-  hit-and-back, skeleton shield-advance, etc). `shield` / `agent shield` for blocking.
+  best weapon (and puts your previous hotbar slot back afterwards), walks in, times crits; bow
+  ballistics; spear stab; per-enemy tactics (creeper hit-and-back, skeleton shield-advance, etc).
+  `shield` / `agent shield` for blocking. An unreachable target is reported and abandoned, not
+  chased forever.
 - **Follow + auto-defend:** `follow <player> [dist]`; `defend` auto-engages an attacker of you or the
   master and resumes. Both honor the SAFE-MOB doctrine (never pre-empt neutral mobs).
 - **`sleep`** -- find a bed (or deploy a Travelers-Backpack sleeping bag*), walk beside it, sleep.
@@ -34,6 +40,8 @@
   launch and auth.
 - **Beat the 10 s cap on a single synchronous handler.** Long actions must be the async ones
   (`move`/`mine`/`craft`/agent), which return immediately and run in the background.
+- **Reach a mob it cannot walk to** (in a sealed pit, across a chasm, in the air). It will try the
+  bow, then report `attack: CANNOT REACH ...` and stop. Dig/build a route, or kill it at range.
 - **Deploy a Travelers-Backpack sleeping bag as a standable bed** (*detection works; the bag item is
   consumed but leaves no persistent block in single-player -- place a real bed instead for now).
 - **Backpack/vault storage over real multiplayer.** The storage ops use the single-player integrated
@@ -48,6 +56,11 @@
   hardcoded ids.
 - Movement is segment-by-segment; poll `where` and read the `[agent] nav:` lines rather than firing a
   second move at the same target.
+- **Drops scatter when you mine at range.** `mine [x y z]` has no practical range limit (the
+  crosshair ray tunnels through whatever is in between), but the items land where the block was and
+  despawn if nobody walks over them. `mine area` collects for you; a hand-rolled ranged dig does not.
+- **A `mine area` box is capped at 65536 cells.** Split a bigger excavation into slices and issue
+  them one after another -- each is its own queued job.
 - **SAFE-MOB doctrine:** neutral mobs (zombified piglins, endermen, wolves, bees, iron golems...) are
   never attacked pre-emptively -- self-defense only, and the bot will not defend the master against
   them. Do not try to hunt them for drops.

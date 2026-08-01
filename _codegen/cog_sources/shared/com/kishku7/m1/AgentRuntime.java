@@ -39,6 +39,14 @@ import java.util.Locale;
  */
 public final class AgentRuntime {
 
+    /** 30 minutes of ticks -- a real excavation is a long job, but never an unbounded one. */
+    private static final int MINE_AREA_BUDGET = 36000;
+    private static final String MINE_USAGE =
+            "usage: agent mine <x> <y> <z> | agent mine area <x1 y1 z1> <x2 y2 z2> [nocollect]"
+            + " | agent mine hold [on|off]";
+    private static final String MINE_AREA_USAGE =
+            "usage: agent mine area <x1> <y1> <z1> <x2> <y2> <z2> [collect|nocollect]";
+
     private static final ActionQueue QUEUE = new ActionQueue();
     private static final ReportChannel REPORTS = new ReportChannel();
     private static final Budgeter BUDGETER = new Budgeter(2.0); // ~2 ms/tick discretionary budget
@@ -202,7 +210,8 @@ public final class AgentRuntime {
             default:
                 return "agent: unknown subcommand '" + sub + "' (try: status | ping | "
                         + "goto <x y z> | moveto <x z> | patrol <x z ...> | look <x y z|yaw [pitch]> | "
-                        + "mine <x y z> | hold <0-8> | equip <item> | use | drop [slot|item] [n|all] | jump | "
+                        + "mine <x y z> | mine area <x1 y1 z1> <x2 y2 z2> [nocollect] | mine hold [on|off] | "
+                        + "hold <0-8> | equip <item> | use | drop [slot|item] [n|all] | jump | "
                         + "sneak [on|off] | sprint [on|off] | sleep | recover | slot <id> [btn] [mode] | openinv | close | "
                         + "attack [nearest|<id>|crosshair] [crit|normal|ranged] | follow <player> [dist] | "
                         + "shield [ticks] | defend [on|off|status|auto|<player>] | vault <sub> | vault close | craft <item> [count] | stop)";
@@ -279,10 +288,85 @@ public final class AgentRuntime {
         }
     }
 
+    /**
+     * {@code mine <x y z>} | {@code mine area <x1 y1 z1> <x2 y2 z2> [nocollect]} |
+     * {@code mine hold [on|off]}.
+     *
+     * <p>The two bulk forms exist because one-block-per-command made real excavation unusable
+     * (Master, 2026-08-01: a 55-column x 12-level slice was 600+ round-trips). {@code area} is the
+     * queued job; {@code hold} is the "hold the button down and walk" primitive.
+     */
     private static String enqueueMine(String args) {
-        String[] t = args.split("\\s+");
+        String[] t = args.trim().split("\\s+");
+        if (t.length == 0 || t[0].isEmpty()) {
+            return MINE_USAGE;
+        }
+        String head = t[0].toLowerCase(Locale.ROOT);
+
+        if (head.equals("hold")) {
+            String a = (t.length > 1) ? t[1].toLowerCase(Locale.ROOT) : "on";
+            if (a.equals("off")) {
+                MineControl.stop();
+                return "mine hold: OFF (attack input released)";
+            }
+            if (!a.equals("on")) {
+                return "usage: agent mine hold [on|off]";
+            }
+            int maxT = MineControl.HOLD_MAX_TICKS;
+            if (t.length > 2) {
+                try {
+                    maxT = Integer.parseInt(t[2]);
+                } catch (NumberFormatException e) {
+                    return "usage: agent mine hold on [maxTicks]";
+                }
+            }
+            MineControl.startHold(maxT);
+            return "mine hold: ON for up to " + (maxT / 20) + "s -- you break whatever the"
+                    + " crosshair hits. Steer with 'face'/'agent moveto'; 'mine hold off' or"
+                    + " 'stop' to release.";
+        }
+
+        if (head.equals("area") || head.equals("box")) {
+            boolean collect = true;
+            java.util.List<Integer> nums = new java.util.ArrayList<>();
+            for (int i = 1; i < t.length; i++) {
+                String tok = t[i].toLowerCase(Locale.ROOT);
+                if (tok.equals("nocollect")) {
+                    collect = false;
+                    continue;
+                }
+                if (tok.equals("collect")) {
+                    collect = true;
+                    continue;
+                }
+                try {
+                    nums.add(Integer.valueOf(Integer.parseInt(t[i])));
+                } catch (NumberFormatException e) {
+                    return MINE_AREA_USAGE;
+                }
+            }
+            if (nums.size() != 6) {
+                return MINE_AREA_USAGE;
+            }
+            int x1 = nums.get(0).intValue();
+            int y1 = nums.get(1).intValue();
+            int z1 = nums.get(2).intValue();
+            int x2 = nums.get(3).intValue();
+            int y2 = nums.get(4).intValue();
+            int z2 = nums.get(5).intValue();
+            long vol = MineAreaAction.volumeOf(x1, y1, z1, x2, y2, z2);
+            if (vol > MineAreaAction.MAX_VOLUME) {
+                return "mine area: that box is " + vol + " cells (cap "
+                        + MineAreaAction.MAX_VOLUME + ") -- split it into smaller boxes";
+            }
+            QUEUE.append(new MineAreaAction(x1, y1, z1, x2, y2, z2, collect, MINE_AREA_BUDGET));
+            return "queued mine area (" + x1 + "," + y1 + "," + z1 + ")-(" + x2 + "," + y2 + ","
+                    + z2 + ") = " + vol + " cells, collect=" + (collect ? "on" : "off")
+                    + ". Progress arrives as [agent] lines; 'stop' cancels.";
+        }
+
         if (t.length < 3) {
-            return "usage: agent mine <x> <y> <z>";
+            return MINE_USAGE;
         }
         try {
             int x = Integer.parseInt(t[0]);
@@ -291,7 +375,7 @@ public final class AgentRuntime {
             QUEUE.append(new MineAction(x, y, z));
             return "queued mine (" + x + ", " + y + ", " + z + ")";
         } catch (NumberFormatException e) {
-            return "usage: agent mine <x> <y> <z>";
+            return MINE_USAGE;
         }
     }
 

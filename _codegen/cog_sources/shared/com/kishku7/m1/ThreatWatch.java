@@ -49,6 +49,7 @@ public final class ThreatWatch implements InterruptSource {
     private static final long THREAT_TTL_TICKS = 300;   // remember an attacker ~15s
     private static final long WARN_COOLDOWN_TICKS = 300; // one early-warning line per mob per ~15s
     private static final long BLACKLIST_TICKS = 200;
+    private static final long ENGAGE_QUIET_TICKS = 100; // one "engaging <mob>" line per mob per 5s
 
     private static volatile boolean enabled = true;
     private static volatile String guardOverride = null;
@@ -65,6 +66,9 @@ public final class ThreatWatch implements InterruptSource {
     private static final Map<Integer, Long> blacklist = new HashMap<>();
     /** rate-limit for the "not engaging (safe mob)" advisory. */
     private static long nextSafeAdvisoryTick;
+    /** last mob we announced an engagement on, and until when that announcement stays quiet. */
+    private static int lastEngagedId = -1;
+    private static long quietEngageUntil;
 
     @Override
     public List<MinecraftAction> poll(ActionContext ctx) {
@@ -129,9 +133,16 @@ public final class ThreatWatch implements InterruptSource {
             return Collections.emptyList();
         }
         threats.remove(best.getId());
-        ctx.report(ReportClass.STATUS, "defend: engaging " + best.getType().toShortString()
-                + " id=" + best.getId() + " (" + (int) Math.sqrt(bestSq) + "m from "
-                + (guard != null ? guard.getName().getString() : "me") + ")");
+        // Re-engaging the SAME mob within a few seconds (a running fight re-triggers the hit edge
+        // over and over) must not re-announce itself -- that was half the [agent] spam of the
+        // leash-thrash report (Master, 2026-08-01).
+        if (best.getId() != lastEngagedId || tick >= quietEngageUntil) {
+            ctx.report(ReportClass.STATUS, "defend: engaging " + best.getType().toShortString()
+                    + " id=" + best.getId() + " (" + (int) Math.sqrt(bestSq) + "m from "
+                    + (guard != null ? guard.getName().getString() : "me") + ")");
+        }
+        lastEngagedId = best.getId();
+        quietEngageUntil = tick + ENGAGE_QUIET_TICKS;
         return List.of(new DefendAction(best.getId(), guard != null ? guard.getName().getString() : null));
     }
 

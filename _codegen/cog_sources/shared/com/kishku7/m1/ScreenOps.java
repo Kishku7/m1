@@ -62,6 +62,11 @@ public final class ScreenOps {
         "  move <dir> <n>       pathfind + walk n blocks that way\n" +
         "  stop                 stop moving\n" +
         "  mine [x y z]         mine the block you are looking at (or at x y z)\n" +
+        "  mine hold [on|off]   HOLD mouse-1 down: you break whatever the crosshair hits -- steer\n" +
+        "                       with face/moveto to tunnel continuously. 'stop' also releases it.\n" +
+        "  mine area <x1 y1 z1> <x2 y2 z2> [nocollect]   clear a whole BOX as one job: top-down,\n" +
+        "                       air gaps skipped free, repositions itself, [agent] progress lines,\n" +
+        "                       then walks the drops in (nocollect to skip that).\n" +
         "  worlds               list saved worlds (on the world-select screen)\n" +
         "  joinworld <idx>      load saved world #idx (re-enter)\n" +
         "  openinv / close      open inventory (2x2 grid) / close screen\n" +
@@ -757,6 +762,14 @@ public final class ScreenOps {
         LocalPlayer p = mc.player;
         if (p == null || mc.level == null) return "mine: not in world";
         String[] t = rest.trim().split("\\s+");
+        // Bulk forms (2026-08-01): one block per command made real excavation unusable, so both
+        // "hold the button down" and "clear this whole box" run on the agent queue.
+        if (t.length >= 1 && !t[0].isEmpty()) {
+            String head = t[0].toLowerCase();
+            if (head.equals("hold") || head.equals("area") || head.equals("box")) {
+                return AgentRuntime.command("mine " + rest.trim());
+            }
+        }
         BlockPos target = null;
         if (t.length >= 3) {
             try { target = new BlockPos(Integer.parseInt(t[0]), Integer.parseInt(t[1]), Integer.parseInt(t[2])); }

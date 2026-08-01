@@ -26,9 +26,11 @@ import java.util.Locale;
  *
  * What the loop owns (tick-rate, mod-reactive per m1-agent.md sec 5-7):
  *  - AUTO-EQUIP: picks the best weapon in the hotbar at engage (702b coaching: "switch to a
- *    weapon"); re-equips when switching between bow range and melee.
+ *    weapon"); re-equips when switching between bow range and melee. The hotbar slot that was
+ *    held BEFORE the engagement is remembered and RESTORED when the plan ends (2026-08-01:
+ *    mining silently resumed with a netherite sword because the swap was never undone).
  *  - MELEE timing: never swing under ~full charge; jump-crit cadence (jump, strike on descent
- *    at >=84.8%); sweep falls out of grounded full-charge swings with a sword.
+ *    at &gt;=84.8%); sweep falls out of grounded full-charge swings with a sword.
  *  - SPEAR (26.x): PIERCING_WEAPON stab via gameMode.piercingAttack -- full charge only, reach
  *    band 2.0-4.5, so the loop holds a 3-4 block band instead of closing to sword range.
  *  - BOW: full 20-tick draw, ballistic pitch (v0=3.0/t, g=0.05, drag 0.99 -- pinned from deobf)
@@ -37,9 +39,13 @@ import java.util.Locale;
  *    repeat. Never lingers in the swell radius.
  *  - RANGED-MOB policy (skeleton/stray/bogged/pillager): shield-advance -- off-hand shield held
  *    while closing (5t raise delay pinned), dropped to strike in reach.
+ *  - UNREACHABLE GIVE-UP: an approach that stops making progress (classic case, 2026-08-01: a
+ *    creeper in a pit ~4 blocks below, which produced ~200 identical re-path cycles) falls back
+ *    to the bow if one is usable, and otherwise FAILS with a "cannot reach" report instead of
+ *    re-pathing forever.
  *
  * Target spec: "nearest", an entity id, or empty (crosshair). Modes: crit (default) | normal |
- * ranged. DONE when the target dies; FAILED on timeout/unreachable-with-no-bow.
+ * ranged. DONE when the target dies; FAILED on timeout/unreachable.
  */
 public final class AttackAction implements MinecraftAction {
 
@@ -55,6 +61,9 @@ public final class AttackAction implements MinecraftAction {
     private static final double SPEAR_MAX = 4.3;
     private static final double CREEPER_DANGER = 4.5;  // swell radius 3 + margin
     private static final double CREEPER_RESET = 6.5;
+    private static final int APPROACH_STALL_TICKS = 100; // 5s of closing NO distance = unreachable
+    private static final int MAX_APPROACH_REPATHS = 12;  // and a hard cap on re-path churn
+    private static final double PROGRESS_EPSILON = 0.5;
 
     private enum Mode { CRIT, NORMAL, RANGED }
 
@@ -75,6 +84,13 @@ public final class AttackAction implements MinecraftAction {
     private int pinnedTicks;
     private int lastRetreatTick;
     private String policy = "default";
+
+    /** Hotbar slot held before we auto-equipped, so the caller's tool survives the fight. */
+    private int prevSlot = -1;
+    /** Closest we have ever been to the target, and when that last improved. */
+    private double bestDist = Double.MAX_VALUE;
+    private int lastProgressTick;
+    private int approachRepaths;
 
     public AttackAction(String spec, boolean crit) {
         this(spec, crit ? "crit" : "normal");
@@ -155,6 +171,7 @@ public final class AttackAction implements MinecraftAction {
             equipped = true;
             int slot = CombatOps.bestMeleeSlot(p);
             if (slot >= 0 && slot != InventoryCompat.getSelected(p.getInventory())) {
+                rememberSlot(p);
                 CombatOps.hold(mc, slot);
             }
             ctx.report(ReportClass.STATUS, "attack: weapon = "
@@ -166,6 +183,15 @@ public final class AttackAction implements MinecraftAction {
         double strikeRange = spear ? SPEAR_MAX : REACH;
 
         if (dist > strikeRange) {
+            // Unreachable check FIRST: a target we cannot close on must never re-path forever.
+            if (approachStalled(dist)) {
+                if (canBow(p) && p.hasLineOfSight(target)) {
+                    noteBowFallback(ctx, p, dist);
+                    return bowStep(ctx, mc, p, dist);
+                }
+                return giveUp(ctx, mc, p, dist, "no progress for "
+                        + ((ticksRun - lastProgressTick) / 20) + "s");
+            }
             // Shield-advance vs ranged mobs: keep the shield up while closing.
             if (policy.equals("shield-advance") && p.getOffhandItem().is(Items.SHIELD)) {
                 faceEntity(p, target);
@@ -178,11 +204,22 @@ public final class AttackAction implements MinecraftAction {
                     || Math.hypot(MoveControl.targetX() - target.getX(),
                             MoveControl.targetZ() - target.getZ()) > 2.0;
             if (needRepath) {
+                if (++approachRepaths > MAX_APPROACH_REPATHS) {
+                    if (canBow(p) && p.hasLineOfSight(target)) {
+                        noteBowFallback(ctx, p, dist);
+                        return bowStep(ctx, mc, p, dist);
+                    }
+                    return giveUp(ctx, mc, p, dist, approachRepaths + " re-paths with no approach");
+                }
                 String r = ScreenOps.startMove(mc, p, target.getX(), target.getY(), target.getZ(),
                         stopAt, "attack approach");
-                if (!r.startsWith("OK") && CombatOps.bowSlot(p) >= 0 && CombatOps.arrowCount(p) > 0) {
-                    // Unreachable (flying / across a gap): fight with the bow instead.
-                    return bowStep(ctx, mc, p, dist);
+                if (!r.startsWith("OK")) {
+                    // Unreachable (flying / across a gap / in a pit): fight with the bow instead.
+                    if (canBow(p)) {
+                        noteBowFallback(ctx, p, dist);
+                        return bowStep(ctx, mc, p, dist);
+                    }
+                    return giveUp(ctx, mc, p, dist, "no path");
                 }
             }
             return StepResult.RUNNING;
@@ -269,12 +306,53 @@ public final class AttackAction implements MinecraftAction {
         return StepResult.RUNNING;
     }
 
+    // ---- unreachable-target guard -------------------------------------------------------
+
+    /** True once the approach has spent {@link #APPROACH_STALL_TICKS} without getting closer. */
+    private boolean approachStalled(double dist) {
+        if (bestDist == Double.MAX_VALUE) {
+            bestDist = dist;
+            lastProgressTick = ticksRun;
+            return false;
+        }
+        if (dist < bestDist - PROGRESS_EPSILON) {
+            bestDist = dist;
+            lastProgressTick = ticksRun;
+            return false;
+        }
+        return (ticksRun - lastProgressTick) > APPROACH_STALL_TICKS;
+    }
+
+    private boolean canBow(LocalPlayer p) {
+        return CombatOps.bowSlot(p) >= 0 && CombatOps.arrowCount(p) > 0;
+    }
+
+    private void noteBowFallback(ActionContext ctx, LocalPlayer p, double dist) {
+        if (!usingBow) {
+            ctx.report(ReportClass.STATUS, String.format(Locale.ROOT,
+                    "attack: cannot walk to %s (%.1fm, dy=%+.1f) -- switching to the bow",
+                    target.getType().toShortString(), dist, target.getY() - p.getY()));
+        }
+    }
+
+    /** Abandon the engagement with an honest, actionable report (never a silent re-path loop). */
+    private StepResult giveUp(ActionContext ctx, Minecraft mc, LocalPlayer p, double dist, String why) {
+        release(mc, p);
+        ctx.report(ReportClass.STATUS, String.format(Locale.ROOT,
+                "attack: CANNOT REACH %s id=%d -- %.1fm away, dy=%+.1f (%s). Giving up;"
+                + " dig/build to it or use a ranged weapon.",
+                target.getType().toShortString(), target.getId(), dist,
+                target.getY() - p.getY(), why));
+        return StepResult.FAILED;
+    }
+
     // ---- creeper: sprint in, one KB hit at full charge, back out, repeat ----
     private StepResult creeperStep(ActionContext ctx, Minecraft mc, LocalPlayer p, double dist) {
         if (!equipped) {
             equipped = true;
             int slot = CombatOps.bestMeleeSlot(p);
             if (slot >= 0 && slot != InventoryCompat.getSelected(p.getInventory())) {
+                rememberSlot(p);
                 CombatOps.hold(mc, slot);
             }
             ctx.report(ReportClass.STATUS, "attack: creeper policy -- hit-and-back (never linger in blast range)");
@@ -310,11 +388,23 @@ public final class AttackAction implements MinecraftAction {
             return StepResult.RUNNING;
         }
         if (dist > REACH) {
+            // Same unreachable guard as melee -- the pit creeper (2026-08-01) was exactly this path.
+            if (approachStalled(dist)) {
+                if (canBow(p) && p.hasLineOfSight(target)) {
+                    noteBowFallback(ctx, p, dist);
+                    return bowStep(ctx, mc, p, dist);
+                }
+                return giveUp(ctx, mc, p, dist, "no progress for "
+                        + ((ticksRun - lastProgressTick) / 20) + "s");
+            }
             MoveControl.setSprint(true);         // sprint approach -> knockback hit
             boolean needRepath = !MoveControl.isActive()
                     || Math.hypot(MoveControl.targetX() - target.getX(),
                             MoveControl.targetZ() - target.getZ()) > 2.0;
             if (needRepath) {
+                if (++approachRepaths > MAX_APPROACH_REPATHS) {
+                    return giveUp(ctx, mc, p, dist, approachRepaths + " re-paths with no approach");
+                }
                 ScreenOps.startMove(mc, p, target.getX(), target.getY(), target.getZ(),
                         REACH - 1.0, "creeper charge");
             }
@@ -327,6 +417,7 @@ public final class AttackAction implements MinecraftAction {
         if (!usingBow) {
             int slot = CombatOps.bowSlot(p);
             if (slot != InventoryCompat.getSelected(p.getInventory())) {
+                rememberSlot(p);
                 CombatOps.hold(mc, slot);
             }
             usingBow = true;
@@ -340,10 +431,17 @@ public final class AttackAction implements MinecraftAction {
             if (p.isUsingItem()) {
                 mc.gameMode.releaseUsingItem(p);
             }
+            if (approachStalled(dist)) {
+                return giveUp(ctx, mc, p, dist, "no line of sight and no way around");
+            }
             boolean needRepath = !MoveControl.isActive()
                     || Math.hypot(MoveControl.targetX() - target.getX(),
                             MoveControl.targetZ() - target.getZ()) > 2.0;
             if (needRepath) {
+                if (++approachRepaths > MAX_APPROACH_REPATHS) {
+                    return giveUp(ctx, mc, p, dist, "no line of sight after "
+                            + approachRepaths + " re-paths");
+                }
                 ScreenOps.startMove(mc, p, target.getX(), target.getY(), target.getZ(),
                         BOW_MELEE_SWITCH - 1.0, "bow reposition");
             }
@@ -403,6 +501,13 @@ public final class AttackAction implements MinecraftAction {
         hits++;
     }
 
+    /** Record the pre-engagement hotbar slot once, so {@link #release} can put the tool back. */
+    private void rememberSlot(LocalPlayer p) {
+        if (prevSlot < 0) {
+            prevSlot = InventoryCompat.getSelected(p.getInventory());
+        }
+    }
+
     private void release(Minecraft mc, LocalPlayer p) {
         if (p.isUsingItem()) {
             mc.gameMode.releaseUsingItem(p);
@@ -410,6 +515,14 @@ public final class AttackAction implements MinecraftAction {
         MoveControl.setSprint(false);
         if (MoveControl.isActive()) {
             MoveControl.stop();
+        }
+        // Put the caller's tool back. Combat auto-equips a weapon; without this the bot went back
+        // to mining holding a netherite sword (Master caught it, not the mod -- 2026-08-01).
+        if (prevSlot >= 0) {
+            if (prevSlot != InventoryCompat.getSelected(p.getInventory())) {
+                CombatOps.hold(mc, prevSlot);
+            }
+            prevSlot = -1;
         }
     }
 
@@ -492,7 +605,12 @@ public final class AttackAction implements MinecraftAction {
         phase = 0;
         Minecraft mc = Minecraft.getInstance();
         if (mc != null && mc.player != null) {
-            release(mc, mc.player);
+            release(mc, mc.player);   // also restores the pre-engagement hotbar slot
         }
+        // Re-equip (and re-baseline the approach guard) from the new state when we resume.
+        equipped = false;
+        usingBow = false;
+        bestDist = Double.MAX_VALUE;
+        approachRepaths = 0;
     }
 }

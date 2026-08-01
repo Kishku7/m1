@@ -1,5 +1,5 @@
 # Command card (exact syntax cheat-sheet)
-<!-- Valid as of: M1 v0.11.0 | MC 1.20 - 26.3 | updated 2026-07-03 (examine verb, drop-from-any-slot, dual hb/idx inv labels, BV ERR lines self-explain) -->
+<!-- Valid as of: M1 v0.14.0 | MC 1.20 - 26.3 | updated 2026-08-01 (BULK MINING: mine hold + mine area; attack gives up on unreachable targets and restores your tool; defend regroups instead of thrashing) -->
 **Covers:** every M1 command with syntax + a one-line note, so you can reload just the syntax cheaply.
 Concepts behind these live in `01_drive_m1.md`.
 
@@ -39,7 +39,23 @@ MOVE (async -- returns at once, poll `where`)
   stop                 cancel movement, mining, AND any queued agent plan (attack/follow)
 
 ACT (async -- poll inv/look)
-  mine [x y z]         mine the block you face, or the one at x y z
+  mine [x y z]         mine ONE block: the one you face, or the one at x y z
+  mine hold [on|off]   BULK: hold mouse-1 down continuously -- you break whatever the crosshair is
+                       on. Steer with face / moveto / agent moveto and you TUNNEL as you walk.
+                       Auto-releases after 5 min; 'mine hold off' or 'stop' releases it now.
+                       Use this when you are cutting a corridor or a face and do not care about
+                       exact block coordinates.
+  mine area <x1 y1 z1> <x2 y2 z2> [nocollect]
+                       BULK: clear an entire BOX as one queued job -- ONE command instead of one
+                       per block. Clears top-down (never digs out from under itself), nearest
+                       first inside each layer, SKIPS AIR CELLS FOR FREE (a hollow/ragged volume
+                       costs nothing extra), walks itself closer when a cell is out of reach,
+                       and never stalls on a cell it cannot break -- it reports and moves on.
+                       Bedrock/barrier and liquids are never attempted. Progress arrives as
+                       [agent] lines ("N broken, N air, N skipped, N left"). When it finishes it
+                       WALKS THE DROPS IN (they land out of reach and despawn otherwise) unless
+                       you pass 'nocollect'. Cap 65536 cells -- split bigger volumes.
+                       'stop' cancels; re-issuing the same box resumes what is left.
   place | use | interact   place/use/interact the held item or the block you face.
                        A "Pass" result = NOTHING HAPPENED (wrong block/out of reach) -- re-aim
   hold <0-8>           select hotbar slot 0-8 (= in-game 1-9)
@@ -64,7 +80,13 @@ ACT (async -- poll inv/look)
 
 COMBAT / FOLLOW (top-level; run on the agent engine, progress arrives as [agent] lines)
   attack [nearest|<id>|crosshair] [crit|normal|ranged]   engage a mob. AUTO-EQUIPS the best hotbar
-                       weapon, walks to it, timed crits. Per-enemy policies built in: creeper =
+                       weapon and RESTORES the slot you were holding when the fight ends (your
+                       pickaxe comes back -- it will not silently leave you mining with a sword).
+                       Walks to it, timed crits.
+                       GIVES UP HONESTLY: a target it cannot reach (in a pit, across a gap,
+                       flying) falls back to the bow if you have one, else reports
+                       "attack: CANNOT REACH <mob> ... dy=<+/-N>" and FAILS instead of re-pathing
+                       forever. If you see that, dig/build to the mob or use a ranged weapon. Per-enemy policies built in: creeper =
                        hit-and-back (never lingers in blast range); skeleton/pillager = shield-advance
                        (off-hand shield up while closing); blaze/ghast = prefers the bow. RANGED mode
                        (or a far/unreachable target + a bow and arrows) = full-draw ballistic bow fire
@@ -73,8 +95,11 @@ COMBAT / FOLLOW (top-level; run on the agent engine, progress arrives as [agent]
   follow <player> [dist]   lock onto a player, keep within dist (default 3); the mod re-tracks them as they move -- issue ONCE, ends on stop
   defend [on|off|status|auto|<player>]   auto-defense reflex, ON by default: if the master (or the named
                        player) or I get attacked, the MOD immediately engages the attacker (no command
-                       needed), leashed to 16m of the protectee, then RESUMES whatever it was doing
-                       (e.g. follow). You will see [agent] lines: "hostile nearby", "X was hit by",
+                       needed), then RESUMES whatever it was doing
+                       (e.g. follow). LEASH: it will not chase a mob more than 16m away from the
+                       person it guards. If the GUARD himself is more than 16m away, it walks to
+                       him and re-engages there (it does not abandon him, and it says so once).
+                       You will see [agent] lines: "hostile nearby", "X was hit by",
                        "defend: engaging/threat down/resuming". Do NOT queue your own attack while a
                        defend is running -- just watch the [agent] lines. 'defend off' disables.
 
@@ -145,6 +170,8 @@ AGENT (autonomous action layer -- queue an action; it runs in-world and reports 
   agent patrol <x1> <z1> [x2 z2 ...]  queue a multi-leg patrol
   agent look <x y z> | <yaw [pitch]>  queue aim at a point, or at yaw[/pitch]
   agent mine <x> <y> <z>              queue breaking the block at x,y,z
+  agent mine area <x1 y1 z1> <x2 y2 z2> [nocollect]   queue a whole-box excavation (see mine area)
+  agent mine hold [on|off]            hold/release the mine button (see mine hold)
   agent hold <0-8>                    queue selecting a hotbar slot
   agent equip <item>                  queue moving a named item to hand (needs an open container)
   agent use | agent place             queue use/place on the crosshair block

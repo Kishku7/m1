@@ -9,15 +9,24 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 
+import java.util.Locale;
+
 /**
  * Reflex interrupt: defend the protectee from one attacker, then finish so the paused standing
  * plan (e.g. follow) resumes. Wraps {@link AttackAction} (id-targeted, crit mode -- approach,
  * cooldown timing, jump-crits) and adds the defense guardrails:
  *
  * <ul>
- *   <li><b>Leash:</b> while a guarded player is present, never chase the target further than
- *       {@link #LEASH} blocks from the guard -- protecting them beats chasing a fleeing mob.
- *       Breaks off, reports, and finishes (follow then walks us back).</li>
+ *   <li><b>Leash is measured GUARD-to-TARGET, not me-to-guard.</b> The rule is "do not chase a
+ *       mob far away from the person I am protecting", so the distance that matters is how far
+ *       the MOB is from the guard. Beyond {@link #LEASH} we break off once and finish.</li>
+ *   <li><b>Out of position means REGROUP, not break off.</b> When the guard himself has moved
+ *       beyond the leash (he ran ahead and picked a fight), the old code measured MY distance to
+ *       him and quit -- then the reflex fired again on his next hit, and again, producing pure
+ *       {@code [agent]} spam and no defending at all (Master, 2026-08-01). Now we walk toward the
+ *       guard, keeping the threat targeted, and say so exactly ONCE.</li>
+ *   <li><b>Every advisory fires at most once per engagement.</b> An interrupt that talks more
+ *       than it acts is worse than silence.</li>
  *   <li><b>Failure containment:</b> if the inner attack FAILS (unreachable, timeout), the target
  *       is blacklisted in {@link ThreatWatch} briefly so the reflex does not loop on it, and the
  *       defense completes DONE (an interrupt must never wedge the stack).</li>
@@ -26,10 +35,20 @@ import net.minecraft.world.entity.player.Player;
 public final class DefendAction implements MinecraftAction {
 
     private static final double LEASH = 16.0;
+    /** Give up regrouping after this long without closing on the guard. */
+    private static final int REGROUP_STALL_TICKS = 200;
+    private static final double REGROUP_STOP = LEASH * 0.5;
 
     private final int targetId;
     private final String guardName;
     private final AttackAction inner;
+
+    private boolean regrouping;
+    private boolean saidRegroup;
+    private boolean saidBreakOff;
+    private int ticksRun;
+    private double bestGuardDist = Double.MAX_VALUE;
+    private int lastRegroupProgress;
 
     public DefendAction(int targetId, String guardName) {
         this.targetId = targetId;
@@ -48,6 +67,7 @@ public final class DefendAction implements MinecraftAction {
         if (mc == null || mc.player == null || mc.level == null) {
             return StepResult.FAILED;
         }
+        ticksRun++;
 
         // Target gone or down already?
         if (!(mc.level.getEntity(targetId) instanceof LivingEntity target)
@@ -57,14 +77,53 @@ public final class DefendAction implements MinecraftAction {
             return StepResult.DONE;
         }
 
-        // Leash: never stray too far from whoever we are protecting.
         Player guard = findGuard(mc);
-        if (guard != null && mc.player.distanceToSqr(guard) > LEASH * LEASH) {
+
+        // TRUE leash: never chase a mob far away from the person being protected.
+        if (guard != null && guard.distanceToSqr(target) > LEASH * LEASH) {
             MoveControl.stop();
             ThreatWatch.blacklist(targetId, ctx.tick());
-            ctx.report(ReportClass.STATUS, "defend: breaking off (leash " + (int) LEASH
-                    + "m from " + guard.getName().getString() + "), resuming");
+            if (!saidBreakOff) {
+                saidBreakOff = true;
+                ctx.report(ReportClass.STATUS, "defend: " + target.getType().toShortString()
+                        + " is beyond the " + (int) LEASH + "m leash from "
+                        + guard.getName().getString() + " -- staying with him instead");
+            }
             return StepResult.DONE;
+        }
+
+        // Out of position: close on the guard rather than abandoning the defense entirely.
+        double guardDist = (guard == null) ? 0.0 : Math.sqrt(mc.player.distanceToSqr(guard));
+        if (guard != null && guardDist > LEASH) {
+            if (!saidRegroup) {
+                saidRegroup = true;
+                ctx.report(ReportClass.ADVISORY, String.format(Locale.ROOT,
+                        "defend: %s is %.0fm away fighting %s -- closing to re-engage",
+                        guard.getName().getString(), guardDist, target.getType().toShortString()));
+            }
+            if (guardDist < bestGuardDist - 1.0) {
+                bestGuardDist = guardDist;
+                lastRegroupProgress = ticksRun;
+            } else if (bestGuardDist == Double.MAX_VALUE) {
+                bestGuardDist = guardDist;
+                lastRegroupProgress = ticksRun;
+            } else if (ticksRun - lastRegroupProgress > REGROUP_STALL_TICKS) {
+                MoveControl.stop();
+                ThreatWatch.blacklist(targetId, ctx.tick());
+                ctx.report(ReportClass.STATUS, "defend: cannot reach "
+                        + guard.getName().getString() + " to help -- standing down");
+                return StepResult.DONE;
+            }
+            if (!MoveControl.isActive()) {
+                regrouping = true;
+                ScreenOps.startMove(mc, mc.player, guard.getX(), guard.getY(), guard.getZ(),
+                        REGROUP_STOP, "defend regroup");
+            }
+            return StepResult.RUNNING;
+        }
+        if (regrouping) {
+            regrouping = false;
+            MoveControl.stop();   // back in position: hand movement over to the attack loop
         }
 
         StepResult r = inner.step(ctx);
