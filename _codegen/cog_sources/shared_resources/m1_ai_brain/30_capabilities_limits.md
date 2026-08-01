@@ -1,5 +1,5 @@
 # Capabilities & limits (what M1 can and cannot do)
-<!-- Valid as of: M1 v0.14.0 | MC 1.20 - 26.3 | updated 2026-08-01 (bulk mining; unreachable-target give-up) -->
+<!-- Valid as of: M1 v0.15.0 | MC 1.20 - 26.3 | updated 2026-08-01 (bulk mining; unreachable give-up; enumerate-all scan; sign reading; open by coord; take output) -->
 **Covers:** an honest boundary list so you do not attempt impossible things or loop on them.
 
 ## CAN
@@ -27,6 +27,12 @@
 - **`recover`** -- clear a death grave-site (sign + chest + armor stand) in one command.
 - **Storage:** Bank Vault (`vault ...`, incl. enchanted-gear `id#hash` withdraw) and Travelers
   Backpack (`pack on|contents|put|take`, code-level wear + batch move).
+- **Enumerate anything:** `scan <name>` lists EVERY match by volume (NOT line-of-sight) with coords,
+  facing, distance and any sign text, paged 50 at a time. This is how you survey a storage room or a
+  furnace bank -- never walk-and-rescan, it skips things silently (it missed 3 of 16 furnaces live).
+- **Read signs** -- `read [x y z]`, or inline in `scan sign`. Labels on a storage wall are readable.
+- **Address containers by COORDINATE** -- `open <x y z>`, so container work no longer depends on aiming.
+- **`take output [radius]`** -- empty every furnace in range, output slot only, in one command.
 - Run slash-commands via `cmd <...>` when cheats/permission are present.
 - `screenshot` a frame; armor auto-equips itself to the best you carry.
 - Queue **autonomous actions** via the `agent` layer; they run in-world and report back async.
@@ -48,6 +54,13 @@
   server; on a true MP server they are not wired yet (single-player is the current target).
 
 ## QUIRKS to plan around
+- **Aiming at close range is unreliable.** `face <x y z>` can be tens of degrees off within a block
+  or two and will target the block NEXT to the one you meant. For containers use `open <x y z>`;
+  for a direction use `face <dir>`, which is exact.
+- **`moveto` will not make sub-block adjustments** -- its 1-block stop radius means a short move
+  reports "arrived" without moving. Use `move <dir> <n>` for fine positioning.
+- **A chest wall several deep is only reachable from its outer faces**; standing on top and looking
+  down reaches the top layer.
 - `scan` is **line-of-sight only** -- you cannot SEE what is behind a wall, so `scan` from new spots
   to discover targets. (Once you have a coordinate, the pathfinder WILL route to it around walls --
   the old "cannot path behind a wall" caveat no longer applies to reaching a known point.)

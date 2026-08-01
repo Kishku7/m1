@@ -72,7 +72,7 @@ public final class DefendAction implements MinecraftAction {
         // Target gone or down already?
         if (!(mc.level.getEntity(targetId) instanceof LivingEntity target)
                 || !target.isAlive() || target.isRemoved()) {
-            MoveControl.stop();
+            finishInner(ctx);
             ctx.report(ReportClass.STATUS, "defend: threat cleared, resuming");
             return StepResult.DONE;
         }
@@ -81,7 +81,7 @@ public final class DefendAction implements MinecraftAction {
 
         // TRUE leash: never chase a mob far away from the person being protected.
         if (guard != null && guard.distanceToSqr(target) > LEASH * LEASH) {
-            MoveControl.stop();
+            finishInner(ctx);
             ThreatWatch.blacklist(targetId, ctx.tick());
             if (!saidBreakOff) {
                 saidBreakOff = true;
@@ -108,7 +108,7 @@ public final class DefendAction implements MinecraftAction {
                 bestGuardDist = guardDist;
                 lastRegroupProgress = ticksRun;
             } else if (ticksRun - lastRegroupProgress > REGROUP_STALL_TICKS) {
-                MoveControl.stop();
+                finishInner(ctx);
                 ThreatWatch.blacklist(targetId, ctx.tick());
                 ctx.report(ReportClass.STATUS, "defend: cannot reach "
                         + guard.getName().getString() + " to help -- standing down");
@@ -128,17 +128,33 @@ public final class DefendAction implements MinecraftAction {
 
         StepResult r = inner.step(ctx);
         if (r == StepResult.FAILED) {
-            MoveControl.stop();
+            finishInner(ctx);
             ThreatWatch.blacklist(targetId, ctx.tick());
             ctx.report(ReportClass.STATUS, "defend: could not finish target id=" + targetId
                     + " (blacklisted briefly), resuming");
             return StepResult.DONE;
         }
         if (r == StepResult.DONE) {
-            MoveControl.stop();
+            finishInner(ctx);
             ctx.report(ReportClass.STATUS, "defend: threat down, resuming");
         }
         return r;
+    }
+
+    /**
+     * Tear the wrapped attack down on EVERY exit path.
+     *
+     * <p>Live bug (Master, 2026-08-01): pillagers attacked, defend engaged, {@link AttackAction}
+     * auto-equipped the netherite sword -- and the pickaxe never came back. The restore added in
+     * 0.14.0 lives in AttackAction's own cleanup, but defend's fast paths (threat died, leash
+     * break-off, regroup give-up) return DONE WITHOUT ever calling into the inner action again, so
+     * that cleanup never ran. The common case -- the reflex, not a typed `attack` -- was exactly the
+     * case that leaked. Any wrapper that can finish on behalf of the action it wraps has to run the
+     * wrapped action's cleanup itself.
+     */
+    private void finishInner(ActionContext ctx) {
+        inner.onInterrupted(ctx);   // restores the pre-combat hotbar slot + releases movement/use
+        MoveControl.stop();
     }
 
     private Player findGuard(Minecraft mc) {

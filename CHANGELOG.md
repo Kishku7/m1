@@ -4,6 +4,161 @@ All notable changes to M1 are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/); this project uses
 `<mod version>+<minecraft family>-<loader>` jar naming.
 
+## [0.15.0] - 2026-08-01
+
+### Added
+All three come straight out of two live chores that went badly -- emptying a 16-furnace bank and
+searching a 49-chest storage room -- where roughly 150 socket commands produced an incomplete
+furnace sweep and no found chest at all. In every case the container logic was fine; AIMING and
+POSITIONING were the bottleneck.
+
+- **`read [x y z]` -- sign reading, from the block entity rather than a ray.** A storage room's 12
+  wall signs label every chest column and were completely unreadable: the server's `lookingat` ray
+  uses a COLLIDER context and wall signs have no collision box, so it passes straight through them
+  and reports the chest behind. The labels that would have answered "which column is copper" in one
+  command were invisible. Reading the `SignBlockEntity` sidesteps rays entirely; both faces are
+  returned when the back is written.
+- **`scan <name>` now returns each match's sign text inline**, so `scan sign` is a one-command
+  readout of an entire labelled wall -- usually faster than `read` per sign.
+- **`open <x> <y> <z>` -- interact with a container BY COORDINATE, no crosshair.** A synthesized
+  `BlockHitResult` removes aiming from container work: `scan` already hands back exact coordinates,
+  so the caller can act on them directly. This was the fix for three separate failures seen live --
+  `face <x y z>` throwing 50-60 degree pitch errors at close range and opening the neighbouring
+  chest; `moveto` silently no-opping any move under its 1-block stop radius while still reporting
+  "arrived"; and a chest block several deep only being reachable from certain sides. Server reach
+  (~4.4 from the eye) is still real and is now reported honestly with the distance instead of
+  failing silently.
+- **`take output [radius]` -- bulk furnace collection** (`TakeOutputAction`, agent-queued). Walks
+  every furnace / blast furnace / smoker in range, opens each BY COORDINATE, takes the OUTPUT slot
+  only and never touches input or fuel. Finds them by volume, not line-of-sight. Reports per-furnace
+  progress, skips anything it cannot open rather than wedging, and stops early with an explicit
+  message if the inventory fills instead of silently dropping items. Replaces six commands per
+  furnace; the bank that prompted it was sixteen.
+
+### Notes
+- Version drift was handled by NOT depending on the drifting symbols: `Direction.getNearest` has
+  come and gone in double/float/Vec3 forms across the range, so the dominant-axis face is computed
+  in-mod from the stable enum constants. Same reasoning as the build-height accessor in 0.14.4.
+  Cog remains the fallback for drift that cannot be avoided this way.
+
+## [0.14.4] - 2026-08-01
+
+### Changed
+- **Targeted `scan <name|id>` rewritten: every match, by volume, with facing, paged.** Found by
+  doing a real chore -- "empty every furnace in the bank" -- which turned into a ~40-command crawl
+  and STILL missed furnaces. Two separate faults, both of which only show up in play:
+  - it deduped by block id and reported only the NEAREST of each kind plus a bare `+more`, which
+    for a bank of 8 furnaces is unusable: the controller had to step a few blocks and re-scan,
+    repeatedly, and silently skipped three furnaces (`-63`, `-60`, `-59`) because the hops jumped
+    over them;
+  - it RAYCAST, so it was line-of-sight only -- the back rows of a chest/furnace wall, or anything
+    behind a block, did not exist as far as the caller could tell.
+  It now walks the block VOLUME (no rays, no LOS), lists EVERY match with exact coords, reports each
+  block's `facing` where it has one (so the caller knows which side to stand on instead of guessing
+  and mis-aiming), and PAGES 50 at a time -- `scan furnace` then `scan furnace 2`, with a
+  `showing 1-50, page 1 of 5` header and a `(next: ...)` hint. `rN` sets the radius (default 16,
+  max 32). The untargeted `scan` / `scan <radius>` situational-awareness form is unchanged.
+- `facing` is read GENERICALLY off the state's property set rather than by naming a block class, so
+  it covers furnaces, chests, dispensers, stairs and beds on every supported version.
+
+### Notes
+- The volume loop deliberately does NOT clamp to build height: that accessor was renamed across the
+  supported range (`getMinBuildHeight`/`getMaxBuildHeight` -> `getMinY`/`getMaxY`), and
+  `Level.getBlockState` already returns air outside the limits, so the check would buy nothing and
+  cost a Cog branch on every cell. (The first build failed on exactly that rename.)
+
+## [0.14.3] - 2026-08-01
+
+### Fixed
+Both found by playing, not by reading -- a live pillager ambush on the Zion server.
+
+- **`defend` never gave the tool back.** 0.14.0 taught `AttackAction` to restore the hotbar slot it
+  auto-equipped away from, and that works for a typed `attack`. But `DefendAction` -- the REFLEX,
+  i.e. the common case -- finishes on the inner action's behalf on three fast paths (threat died,
+  leash break-off, regroup give-up) and returned DONE without ever stepping into it again, so the
+  restore never ran. Observed live: pillagers attacked mid-excavation, the bot drew its netherite
+  sword, killed them, reported "defend: threat cleared, resuming" -- and was still holding the sword
+  with the pickaxe back in slot 2. Every exit path now runs the wrapped action's cleanup
+  (`finishInner`). GENERAL RULE for this codebase: a wrapper that can complete on behalf of the
+  action it wraps MUST run that action's cleanup itself.
+- **The 0.13.8 pause reflex made the graceful-exit path undrivable.** 0.13.8 auto-dismisses any
+  `PauseScreen`, because vanilla's "Pause on Lost Focus" opens one whenever an unattended client
+  loses OS focus and that stalls `mc.hitResult`. But the reflex could not tell a focus-loss pause
+  from one the controller opened ON PURPOSE, so it ate the menu that `pause` had just created, one
+  tick later, every time -- and since an unattended session is unfocused BY DEFINITION, the
+  documented quit sequence (`pause` -> click "Save and Quit to Title" / "Disconnect") could never
+  be driven at all. Caught trying to log off Zion cleanly (Master, 2026-08-01). `pause` now calls
+  `ScreenWatch.allowPause(60s)`, a time-boxed grace window, so a deliberate pause stands while a
+  focus-loss pause is still killed; the box means a crashed or abandoned plan cannot leave the
+  reflex disabled.
+
+- **An order issued during `follow` never ran.** `follow` and `patrol` are standing plans that only
+  end on `stop`, but EVERY `agent` subcommand went onto the backlog, which only advances when the
+  active task completes. So an order given while following queued up behind an action that never
+  finishes: during the same fight a queued `attack nearest` answered "queued attack" and then sat
+  there, with `agent status` showing `backlog=1` while follow kept walking. Silent, and precisely
+  when it mattered. The design already specified this -- m1-agent.md's priority model is
+  `standing plan < reflex interrupt < AI override`, "inject = default" -- but the socket layer only
+  ever called `append`. One-shot orders now `injectInterrupt`, preempting the standing plan, which
+  resumes underneath them afterwards (the mechanism the defend reflex already used). Only `follow`
+  and `patrol` still append.
+
+## [0.14.2] - 2026-08-01
+
+### Fixed
+- **Selection-list ROWS were invisible to the controller -- the saved multiplayer server list could
+  not be seen or used at all.** A list's rows are not widgets, they are `AbstractSelectionList`
+  Entries, so `describe` (which enumerates widgets) never showed them, and `worlds` only understood
+  `WorldSelectionList.WorldListEntry` and answered "(no worlds)" for anything else. Net effect,
+  found live (Master, 2026-08-01): on the Play Multiplayer screen the controller could see the
+  Join Server / Direct Connection / Add Server buttons but NOT the saved servers themselves, so
+  joining a saved server was impossible -- the rows simply did not exist as far as it could tell.
+  - `describe` now appends a `list rows:` section (`<n> <narration>`) for whatever selection list
+    is on screen, clearly marked as not-widgets so `<n>` is never confused with a widget `[n]`.
+  - `worlds` is now GENERIC and aliased as `servers` / `entries`: it enumerates ANY
+    `ObjectSelectionList` via `Entry.getNarration()`, so saved worlds, saved servers, LAN games and
+    any other list screen all work through one code path with no version-specific entry class named
+    anywhere.
+  - New `select <n>` verb selects a row; buttons that require a selection (Join Server, Play
+    Selected World, Edit, Delete) then go ACTIVE and are clicked by their normal widget id. The
+    reply re-describes the screen so the caller sees what became available.
+  - Implementation note for future ports: `AbstractSelectionList.Entry` is PROTECTED and can never
+    be named from mod code -- the cast must go through the public `ObjectSelectionList.Entry`,
+    which is a subtype of the erased `setSelected` parameter. Naming the protected type compiles
+    nowhere (caught on the 1.21.11 cell).
+
+## [0.14.1] - 2026-08-01
+
+### Fixed
+Both found by actually driving `mine area` against the real stone wall at x=-140 (live client,
+Legacy 1.21.11) rather than by reading the code -- the 0.14.0 build was green and still did the
+wrong thing in the world.
+
+- **Out-of-reach cells burned 20 s each instead of being skipped.** Server interaction reach is
+  ~4.5 blocks from the eye, so a cell more than ~4 blocks above the player's feet can never be
+  broken from ground level -- but the action still ran the full dig budget twice (2 x 200 ticks)
+  before giving up on it. A tall wall is mostly such cells, so the job spent its entire 30-minute
+  budget achieving almost nothing (observed on `(-140,74,21)` while standing at y=68). There is now
+  a hard reach check AFTER the approach: past `REACH_HARD` (5.0 m from the eye) the cell is skipped
+  immediately, counted separately as `out of reach` in the progress line, and explained ONCE with
+  an actionable message ("reach tops out ~4 blocks above my feet: run the high band from higher
+  ground, or clear the low band first and stand on what is left").
+- **Cell ordering ping-ponged, so travel dominated the whole job.** Sorting each layer by distance
+  from wherever the player happened to be at PLAN time makes the cursor alternate outward either
+  side of that point: the live run went z=18, 24, 16, 25, 15, 26, 14, 27 ... walking further
+  between every single block until it was covering ~18 blocks per cell and still accelerating.
+  Ordering is a travel problem, not a sorting problem, so each layer is now swept
+  **serpentine** -- x ascending, z alternating per column, and the direction flipped per layer so
+  the end of one layer is adjacent to the start of the next.
+- **Stand-off reduced 3.0 -> 1.6 m** (`APPROACH_STOP`). Every block of stand-off is a block of
+  reach spent, and reach is what decides how high up a wall the bot can still work; standing
+  adjacent buys roughly two more vertical levels per pass.
+
+### Known limitation (not a bug -- physics)
+`mine area` cannot clear a wall taller than ~4 blocks above the ground it is standing on. Clear the
+low band first and re-issue for the band above once there is something to stand on, or run the job
+from higher ground. A proper fix (pillar up / stand on the wall) is a future feature.
+
 ## [0.14.0] - 2026-08-01
 
 ### Added

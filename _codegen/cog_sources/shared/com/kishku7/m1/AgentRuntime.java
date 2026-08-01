@@ -116,7 +116,7 @@ public final class AgentRuntime {
             case "status":
                 return status();
             case "ping":
-                QUEUE.append(new PingAction());
+                QUEUE.injectInterrupt(new PingAction());
                 return "queued ping (runs next in-world tick; reports drain onto a later reply)";
             case "goto":
                 return enqueueGoto(args);
@@ -134,7 +134,7 @@ public final class AgentRuntime {
                 return enqueueEquip(args);
             case "use":
             case "place":
-                QUEUE.append(new UseAction());
+                QUEUE.injectInterrupt(new UseAction());
                 return "queued use/place (acts on the crosshair block next in-world tick)";
             case "attack":
                 return enqueueAttack(args);
@@ -145,6 +145,19 @@ public final class AgentRuntime {
                 return enqueueShield(args);
             case "defend":
                 return ThreatWatch.command(args);
+            case "takeoutput": {
+                int r = 16;
+                if (!args.isEmpty()) {
+                    try {
+                        r = Integer.parseInt(args.trim().split("\\s+")[0]);
+                    } catch (NumberFormatException e) {
+                        return "usage: agent takeoutput [radius]";
+                    }
+                }
+                QUEUE.injectInterrupt(new TakeOutputAction(r));
+                return "queued take output (every furnace within " + r + "; output slot only,"
+                        + " input + fuel untouched). Progress arrives as [agent] lines; 'stop' cancels.";
+            }
             case "craft": {
                 String[] ct = args.split("\\s+");
                 if (args.isEmpty() || ct[0].isEmpty()) {
@@ -158,20 +171,20 @@ public final class AgentRuntime {
                         return "usage: agent craft <item> [count]";
                     }
                 }
-                QUEUE.append(new CraftAction(ct[0], cn));
+                QUEUE.injectInterrupt(new CraftAction(ct[0], cn));
                 return "queued craft " + ct[0] + " x" + cn + " (needs a crafting grid open)";
             }
             case "vault":
                 if (args.equalsIgnoreCase("close")) {
-                    QUEUE.append(new VaultGuardAction());
+                    QUEUE.injectInterrupt(new VaultGuardAction());
                     return "queued vault close (trinket-guarded)";
                 }
-                QUEUE.append(new VaultCmdAction(args));
+                QUEUE.injectInterrupt(new VaultCmdAction(args));
                 return "queued vault " + (args.isEmpty() ? "status" : args);
             case "drop":
                 return enqueueDrop(args);
             case "jump":
-                QUEUE.append(new KeyInputAction(KeyInputAction.Mode.JUMP));
+                QUEUE.injectInterrupt(new KeyInputAction(KeyInputAction.Mode.JUMP));
                 return "queued jump";
             case "sneak":
                 return enqueueToggle("sneak", args);
@@ -181,20 +194,20 @@ public final class AgentRuntime {
                 if (args.isEmpty()) {
                     return "usage: agent slot <id> [button] [pickup|quick|swap]";
                 }
-                QUEUE.append(new SlotAction(args));
+                QUEUE.injectInterrupt(new SlotAction(args));
                 return "queued slot " + args;
             case "sleep":
-                QUEUE.append(new SleepAction());
+                QUEUE.injectInterrupt(new SleepAction());
                 return "queued sleep (find a usable bed, walk beside it, sleep in it)";
             case "recover":
-                QUEUE.append(new RecoverAction());
+                QUEUE.injectInterrupt(new RecoverAction());
                 return "queued recover (grave-site: break sign, empty chest, break armor stand,"
                         + " collect drops, equip all, organize hotbar)";
             case "openinv":
-                QUEUE.append(new InvScreenAction(true));
+                QUEUE.injectInterrupt(new InvScreenAction(true));
                 return "queued openinv";
             case "close":
-                QUEUE.append(new InvScreenAction(false));
+                QUEUE.injectInterrupt(new InvScreenAction(false));
                 return "queued close";
             case "stop": {
                 QUEUE.replace(Collections.<MinecraftAction>emptyList());
@@ -218,6 +231,23 @@ public final class AgentRuntime {
         }
     }
 
+    /**
+     * WHY ONE-SHOT ORDERS INJECT INSTEAD OF APPENDING (live bug, Master 2026-08-01).
+     *
+     * <p>{@code follow} and {@code patrol} are STANDING plans -- they never complete on their own,
+     * they run until {@code stop}. Everything used to go onto the BACKLOG, which only advances when
+     * the active task finishes, so an order issued while following sat behind it FOREVER: during a
+     * live pillager fight a queued {@code attack nearest} reported {@code queued} and then simply
+     * never ran ({@code agent status} showed {@code backlog=1} while follow kept walking). Silent,
+     * and exactly when it mattered most.
+     *
+     * <p>The design already called for this -- m1-agent.md's priority model is
+     * {@code standing plan < reflex interrupt < AI override}, and "inject = default" -- but the
+     * socket layer only ever called {@code append}. One-shot orders now {@link
+     * ActionQueue#injectInterrupt} so they preempt the standing plan and it resumes underneath them
+     * afterwards (the same mechanism the defend reflex already used). Only the two standing plans
+     * still append.
+     */
     private static String enqueueGoto(String args) {
         String[] t = args.split("\\s+");
         if (t.length < 3) {
@@ -227,7 +257,7 @@ public final class AgentRuntime {
             double x = Double.parseDouble(t[0]);
             double y = Double.parseDouble(t[1]);
             double z = Double.parseDouble(t[2]);
-            QUEUE.append(new MoveAction(x, y, z, 1.0, "agent goto"));
+            QUEUE.injectInterrupt(new MoveAction(x, y, z, 1.0, "agent goto"));
             return "queued goto (" + x + ", " + y + ", " + z + ")";
         } catch (NumberFormatException e) {
             return "usage: agent goto <x> <y> <z>";
@@ -242,7 +272,7 @@ public final class AgentRuntime {
         try {
             double x = Double.parseDouble(t[0]);
             double z = Double.parseDouble(t[1]);
-            QUEUE.append(new MoveAction(x, Double.NaN, z, 1.0, "agent moveto"));
+            QUEUE.injectInterrupt(new MoveAction(x, Double.NaN, z, 1.0, "agent moveto"));
             return "queued moveto (" + x + ", " + z + ")";
         } catch (NumberFormatException e) {
             return "usage: agent moveto <x> <z>";
@@ -276,12 +306,12 @@ public final class AgentRuntime {
                 double x = Double.parseDouble(t[0]);
                 double y = Double.parseDouble(t[1]);
                 double z = Double.parseDouble(t[2]);
-                QUEUE.append(LookAction.atPoint(x, y, z));
+                QUEUE.injectInterrupt(LookAction.atPoint(x, y, z));
                 return "queued look at (" + x + ", " + y + ", " + z + ")";
             }
             float yaw = Float.parseFloat(t[0]);
             Float pitch = (t.length >= 2) ? Float.valueOf(Float.parseFloat(t[1])) : null;
-            QUEUE.append(LookAction.atAngles(yaw, pitch));
+            QUEUE.injectInterrupt(LookAction.atAngles(yaw, pitch));
             return "queued look yaw=" + yaw + (pitch != null ? " pitch=" + pitch : "");
         } catch (NumberFormatException e) {
             return "usage: agent look <x y z> | <yaw [pitch]>";
@@ -359,7 +389,7 @@ public final class AgentRuntime {
                 return "mine area: that box is " + vol + " cells (cap "
                         + MineAreaAction.MAX_VOLUME + ") -- split it into smaller boxes";
             }
-            QUEUE.append(new MineAreaAction(x1, y1, z1, x2, y2, z2, collect, MINE_AREA_BUDGET));
+            QUEUE.injectInterrupt(new MineAreaAction(x1, y1, z1, x2, y2, z2, collect, MINE_AREA_BUDGET));
             return "queued mine area (" + x1 + "," + y1 + "," + z1 + ")-(" + x2 + "," + y2 + ","
                     + z2 + ") = " + vol + " cells, collect=" + (collect ? "on" : "off")
                     + ". Progress arrives as [agent] lines; 'stop' cancels.";
@@ -372,7 +402,7 @@ public final class AgentRuntime {
             int x = Integer.parseInt(t[0]);
             int y = Integer.parseInt(t[1]);
             int z = Integer.parseInt(t[2]);
-            QUEUE.append(new MineAction(x, y, z));
+            QUEUE.injectInterrupt(new MineAction(x, y, z));
             return "queued mine (" + x + ", " + y + ", " + z + ")";
         } catch (NumberFormatException e) {
             return MINE_USAGE;
@@ -382,7 +412,7 @@ public final class AgentRuntime {
     private static String enqueueHold(String args) {
         try {
             int n = Integer.parseInt(args.trim());
-            QUEUE.append(new HoldAction(n));
+            QUEUE.injectInterrupt(new HoldAction(n));
             return "queued hold hotbar " + n;
         } catch (NumberFormatException e) {
             return "usage: agent hold <0-8>";
@@ -393,7 +423,7 @@ public final class AgentRuntime {
         if (args.isEmpty()) {
             return "usage: agent equip <item> (requires an open container)";
         }
-        QUEUE.append(new EquipAction(args));
+        QUEUE.injectInterrupt(new EquipAction(args));
         return "queued equip " + args;
     }
 
@@ -411,7 +441,7 @@ public final class AgentRuntime {
         KeyInputAction.Mode m = which.equals("sneak")
                 ? (on ? KeyInputAction.Mode.SNEAK_ON : KeyInputAction.Mode.SNEAK_OFF)
                 : (on ? KeyInputAction.Mode.SPRINT_ON : KeyInputAction.Mode.SPRINT_OFF);
-        QUEUE.append(new KeyInputAction(m));
+        QUEUE.injectInterrupt(new KeyInputAction(m));
         return "queued " + which + " " + (on ? "on" : "off");
     }
 
@@ -434,7 +464,7 @@ public final class AgentRuntime {
         if (spec.equalsIgnoreCase("crosshair")) {
             spec = "";
         }
-        QUEUE.append(new AttackAction(spec, mode));
+        QUEUE.injectInterrupt(new AttackAction(spec, mode));
         return "queued attack (target=" + (spec.isEmpty() ? "crosshair" : spec) + ", mode=" + mode + ")";
     }
 
@@ -485,7 +515,7 @@ public final class AgentRuntime {
             }
             spec.append(tok);
         }
-        QUEUE.append(new DropAction(spec.toString(), count));
+        QUEUE.injectInterrupt(new DropAction(spec.toString(), count));
         return "queued drop " + (spec.length() == 0 ? "held item" : "'" + spec + "'")
                 + (count == DropAction.ALL ? " (whole stack)" : " x" + count);
     }
@@ -500,7 +530,7 @@ public final class AgentRuntime {
                 return "usage: agent shield [holdTicks]";
             }
         }
-        QUEUE.append(new ShieldAction(ticks));
+        QUEUE.injectInterrupt(new ShieldAction(ticks));
         return "queued shield (hold " + ticks + "t)";
     }
 

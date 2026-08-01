@@ -52,8 +52,13 @@ public final class MineAreaAction implements MinecraftAction {
 
     private static final int DIG_TICKS = 200;        // per-block dig budget (same as 'mine')
     private static final int APPROACH_TICKS = 400;   // per-cell approach budget
-    private static final double REACH_TRY = 5.0;     // beyond this we approach before digging
-    private static final double APPROACH_STOP = 3.0;
+    private static final double REACH_TRY = 4.0;     // beyond this we approach before digging
+    /** Stand ADJACENT, not 3 blocks off: every block of stand-off is a block of reach spent, and
+     *  reach is what decides how HIGH up the wall we can still work (live test, 2026-08-01). */
+    private static final double APPROACH_STOP = 1.6;
+    /** Server-side interaction reach is ~4.5 from the EYE; past this the dig can never land, so
+     *  attempting it just burns DIG_TICKS twice per cell (20s each) for nothing. */
+    private static final double REACH_HARD = 5.0;
     private static final int RETRIES = 1;            // dig attempts per cell after the first
     private static final int REPORT_EVERY = 25;      // blocks broken between progress lines
     private static final int COLLECT_BUDGET = 2400;  // ticks for the whole pickup sweep
@@ -69,7 +74,7 @@ public final class MineAreaAction implements MinecraftAction {
     private Phase phase = Phase.PLAN;
     private List<BlockPos> cells;
     private int cursor;
-    private int broken, skippedAir, skippedHard, failed;
+    private int broken, skippedAir, skippedHard, failed, outOfReach;
     private int ticksRun;
 
     // per-cell state
@@ -142,8 +147,6 @@ public final class MineAreaAction implements MinecraftAction {
                     + ") -- split it into smaller boxes");
             return StepResult.FAILED;
         }
-        final double px = p.getX();
-        final double pz = p.getZ();
         List<BlockPos> list = new ArrayList<>();
         for (int y = y2; y >= y1; y--) {
             for (int x = x1; x <= x2; x++) {
@@ -152,13 +155,15 @@ public final class MineAreaAction implements MinecraftAction {
                 }
             }
         }
+        // Order is a TRAVEL problem, not a sorting problem. Sorting each layer by distance from
+        // where the player HAPPENED to start produces an expanding ping-pong -- the live run went
+        // z=18,24,16,25,15,26,14,27... walking further between every single block until it was
+        // covering 18 blocks per cell (2026-08-01). Sweep each layer monotonically instead
+        // (serpentine: alternate direction per layer so the end of one layer is the start of the
+        // next), which is the shortest tour for a box and costs one walk-past per layer.
         list.sort(Comparator
                 .comparingInt((BlockPos b) -> -b.getY())
-                .thenComparingDouble(b -> {
-                    double dx = b.getX() + 0.5 - px;
-                    double dz = b.getZ() + 0.5 - pz;
-                    return dx * dx + dz * dz;
-                }));
+                .thenComparingInt(b -> serpentineKey(b)));
         cells = list;
         cursor = 0;
         phase = Phase.DIG;
@@ -166,6 +171,23 @@ public final class MineAreaAction implements MinecraftAction {
                 "mine area: (%d,%d,%d)-(%d,%d,%d) = %d cells, top-down, collect=%s",
                 x1, y1, z1, x2, y2, z2, cells.size(), collect ? "on" : "off"));
         return StepResult.RUNNING;
+    }
+
+    /**
+     * Serpentine ordering key within a layer: x ascending, and z ascending on even x-columns /
+     * descending on odd ones, so the cursor snakes through the layer instead of jumping about.
+     * Layers also alternate direction (via the y parity) so the end of one layer is next to the
+     * start of the next.
+     */
+    private int serpentineKey(BlockPos b) {
+        int xi = b.getX() - x1;
+        int zi = b.getZ() - z1;
+        int zSpan = (z2 - z1) + 1;
+        boolean layerFlip = (((y2 - b.getY()) & 1) == 1);
+        boolean colFlip = ((xi & 1) == 1) ^ layerFlip;
+        int zKey = colFlip ? (zSpan - 1 - zi) : zi;
+        int xKey = layerFlip ? ((x2 - x1) - xi) : xi;
+        return xKey * zSpan + zKey;
     }
 
     // ---- phase 2: walk the cell list ----
@@ -221,10 +243,29 @@ public final class MineAreaAction implements MinecraftAction {
         double eyeDist = Math.sqrt(p.getEyePosition().distanceToSqr(
                 t.getX() + 0.5, t.getY() + 0.5, t.getZ() + 0.5));
         if (!approached && eyeDist > REACH_TRY) {
-            approached = true;   // one approach per cell, then dig from wherever we ended up
+            approached = true;   // one approach per cell, then judge from wherever we ended up
             cellTicks = 0;
             ScreenOps.startMove(mc, p, t.getX() + 0.5, t.getY(), t.getZ() + 0.5,
                     APPROACH_STOP, "mine area approach");
+            return StepResult.RUNNING;
+        }
+
+        // FAIL FAST. We have already approached; if the cell is still outside interaction reach the
+        // dig physically cannot land, and attempting it anyway costs DIG_TICKS x (RETRIES+1) = 20s
+        // PER CELL. A tall wall is mostly such cells, so the old code spent the entire job budget
+        // achieving nothing (live test, 2026-08-01: y=74 from ground level).
+        if (eyeDist > REACH_HARD) {
+            outOfReach++;
+            if (outOfReach == 1) {
+                ctx.report(ReportClass.STATUS, String.format(Locale.ROOT,
+                        "mine area: (%d,%d,%d) is out of reach (%.1fm from eye, I stand at y=%.0f)"
+                        + " -- skipping it and every cell like it. Reach tops out ~4 blocks above my"
+                        + " feet: run the high band from higher ground, or clear the low band first"
+                        + " and stand on what is left.",
+                        t.getX(), t.getY(), t.getZ(), eyeDist, p.getY()));
+            }
+            cursor++;
+            resetCell();
             return StepResult.RUNNING;
         }
 
@@ -301,6 +342,7 @@ public final class MineAreaAction implements MinecraftAction {
 
     private String summary() {
         return broken + " broken, " + skippedAir + " air, " + skippedHard + " unbreakable/liquid, "
+                + outOfReach + " out of reach, "
                 + failed + " skipped, " + (cells == null ? 0 : cells.size() - cursor) + " left";
     }
 

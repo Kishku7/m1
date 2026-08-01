@@ -1,5 +1,5 @@
 # Command card (exact syntax cheat-sheet)
-<!-- Valid as of: M1 v0.14.0 | MC 1.20 - 26.3 | updated 2026-08-01 (BULK MINING: mine hold + mine area; attack gives up on unreachable targets and restores your tool; defend regroups instead of thrashing) -->
+<!-- Valid as of: M1 v0.15.0 | MC 1.20 - 26.3 | updated 2026-08-01 (bulk mining: mine hold + mine area; attack give-up + tool restore; defend regroup; scan lists EVERY match with facing + paging; sign reading; open by coordinate; take output) -->
 **Covers:** every M1 command with syntax + a one-line note, so you can reload just the syntax cheaply.
 Concepts behind these live in `01_drive_m1.md`.
 
@@ -8,7 +8,25 @@ OBSERVE
   describe              list the current screen's widgets (id, type, message/label, pos, V/A/F flags)
   where                your position + movement status (pos / moving / arrived / blocked / no world)
   look                 what you are pointed at (block/entity + distance)
-  scan [r|<name>]      line-of-sight scan; r<=32 (default 32). scan <name> = nearest match. scan 16 = radius 16
+  scan [r]             line-of-sight situational scan; r<=32 (default 32). 'scan 16' = radius 16
+  scan <name|id> [rN] [page]
+                       FIND EVERY MATCH. Walks the block VOLUME, so it is NOT line-of-sight -- it
+                       sees the back rows of a wall, which the old raycast scan could not. Returns
+                       exact coords + facing + distance for each, plus any SIGN TEXT inline, 50 per
+                       page ('scan furnace' then 'scan furnace 2'). rN sets radius (default 16).
+                       USE THIS to enumerate a bank of chests/furnaces. Do NOT walk-and-rescan --
+                       it silently skips things (missed 3 of 16 furnaces live, 2026-08-01).
+  read [x y z]         read a SIGN, by coord or crosshair. Reads the block entity, so it works on
+                       wall signs (a collider ray goes straight through them, which is why sign
+                       labels used to be unreadable). 'scan sign' returns every sign's text at once.
+  open <x> <y> <z>     open/use a container BY COORDINATE -- no aiming, no crosshair. Feed it the
+                       coords 'scan' gave you, then 'slots'. Server reach (~4.4 from the eye) still
+                       applies; too far and the reply tells you the distance -- walk, then re-issue.
+                       PREFER THIS over face+place: close-range aiming is unreliable and will
+                       happily open the chest NEXT to the one you meant.
+  take output [radius] BULK: empty EVERY furnace/blast furnace/smoker in range. Walks them all,
+                       takes the OUTPUT slot only, never touches input or fuel. One command instead
+                       of six per furnace. [agent] progress; stops early if your inventory fills.
   inv                  stable player inventory. Slots are labeled in BOTH spaces: [hb6 (idx 5)]
                        for hotbar (hbN = as spoken, idx = raw 0-8), [inv 9..35] main,
                        feet/legs/chest/head (36-39), offhand (40)

@@ -10,12 +10,15 @@ import net.minecraft.client.gui.components.StringWidget;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.components.AbstractSelectionList;
+import net.minecraft.network.chat.Component;
 import net.minecraft.client.gui.components.ObjectSelectionList;
 import net.minecraft.client.gui.components.events.ContainerEventHandler;
 import net.minecraft.client.gui.screens.worldselection.WorldSelectionList;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.world.entity.player.Inventory;
@@ -51,7 +54,12 @@ public final class ScreenOps {
         "world:\n" +
         "  where | state        player pos/facing/health\n" +
         "  look                 what the crosshair is pointed at\n" +
-        "  scan [r|<name>]      what you SEE: bounds + notable blocks + mobs + items (LOS, r<=32)\n" +
+        "  scan [r]             what you SEE: bounds + notable blocks + mobs + items (LOS, r<=32)\n" +
+        "  scan <name|id> [rN] [page]   FIND EVERY match, by VOLUME not line-of-sight (so it sees\n" +
+        "                       the back rows of a wall). Lists exact coords + facing + distance for\n" +
+        "                       each, 50 per page: 'scan furnace' then 'scan furnace 2' for page 2.\n" +
+        "                       rN sets radius (default 16, max 32). Use this to enumerate a bank of\n" +
+        "                       chests/furnaces -- never walk-and-rescan, it silently skips things.\n" +
         "  inv                  inventory contents + held item\n" +
         "  cmd <command>        run a server command (needs cheats), no slash\n" +
         "  say <text>           send an in-game CHAT message (e.g. acknowledge your master)\n" +
@@ -67,7 +75,20 @@ public final class ScreenOps {
         "  mine area <x1 y1 z1> <x2 y2 z2> [nocollect]   clear a whole BOX as one job: top-down,\n" +
         "                       air gaps skipped free, repositions itself, [agent] progress lines,\n" +
         "                       then walks the drops in (nocollect to skip that).\n" +
-        "  worlds               list saved worlds (on the world-select screen)\n" +
+        "  read [x y z]         READ A SIGN, by coord or crosshair. Reads the block entity, not a ray,\n" +
+        "                       so it works on wall signs (a collider ray passes straight through them).\n" +
+        "                       'scan sign' also returns each sign's text inline, which is usually faster.\n" +
+        "  take output [radius] BULK: empty EVERY furnace in range -- walks them all, takes the OUTPUT\n" +
+        "                       slot only, never touches input or fuel. One command instead of six per\n" +
+        "                       furnace. Progress arrives as [agent] lines; stops early if you fill up.\n" +
+        "  open <x> <y> <z>     open/use a container BY COORDINATE -- no aiming, no crosshair. Feed it\n" +
+        "                       coords straight from 'scan'. Server reach still applies (~4.4): if it is\n" +
+        "                       too far the reply says so with the distance. Then 'slots' as usual.\n" +
+        "  worlds | servers | entries   list the ROWS of the on-screen selection list (saved worlds,\n" +
+        "                       saved servers, LAN games...). Rows are NOT widgets -- they never show\n" +
+        "                       up in 'describe' as [n] ids; they are listed separately as <n>.\n" +
+        "  select <n>           select list row <n>; buttons needing a selection (Join Server, Play\n" +
+        "                       Selected World) then go ACTIVE and can be clicked by their widget id\n" +
         "  joinworld <idx>      load saved world #idx (re-enter)\n" +
         "  openinv / close      open inventory (2x2 grid) / close screen\n" +
         "  craft planks|sticks|table|axe   craft items (axe needs the crafting table open=3x3)\n" +
@@ -125,7 +146,13 @@ public final class ScreenOps {
             case "sleep":     return AgentRuntime.command("sleep");
             case "recover":   return AgentRuntime.command("recover");
             case "mine":      return mine(mc, rest);
-            case "worlds":    return worlds(mc);
+            case "open":      return openAtCmd(mc, rest);
+            case "take":      return takeCmd(rest);
+            case "read":      return readCmd(mc, rest);
+            case "worlds":
+            case "servers":
+            case "entries":   return worlds(mc);
+            case "select":    return selectCmd(mc, rest);
             case "joinworld":
             case "join":      return joinWorldCmd(mc, rest);
             case "openinv":   return Crafting.openInv(mc);
@@ -223,6 +250,14 @@ public final class ScreenOps {
                 if (lbl != null && !lbl.isEmpty() && !msg.equalsIgnoreCase(lbl)) b.append(" label=\"").append(lbl).append("\"");
             }
             b.append("\n");
+        }
+        List<String> rows = listEntryLines(s);
+        if (!rows.isEmpty()) {
+            b.append("list rows: ").append(rows.size())
+             .append("  (not widgets -- use 'select <n>', then click the now-active button)\n");
+            for (int i = 0; i < rows.size(); i++) {
+                b.append("  <").append(i).append("> ").append(rows.get(i)).append("\n");
+            }
         }
         return trim(b);
     }
@@ -343,6 +378,10 @@ public final class ScreenOps {
 
     private static final int SCAN_DEFAULT_R = 32;
     private static final int SCAN_MAX_R = 32;
+    /** Targeted scan walks a VOLUME, so its default radius is smaller than the raycast one. */
+    private static final int SCAN_FIND_DEFAULT_R = 16;
+    /** Match rows per page (Master, 2026-08-01: "so you can get up to 50"). */
+    private static final int SCAN_PAGE = 50;
 
     private static final java.util.Set<String> FILLER = new java.util.HashSet<>(java.util.Arrays.asList(
         "stone", "cobblestone", "deepslate", "cobbled_deepslate", "dirt", "coarse_dirt", "grass_block",
@@ -356,7 +395,10 @@ public final class ScreenOps {
         if (p == null || mc.level == null) return "scan: not in world";
         String arg = firstTok(rest);
         Integer ri = parseInt(arg);
-        if (!arg.isEmpty() && ri == null) return scanFind(mc, p, arg.toLowerCase(), SCAN_DEFAULT_R);
+        if (!arg.isEmpty() && ri == null) {
+            String more = rest.trim().substring(arg.length()).trim();
+            return scanFind(mc, p, arg.toLowerCase(), SCAN_FIND_DEFAULT_R, more);
+        }
         int r = SCAN_DEFAULT_R;
         if (ri != null) r = Math.max(2, Math.min(SCAN_MAX_R, ri));
         return scanFull(mc, p, r);
@@ -490,34 +532,110 @@ public final class ScreenOps {
         return b.toString();
     }
 
-    private static String scanFind(Minecraft mc, LocalPlayer p, String needle, int r) {
+    /**
+     * TARGETED SCAN -- "find me every X". Rewritten 2026-08-01 after a live chore (empty every
+     * furnace in a bank) turned into a 40-command crawl.
+     *
+     * <p>Two things were wrong with the old one, both found by playing:
+     * <ol>
+     *   <li>It deduped by block id and reported only the NEAREST of each kind plus a bare
+     *       {@code +more}. For a bank of 8 furnaces that is worse than useless -- you cannot
+     *       enumerate what you cannot see, so the controller had to walk a few blocks and re-scan,
+     *       over and over, and STILL silently skipped three furnaces because the hops jumped over
+     *       them.</li>
+     *   <li>It RAYCAST, so it was line-of-sight only: the back rows of a chest/furnace wall, or
+     *       anything behind a block, simply did not exist.</li>
+     * </ol>
+     *
+     * <p>Now it walks the actual block VOLUME (no rays, no line-of-sight), lists EVERY match with
+     * exact coords, reports each block's {@code facing} where it has one (so the caller knows which
+     * side to stand on rather than guessing), and PAGES the result 50 at a time
+     * ({@code scan furnace 2} = page 2) so a big match set can be read without blowing the reply.
+     *
+     * <p>Syntax: {@code scan <name|id> [rN] [page]} -- {@code rN} sets the radius (default
+     * {@value #SCAN_FIND_DEFAULT_R}, max {@value #SCAN_MAX_R}), a bare integer is the page number.
+     */
+    private static String scanFind(Minecraft mc, LocalPlayer p, String needle, int r, String rest) {
+        int page = 1;
+        for (String tok : rest.trim().split("\\s+")) {
+            if (tok.isEmpty()) continue;
+            String low = tok.toLowerCase();
+            if (low.startsWith("r") && parseInt(low.substring(1)) != null) {
+                r = Math.max(2, Math.min(SCAN_MAX_R, parseInt(low.substring(1)).intValue()));
+                continue;
+            }
+            Integer n = parseInt(low);
+            if (n != null) page = Math.max(1, n.intValue());
+        }
+
         Vec3 eye = p.getEyePosition();
-        java.util.Map<String, int[]> count = new java.util.LinkedHashMap<>();
-        java.util.Map<String, BlockPos> near = new java.util.LinkedHashMap<>();
-        java.util.Map<String, Double> nsq = new java.util.LinkedHashMap<>();
-        double[] pitches = {-60, -40, -25, -12, 0, 12, 25, 40, 60};
-        for (int yawDeg = 0; yawDeg < 360; yawDeg += 12) {
-            double yr = Math.toRadians(yawDeg);
-            for (double pd : pitches) {
-                double pr = Math.toRadians(pd);
-                BlockHitResult h = ray(mc, eye, Math.cos(pr) * Math.cos(yr), Math.sin(pr), Math.cos(pr) * Math.sin(yr), r);
-                if (h == null || h.getType() == HitResult.Type.MISS) continue;
-                BlockState st = mc.level.getBlockState(h.getBlockPos());
-                String id = blockShort(st);
-                if (!id.contains(needle)) continue;
-                double sq = eye.distanceToSqr(Vec3.atCenterOf(h.getBlockPos()));
-                int[] c = count.get(id);
-                if (c == null) { count.put(id, new int[]{1}); near.put(id, h.getBlockPos()); nsq.put(id, sq); }
-                else { c[0]++; if (sq < nsq.get(id)) { near.put(id, h.getBlockPos()); nsq.put(id, sq); } }
+        BlockPos origin = BlockPos.containing(p.getX(), p.getY(), p.getZ());
+        java.util.List<BlockPos> hits = new java.util.ArrayList<>();
+        java.util.List<String> ids = new java.util.ArrayList<>();
+        BlockPos.MutableBlockPos m = new BlockPos.MutableBlockPos();
+        int rr = r * r;
+        // NO explicit build-height clamp on purpose: the accessor was RENAMED across the supported
+        // range (getMinBuildHeight/getMaxBuildHeight -> getMinY/getMaxY), and Level.getBlockState
+        // already returns air for anything outside the build limits, so the bounds check buys
+        // nothing and would cost a Cog branch or a facade on every cell.
+        for (int dx = -r; dx <= r; dx++) {
+            for (int dy = -r; dy <= r; dy++) {
+                int wy = origin.getY() + dy;
+                for (int dz = -r; dz <= r; dz++) {
+                    if (dx * dx + dy * dy + dz * dz > rr) continue;
+                    m.set(origin.getX() + dx, wy, origin.getZ() + dz);
+                    BlockState st = mc.level.getBlockState(m);
+                    if (st.isAir()) continue;
+                    String id = blockShort(st);
+                    if (!id.contains(needle)) continue;
+                    hits.add(m.immutable());
+                    ids.add(id);
+                }
             }
         }
+
+        // nearest first -- the caller almost always wants to work outward from where it stands
+        Integer[] order = new Integer[hits.size()];
+        for (int i = 0; i < order.length; i++) order[i] = Integer.valueOf(i);
+        final java.util.List<BlockPos> hf = hits;
+        java.util.Arrays.sort(order, java.util.Comparator.comparingDouble(
+                i -> eye.distanceToSqr(Vec3.atCenterOf(hf.get(i.intValue())))));
+
         StringBuilder b = new StringBuilder();
-        if (!near.isEmpty()) {
-            java.util.List<String> ids = new java.util.ArrayList<>(near.keySet());
-            ids.sort(java.util.Comparator.comparingDouble(nsq::get));
-            for (String id : ids) b.append(blockLine(p, eye, id, near.get(id), count.get(id)[0])).append("\n");
+        int total = hits.size();
+        if (total == 0) {
+            b.append("scan ").append(needle).append(": no blocks within ").append(r).append("\n");
+        } else {
+            int pages = (total + SCAN_PAGE - 1) / SCAN_PAGE;
+            if (page > pages) page = pages;
+            int from = (page - 1) * SCAN_PAGE;
+            int to = Math.min(total, from + SCAN_PAGE);
+            b.append(String.format(java.util.Locale.ROOT,
+                    "scan %s: %d match%s within %d (volume, NOT line-of-sight) -- showing %d-%d, page %d of %d\n",
+                    needle, total, total == 1 ? "" : "es", r, from + 1, to, page, pages));
+            for (int i = from; i < to; i++) {
+                int k = order[i].intValue();
+                BlockPos bp = hits.get(k);
+                BlockState st = mc.level.getBlockState(bp);
+                String face = facingOf(st);
+                double ddx = bp.getX() + 0.5 - p.getX();
+                double ddy = bp.getY() + 0.5 - eye.y;
+                double ddz = bp.getZ() + 0.5 - p.getZ();
+                String sign = signTextAt(mc, bp);   // labels come back WITH the match, for free
+                b.append(String.format(java.util.Locale.ROOT, "  %s (%d,%d,%d)%s dist=%.1f %s%s\n",
+                        ids.get(k), bp.getX(), bp.getY(), bp.getZ(),
+                        face == null ? "" : " facing=" + face,
+                        Math.sqrt(ddx * ddx + ddy * ddy + ddz * ddz), bearing(ddx, ddy, ddz),
+                        sign == null ? "" : "  \"" + sign + "\""));
+            }
+            if (pages > 1) {
+                b.append("  (next: scan ").append(needle).append(' ')
+                 .append(page < pages ? page + 1 : pages).append(")\n");
+            }
         }
-        double rr = (double) r * r;
+
+        double erad = (double) r * r;
+        java.util.List<String> ents = new java.util.ArrayList<>();
         for (Entity e : mc.level.entitiesForRendering()) {
             if (e == p) continue;
             boolean item = e instanceof ItemEntity;
@@ -526,18 +644,32 @@ public final class ScreenOps {
             if (!id.contains(needle)) continue;
             Vec3 c = e.getBoundingBox().getCenter();
             double sq = c.distanceToSqr(eye);
-            if (sq > rr) continue;
-            BlockHitResult h = mc.level.clip(new ClipContext(eye, c, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, p));
-            if (h != null && h.getType() != HitResult.Type.MISS && h.getLocation().distanceToSqr(eye) < sq - 0.5) continue;
-            double dx = c.x - eye.x, dy = c.y - eye.y, dz = c.z - eye.z;
-            int dist = (int) Math.round(Math.sqrt(dx * dx + dy * dy + dz * dz));
-            b.append(String.format("%s (%.0f,%.0f,%.0f) %s %d\n", id, c.x, c.y, c.z, bearing(dx, dy, dz), dist));
+            if (sq > erad) continue;
+            ents.add(String.format(java.util.Locale.ROOT, "  %s%s (%.0f,%.0f,%.0f) id=%d dist=%.1f",
+                    item ? "item:" : "", id, c.x, c.y, c.z, e.getId(), Math.sqrt(sq)));
         }
-        if (b.length() == 0) return "scan " + needle + ": none visible within " + r;
-        return "scan " + needle + ":\n" + trim(b);
+        if (!ents.isEmpty()) {
+            b.append("entities: ").append(ents.size()).append("\n");
+            for (String line : ents) b.append(line).append("\n");
+        }
+        return trim(b);
     }
 
-    @SuppressWarnings("deprecation") // Forge 1.20.1-only: BuiltInRegistries access deprecated there (ForgeRegistries); vanilla registry is correct + cross-loader
+    /**
+     * A block's {@code facing} property value, or null when it has none. Read GENERICALLY off the
+     * state's property set rather than by naming a block class, so it works for furnaces, chests,
+     * dispensers, stairs, beds and anything else on every supported MC version.
+     */
+    private static String facingOf(BlockState st) {
+        for (net.minecraft.world.level.block.state.properties.Property<?> pr : st.getProperties()) {
+            if (pr.getName().equals("facing")) {
+                Comparable<?> v = st.getValue(pr);
+                if (v != null) return v.toString().toLowerCase(java.util.Locale.ROOT);
+            }
+        }
+        return null;
+    }
+
     private static String entPath(Entity e) {
         return BuiltInRegistries.ENTITY_TYPE.getKey(e.getType()).getPath();
     }
@@ -548,7 +680,7 @@ public final class ScreenOps {
     }
 
     @SuppressWarnings("deprecation") // Forge 1.20.1-only: BuiltInRegistries access deprecated there (ForgeRegistries); vanilla registry is correct + cross-loader
-    private static String blockShort(BlockState st) {
+    static String blockShort(BlockState st) {
         return BuiltInRegistries.BLOCK.getKey(st.getBlock()).getPath();
     }
 
@@ -616,8 +748,12 @@ public final class ScreenOps {
     }
     private static String pause(Minecraft mc) {
         if (mc.level == null) return "pause: not in world";
+        // Tell the PauseScreen reflex to stand down: this pause is DELIBERATE. Without this the
+        // reflex closes it on the very next tick and the graceful-exit path cannot be driven.
+        ScreenWatch.allowPause(60_000L);
         M1Compat.setScreen(mc, new net.minecraft.client.gui.screens.PauseScreen(true));
-        return "OK pause menu opened (describe, then click 'Save and Quit to Title' to save+exit)";
+        return "OK pause menu opened, and the auto-dismiss reflex is suppressed for 60s"
+                + " (describe, then click 'Save and Quit to Title' / 'Disconnect')";
     }
 
     private static String face(Minecraft mc, String rest) {
@@ -785,6 +921,175 @@ public final class ScreenOps {
         return "OK mining " + id + " at (" + target.getX() + "," + target.getY() + "," + target.getZ() + "). poll 'inv'/'look'.";
     }
 
+    /**
+     * Rows of the screen's selection list, as text. THE GUI GAP (Master, 2026-08-01): a selection
+     * list's rows are NOT widgets -- they are list Entries -- so `describe` never showed them and
+     * `worlds` only understood WorldListEntry. That made the multiplayer server list, and every
+     * other list screen, completely invisible: the saved-server rows simply did not exist as far as
+     * the controller could tell. Enumerate them GENERICALLY via Entry.getNarration(), which every
+     * ObjectSelectionList.Entry implements, so this works for worlds, servers, LAN games, packs,
+     * and anything else without naming a single version-specific entry class.
+     */
+    private static List<String> listEntryLines(Screen s) {
+        List<String> out = new ArrayList<>();
+        ObjectSelectionList<?> list = findList(s);
+        if (list == null) return out;
+        for (Object e : list.children()) {
+            String n = "";
+            if (e instanceof ObjectSelectionList.Entry<?> oe) {
+                Component c = oe.getNarration();
+                if (c != null) n = c.getString();
+            }
+            if (n.isEmpty()) n = e.getClass().getSimpleName();
+            out.add(n.replace('\n', ' ').trim());
+        }
+        return out;
+    }
+
+    /** Select list row {@code idx}. Raw/unchecked: the list's element type is a self-referential
+     *  generic, and we deliberately do not name any concrete entry class (version drift). */
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    private static boolean selectEntry(ObjectSelectionList<?> list, int idx) {
+        List<?> kids = list.children();
+        if (idx < 0 || idx >= kids.size()) return false;
+        // AbstractSelectionList.Entry is PROTECTED, so it can never be named here; ObjectSelectionList
+        // .Entry is public and is a subtype of the erased parameter, which is what makes this compile
+        // on every version without naming an inaccessible type.
+        ((ObjectSelectionList) list).setSelected((ObjectSelectionList.Entry) kids.get(idx));
+        return true;
+    }
+
+    /**
+     * Sign text, read from the BLOCK ENTITY rather than from a ray.
+     *
+     * <p>Live bug (Master, 2026-08-01): a storage room's 12 wall signs -- which label every chest
+     * column -- were completely unreadable. The server's {@code lookingat} ray uses a COLLIDER
+     * context and wall signs have no collision box, so the ray goes straight through them and
+     * reports the chest behind. The controller could see the signs existed (they show in a block
+     * scan) but could never read a single one, and had to open chests one by one instead.
+     *
+     * <p>Reading the block entity sidesteps rays entirely. Both faces are returned when the back is
+     * also written; blank lines are dropped.
+     */
+    private static String signTextAt(Minecraft mc, BlockPos bp) {
+        if (mc.level == null) return null;
+        net.minecraft.world.level.block.entity.BlockEntity be = mc.level.getBlockEntity(bp);
+        if (!(be instanceof net.minecraft.world.level.block.entity.SignBlockEntity sign)) return null;
+        // Both the accessor and the return shape drift at 26.3 -- SignCompat owns that (Cog facade).
+        String front = SignCompat.face(sign, true);
+        String back = SignCompat.face(sign, false);
+        if (front.isEmpty() && back.isEmpty()) return "(blank)";
+        if (back.isEmpty()) return front;
+        if (front.isEmpty()) return back;
+        return front + " // " + back;
+    }
+
+    /** {@code read [x y z]} -- sign text at a coordinate, or at the crosshair block. */
+    private static String readCmd(Minecraft mc, String rest) {
+        LocalPlayer p = mc.player;
+        if (p == null || mc.level == null) return "read: not in world";
+        String[] t = rest.trim().split("\\s+");
+        BlockPos bp = null;
+        if (t.length >= 3 && !t[0].isEmpty()) {
+            Integer x = parseInt(t[0]);
+            Integer y = parseInt(t[1]);
+            Integer z = parseInt(t[2]);
+            if (x == null || y == null || z == null) return "ERR usage: read [x y z]";
+            bp = new BlockPos(x.intValue(), y.intValue(), z.intValue());
+        } else {
+            HitResult hr = mc.hitResult;
+            if (hr instanceof BlockHitResult bhr) bp = bhr.getBlockPos();
+            else return "read: not looking at a block (aim at it, or 'read x y z')";
+        }
+        String txt = signTextAt(mc, bp);
+        if (txt == null) {
+            return "read: no sign at (" + bp.getX() + "," + bp.getY() + "," + bp.getZ() + ") -- it is "
+                    + blockShort(mc.level.getBlockState(bp));
+        }
+        return "sign (" + bp.getX() + "," + bp.getY() + "," + bp.getZ() + "): " + txt;
+    }
+
+    /** Server interaction reach; past this the packet is rejected however well we aim. */
+    private static final double USE_REACH = 4.4;
+
+    /**
+     * Interact with the block at an exact COORDINATE -- no crosshair, no aiming.
+     *
+     * <p>Why this exists (Master, 2026-08-01): every container chore was really an AIMING chore.
+     * Opening a chest meant standing in exactly the right spot and landing a ray on it, and all
+     * three parts of that were unreliable in practice -- {@code face x y z} threw 50-60 degree
+     * pitch errors at close range and hit the neighbouring chest; {@code moveto} silently no-ops
+     * any move under its 1-block stop radius and still reports "arrived"; and a chest block several
+     * deep is only reachable from certain sides at all. Searching a 49-chest room cost ~150
+     * commands and still did not find the target.
+     *
+     * <p>A synthesized {@link BlockHitResult} removes the ray from the equation entirely: `scan`
+     * already hands back exact coordinates, so the caller can act on them directly. Proximity is
+     * still real -- the SERVER enforces reach -- so an out-of-range target is reported honestly
+     * with its distance rather than silently doing nothing.
+     */
+    static String useAt(Minecraft mc, BlockPos bp, String label) {
+        LocalPlayer p = mc.player;
+        if (p == null || mc.level == null) return label + ": not in world";
+        Vec3 eye = p.getEyePosition();
+        Vec3 center = Vec3.atCenterOf(bp);
+        double dist = eye.distanceTo(center);
+        if (dist > USE_REACH) {
+            return String.format(java.util.Locale.ROOT,
+                    "%s: (%d,%d,%d) is %.1f blocks away, past the %.1f server reach -- walk closer"
+                    + " first (goto/moveto), then re-issue",
+                    label, bp.getX(), bp.getY(), bp.getZ(), dist, USE_REACH);
+        }
+        if (mc.level.getBlockState(bp).isAir()) {
+            return label + ": nothing at (" + bp.getX() + "," + bp.getY() + "," + bp.getZ() + ")";
+        }
+        // Look at it as a real player would -- some servers sanity-check the look vector -- then
+        // hit the face that points back at us, so the click lands on a reachable side.
+        MineControl.faceBlock(p, bp);
+        Direction face = nearestFace(eye.x - center.x, eye.y - center.y, eye.z - center.z);
+        BlockHitResult hit = new BlockHitResult(center, face, bp, false);
+        mc.gameMode.useItemOn(p, InteractionHand.MAIN_HAND, hit);
+        p.swing(InteractionHand.MAIN_HAND);
+        return "OK " + label + " " + blockShort(mc.level.getBlockState(bp))
+                + " at (" + bp.getX() + "," + bp.getY() + "," + bp.getZ() + ")";
+    }
+
+    /**
+     * Dominant-axis face for a direction vector. Hand-rolled on purpose: {@code Direction.getNearest}
+     * changed signature across the supported range (double/float/Vec3 overloads come and go), and
+     * the enum constants are the only part that is stable everywhere.
+     */
+    private static Direction nearestFace(double dx, double dy, double dz) {
+        double ax = Math.abs(dx);
+        double ay = Math.abs(dy);
+        double az = Math.abs(dz);
+        if (ax >= ay && ax >= az) return dx > 0 ? Direction.EAST : Direction.WEST;
+        if (ay >= az) return dy > 0 ? Direction.UP : Direction.DOWN;
+        return dz > 0 ? Direction.SOUTH : Direction.NORTH;
+    }
+
+    /** {@code take output [radius]} -- bulk-collect furnace outputs (delegates to the agent queue). */
+    private static String takeCmd(String rest) {
+        String[] t = rest.trim().split("\\s+");
+        if (t.length == 0 || t[0].isEmpty() || !t[0].equalsIgnoreCase("output")) {
+            return "usage: take output [radius]   (empties every furnace in range, output slot only)";
+        }
+        return AgentRuntime.command("takeoutput" + (t.length > 1 ? " " + t[1] : ""));
+    }
+
+    /** {@code open <x> <y> <z>} -- open/use a container by coordinate. */
+    private static String openAtCmd(Minecraft mc, String rest) {
+        String[] t = rest.trim().split("\\s+");
+        if (t.length < 3) return "ERR usage: open <x> <y> <z>   (coords come straight from 'scan')";
+        Integer x = parseInt(t[0]);
+        Integer y = parseInt(t[1]);
+        Integer z = parseInt(t[2]);
+        if (x == null || y == null || z == null) return "ERR usage: open <x> <y> <z>";
+        String r = useAt(mc, new BlockPos(x.intValue(), y.intValue(), z.intValue()), "open");
+        if (!r.startsWith("OK")) return r;
+        return r + " -- run 'slots' to see its contents";
+    }
+
     private static ObjectSelectionList<?> findList(Screen s) {
         for (GuiEventListener c : s.children()) {
             if (c instanceof ObjectSelectionList<?> l) return l;
@@ -792,21 +1097,40 @@ public final class ScreenOps {
         return null;
     }
 
+    /** {@code worlds} / {@code servers} / {@code entries} -- list the rows of WHATEVER selection
+     *  list is on screen (saved worlds, saved servers, LAN games, ...). Generic on purpose. */
     private static String worlds(Minecraft mc) {
         Screen s = M1Compat.screen(mc);
-        if (s == null) return "worlds: no screen open";
+        if (s == null) return "list: no screen open";
         ObjectSelectionList<?> list = findList(s);
-        if (list == null) return "worlds: no selection list on " + s.getClass().getSimpleName();
-        StringBuilder b = new StringBuilder("world entries:\n");
-        int i = 0;
-        for (Object e : list.children()) {
-            if (e instanceof WorldSelectionList.WorldListEntry wle) {
-                b.append("  [").append(i).append("] ").append(wle.getNarration().getString()).append("\n");
-                i++;
-            }
+        if (list == null) return "list: no selection list on " + s.getClass().getSimpleName();
+        List<String> rows = listEntryLines(s);
+        if (rows.isEmpty()) return "list: the selection list on " + s.getClass().getSimpleName()
+                + " is empty (0 rows)";
+        StringBuilder b = new StringBuilder("list rows: " + rows.size()
+                + "  (use 'select <n>', then click the button that becomes active)\n");
+        for (int i = 0; i < rows.size(); i++) {
+            b.append("  <").append(i).append("> ").append(rows.get(i)).append("\n");
         }
-        if (i == 0) b.append("  (no worlds)\n");
         return trim(b);
+    }
+
+    /** {@code select <n>} -- select row n of the on-screen selection list. Buttons that depend on a
+     *  selection (Join Server, Play Selected World, Edit, Delete) go ACTIVE once a row is selected;
+     *  the reply re-describes so the caller sees which. */
+    private static String selectCmd(Minecraft mc, String rest) {
+        Screen s = M1Compat.screen(mc);
+        if (s == null) return "select: no screen open";
+        ObjectSelectionList<?> list = findList(s);
+        if (list == null) return "select: no selection list on " + s.getClass().getSimpleName();
+        Integer idx = parseInt(firstTok(rest));
+        if (idx == null) return "ERR usage: select <row>  (see 'describe' / 'worlds' for rows)";
+        List<String> rows = listEntryLines(s);
+        if (!selectEntry(list, idx.intValue())) {
+            return "select: no row " + idx + " (have 0.." + (rows.size() - 1) + ")";
+        }
+        return "OK selected <" + idx + "> " + (idx < rows.size() ? rows.get(idx) : "")
+                + "\n--- now ---\n" + describe(mc);
     }
 
     private static String joinWorldCmd(Minecraft mc, String rest) {

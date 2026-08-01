@@ -42,6 +42,8 @@ final class ScreenWatch {
     private static boolean signHandled;
     private static boolean deathHandled;
     private static boolean pauseHandled;
+    /** Wall-clock deadline until which a deliberate pause is left alone. */
+    private static volatile long pauseGraceUntil;
     private static boolean pauseOptionChecked;
     private static BlockPos lastDeathPos;
     private static String lastDeathDim;
@@ -62,6 +64,15 @@ final class ScreenWatch {
             return;
         }
         if (s instanceof PauseScreen) {
+            // A pause the CONTROLLER asked for is not the pause this reflex exists to kill.
+            // Live bug (Master, 2026-08-01): the reflex ate the menu that `pause` had just opened,
+            // one tick later, every time -- so the documented graceful-exit path (pause -> click
+            // "Save and Quit to Title" / "Disconnect") could never be driven at all, because the
+            // window is unfocused during an unattended session BY DEFINITION. Honour a short
+            // explicit grace window instead of guessing from focus state.
+            if (pauseGraceUntil > System.currentTimeMillis()) {
+                return;   // deliberate: leave it up so the caller can describe + click it
+            }
             if (!pauseHandled) {
                 pauseHandled = true;
                 report("screen: PAUSE menu opened (window lost focus) -- auto-dismissed."
@@ -120,6 +131,15 @@ final class ScreenWatch {
             // never let an options-save failure break the tick loop; the PauseScreen reflex above
             // still catches it even if this cannot persist the setting
         }
+    }
+
+    /**
+     * Suppress the PauseScreen reflex for {@code ms} milliseconds because the CONTROLLER is opening
+     * the pause menu on purpose (graceful quit / options). Time-boxed so a crash or an abandoned
+     * plan can never leave the reflex permanently disabled.
+     */
+    static void allowPause(long ms) {
+        pauseGraceUntil = System.currentTimeMillis() + ms;
     }
 
     /** Last recorded death position (for the future corpse-run feature). Null if none this session. */
