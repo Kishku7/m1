@@ -7,23 +7,42 @@ import com.kishku7.m1.agent.ReportClass;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.DeathScreen;
+import net.minecraft.client.gui.screens.PauseScreen;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.AbstractSignEditScreen;
 import net.minecraft.core.BlockPos;
 
 /**
- * Screen reflexes (702d grave-site fixes, Master 2026-07-02):
+ * Screen reflexes (702d grave-site fixes, Master 2026-07-02; PAUSE reflex added 2026-08-01 after
+ * the "260801 bed fumble" -- the operator had to physically click into the window before `sleep`'s
+ * FACE loop could land the crosshair on the bed):
  *
  *  - SIGN-EDIT dialogs are AUTO-DISMISSED. Right-clicking a grave-site sign opens the editor,
  *    which silently traps every later command ("Hit done, you are in a dialog"). A bot never
  *    needs to edit a sign; the dismissal is reported so the AI knows what it right-clicked.
  *  - DEATH SCREEN: auto-click Respawn ("rez self"), record the death position + dimension (the
  *    seed of the future corpse-run feature) and report both.
+ *  - PAUSE SCREEN is AUTO-DISMISSED. Vanilla's "Pause on Lost Focus" opens the ESC pause menu the
+ *    instant the client window loses OS focus -- which an unattended/automated M1 session does
+ *    constantly. While that screen is open, {@code Minecraft.runTick} skips {@code
+ *    GameRenderer.pick()} entirely, so {@code mc.hitResult} goes stale: any aim primitive
+ *    (LookAction, SleepAction's FACE step, {@code ScreenOps.face}) can set the player's yaw/pitch
+ *    all it wants and the crosshair-target never updates to match, so every "am I looking at the
+ *    bed yet" check keeps reading the LAST real pick from before the pause -- silent, retries
+ *    exhaust, "not looking at a block". A human clicking back into the window (or the operator
+ *    reaching over) closes the pause screen and resumes picking, which is why it "just worked"
+ *    manually. Root-caused via {@code hitResult}/{@code GameRenderer.pick} skip-on-screen
+ *    behavior, not assumed. Also disable the underlying option (see {@link
+ *    #disablePauseOnLostFocus}) so the screen stops trying to open in the first place; this reflex
+ *    is the backstop for any other path that can still summon it (e.g. the operator manually
+ *    hitting Escape mid-session).
  */
 final class ScreenWatch {
 
     private static boolean signHandled;
     private static boolean deathHandled;
+    private static boolean pauseHandled;
+    private static boolean pauseOptionChecked;
     private static BlockPos lastDeathPos;
     private static String lastDeathDim;
 
@@ -31,12 +50,27 @@ final class ScreenWatch {
 
     /** Ticked from AgentRuntime.tick (every client tick while in a world). */
     static void tick(Minecraft mc) {
+        if (!pauseOptionChecked) {
+            pauseOptionChecked = true;
+            disablePauseOnLostFocus(mc);
+        }
         Screen s = M1Compat.screen(mc);
         if (s == null) {
             signHandled = false;
             deathHandled = false;
+            pauseHandled = false;
             return;
         }
+        if (s instanceof PauseScreen) {
+            if (!pauseHandled) {
+                pauseHandled = true;
+                report("screen: PAUSE menu opened (window lost focus) -- auto-dismissed."
+                        + " Aim/pick would otherwise stall while this is up");
+            }
+            M1Compat.setScreen(mc, null);
+            return;
+        }
+        pauseHandled = false;
         if (s instanceof AbstractSignEditScreen) {
             if (!signHandled) {
                 signHandled = true;
@@ -65,6 +99,27 @@ final class ScreenWatch {
             return;
         }
         deathHandled = false;
+    }
+
+    /**
+     * Turn OFF "Pause on Lost Focus" once per session (client option, not per-world) so the pause
+     * screen stops being summoned by the OS focus loss an automated/unattended session causes
+     * continuously. Checked once per {@code tick} call series via {@code pauseOptionChecked} --
+     * cheap enough to not need a dedicated connect hook, and self-heals if the option ever drifts
+     * back on (e.g. a settings-menu visit resets it) since a fresh check runs every reconnect.
+     */
+    private static void disablePauseOnLostFocus(Minecraft mc) {
+        try {
+            if (mc.options != null && mc.options.pauseOnLostFocus) {
+                mc.options.pauseOnLostFocus = false;
+                mc.options.save();
+                report("screen: disabled \"Pause on Lost Focus\" (M1 runs unattended; the option"
+                        + " was stalling aim/pick whenever the window lost OS focus)");
+            }
+        } catch (Throwable ignored) {
+            // never let an options-save failure break the tick loop; the PauseScreen reflex above
+            // still catches it even if this cannot persist the setting
+        }
     }
 
     /** Last recorded death position (for the future corpse-run feature). Null if none this session. */

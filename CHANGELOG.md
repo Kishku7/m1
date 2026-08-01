@@ -4,6 +4,31 @@ All notable changes to M1 are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/); this project uses
 `<mod version>+<minecraft family>-<loader>` jar naming.
 
+## [0.13.8] - 2026-08-01
+
+### Fixed
+- **Vanilla's "Pause on Lost Focus" silently broke every aim-then-interact action (`sleep`,
+  `look`, `screen face`) on an unattended/automated M1 session.** M1 runs headless, driven by an
+  AI over a text socket, so the client window constantly loses OS focus -- and vanilla responds
+  by auto-opening the ESC pause menu (`PauseScreen`). While any screen is open, Minecraft's client
+  tick loop skips `GameRenderer.pick()` entirely, so `mc.hitResult` (what the crosshair is
+  pointing at) goes stale and never updates no matter how many times code sets the player's
+  yaw/pitch -- so `SleepAction`'s FACE step (aim at the bed, then use it), `LookAction`, and
+  `ScreenOps.face` would all silently stall until a human physically clicked back into the game
+  window to close the pause screen and resume picking. Root-caused from a real session transcript
+  (2026-08-01) where the bed-sleep macro would not land until manually unpaused.
+  - `ScreenWatch` gained a third reflex: any `PauseScreen` that appears is now auto-dismissed
+    every tick, same pattern as the existing sign-edit and death-screen reflexes.
+  - Also disables the underlying `Options.pauseOnLostFocus` client option (and persists it via
+    `Options.save()`) once per tick series, so the pause screen stops being summoned by focus loss
+    in the first place; the auto-dismiss reflex remains as a backstop for any other path that can
+    still open it (e.g. a manual Escape press).
+
+### Verified
+- Full 34-cell / 37-jar matrix rebuilt clean, `-Xlint:all` zero warnings.
+- `Options.pauseOnLostFocus` / `Options.save()` confirmed present under those exact mojmap names
+  across the whole supported range via a Forge/1.20.1 (SRG-runtime) + Fabric/26 (newest) sanity
+  build before committing to the full rebuild.
 ## [0.13.7] - 2026-07-31
 
 ### Added
