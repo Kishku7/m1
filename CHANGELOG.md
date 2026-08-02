@@ -4,6 +4,23 @@ All notable changes to M1 are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/); this project uses
 `<mod version>+<minecraft family>-<loader>` jar naming.
 
+## [0.15.1] - 2026-08-01
+
+### Fixed
+- **`face <x y z>` aimed at a block's CORNER, not its centre.** A block spans `[x, x+1)`, so the
+  raw integer is its minimum corner -- up to 0.87 blocks off in 3D. At 10+ blocks that is a
+  rounding error and it went unnoticed for months; at 1-2 blocks, which is exactly where container
+  work happens, it is TENS OF DEGREES. Live symptom (2026-08-01): aiming at a chest one block away
+  produced pitch 48-60 and repeatedly opened the chest below or behind the intended one, which is a
+  large part of why searching a 49-chest room cost ~150 commands. Integer args are now treated as a
+  BLOCK reference and aim at the centre (that is what `scan` hands back); anything with a decimal
+  point is still honoured as an exact point, and the reply says `[block centre]` when it snapped.
+- **`attack` re-pathed every tick during a close approach.** A target 3-4 blocks away produces a
+  path that completes in ONE tick, so the "no active move" test was true again immediately and the
+  loop re-issued a path every tick -- 7-10 identical `nav: segment 1 / arrived (1t)` lines per
+  engagement against zombies. It always resolved, but it is pure noise in the report stream and
+  pure waste in the pather. Approach re-paths are now on an 8-tick cooldown.
+
 ## [0.15.0] - 2026-08-01
 
 ### Added

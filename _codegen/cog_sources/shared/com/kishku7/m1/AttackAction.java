@@ -64,6 +64,14 @@ public final class AttackAction implements MinecraftAction {
     private static final int APPROACH_STALL_TICKS = 100; // 5s of closing NO distance = unreachable
     private static final int MAX_APPROACH_REPATHS = 12;  // and a hard cap on re-path churn
     private static final double PROGRESS_EPSILON = 0.5;
+    /**
+     * Minimum ticks between approach re-paths. A target 3-4 blocks away produces a path that
+     * completes in ONE tick, so {@code !MoveControl.isActive()} is true again immediately and the
+     * loop re-paths every single tick -- 7-10 identical "nav: segment 1 / arrived (1t)" lines per
+     * engagement, seen live against zombies on 2026-08-01. It resolved (the mob died) but it is
+     * pure noise in the report stream and pure waste in the pather.
+     */
+    private static final int REPATH_COOLDOWN_TICKS = 8;
 
     private enum Mode { CRIT, NORMAL, RANGED }
 
@@ -91,6 +99,7 @@ public final class AttackAction implements MinecraftAction {
     private double bestDist = Double.MAX_VALUE;
     private int lastProgressTick;
     private int approachRepaths;
+    private int lastRepathTick = Integer.MIN_VALUE;
 
     public AttackAction(String spec, boolean crit) {
         this(spec, crit ? "crit" : "normal");
@@ -200,10 +209,12 @@ public final class AttackAction implements MinecraftAction {
                     shieldUp = true;
                 }
             }
-            boolean needRepath = !MoveControl.isActive()
+            boolean needRepath = (!MoveControl.isActive()
                     || Math.hypot(MoveControl.targetX() - target.getX(),
-                            MoveControl.targetZ() - target.getZ()) > 2.0;
+                            MoveControl.targetZ() - target.getZ()) > 2.0)
+                    && (ticksRun - lastRepathTick) >= REPATH_COOLDOWN_TICKS;
             if (needRepath) {
+                lastRepathTick = ticksRun;
                 if (++approachRepaths > MAX_APPROACH_REPATHS) {
                     if (canBow(p) && p.hasLineOfSight(target)) {
                         noteBowFallback(ctx, p, dist);
@@ -398,10 +409,12 @@ public final class AttackAction implements MinecraftAction {
                         + ((ticksRun - lastProgressTick) / 20) + "s");
             }
             MoveControl.setSprint(true);         // sprint approach -> knockback hit
-            boolean needRepath = !MoveControl.isActive()
+            boolean needRepath = (!MoveControl.isActive()
                     || Math.hypot(MoveControl.targetX() - target.getX(),
-                            MoveControl.targetZ() - target.getZ()) > 2.0;
+                            MoveControl.targetZ() - target.getZ()) > 2.0)
+                    && (ticksRun - lastRepathTick) >= REPATH_COOLDOWN_TICKS;
             if (needRepath) {
+                lastRepathTick = ticksRun;
                 if (++approachRepaths > MAX_APPROACH_REPATHS) {
                     return giveUp(ctx, mc, p, dist, approachRepaths + " re-paths with no approach");
                 }

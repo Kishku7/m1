@@ -768,18 +768,44 @@ public final class ScreenOps {
         try {
             if (t.length >= 3) {
                 double x = Double.parseDouble(t[0]), y = Double.parseDouble(t[1]), z = Double.parseDouble(t[2]);
+                // BLOCK COORDS AIM AT THE BLOCK'S CENTRE, NOT ITS CORNER (fixed 2026-08-01).
+                // A block spans [x, x+1), so the raw integer is its minimum CORNER -- up to 0.87
+                // blocks off in 3D. At 10+ blocks that is a rounding error and nobody noticed; at
+                // 1-2 blocks, which is exactly where container work happens, it is TENS OF DEGREES
+                // and the ray lands on the neighbouring block. Live symptom: aiming at a chest one
+                // block away produced pitch 48-60 and opened the chest below/behind it, repeatedly.
+                // Integers => a block reference (that is what `scan` hands back); anything with a
+                // decimal point is honoured as an exact point.
+                boolean blockRef = isIntToken(t[0]) && isIntToken(t[1]) && isIntToken(t[2]);
+                if (blockRef) {
+                    x += 0.5;
+                    y += 0.5;
+                    z += 0.5;
+                }
                 Vec3 eye = p.getEyePosition();
                 double dx = x - eye.x, dy = y - eye.y, dz = z - eye.z;
                 double h = Math.sqrt(dx * dx + dz * dz);
                 float yw = (float) Math.toDegrees(Math.atan2(-dx, dz));
                 float pt = (float) (-Math.toDegrees(Math.atan2(dy, h)));
                 p.setYRot(yw); p.setXRot(pt);
-                return String.format("OK looking at (%.1f,%.1f,%.1f) yaw=%.1f pitch=%.1f", x, y, z, yw, pt);
+                return String.format("OK looking at (%.1f,%.1f,%.1f)%s yaw=%.1f pitch=%.1f",
+                        x, y, z, blockRef ? " [block centre]" : "", yw, pt);
             }
             float yw = Float.parseFloat(t[0]); p.setYRot(yw);
             if (t.length >= 2) p.setXRot(Float.parseFloat(t[1]));
             return "OK yaw=" + yw;
         } catch (Exception e) { return "ERR usage: face <dir|yaw [pitch]|x y z>"; }
+    }
+
+    /** True when a token is a plain integer (no decimal point) -- i.e. a BLOCK reference. */
+    private static boolean isIntToken(String t) {
+        if (t == null || t.isEmpty()) return false;
+        int i = (t.charAt(0) == '-' || t.charAt(0) == '+') ? 1 : 0;
+        if (i >= t.length()) return false;
+        for (; i < t.length(); i++) {
+            if (!Character.isDigit(t.charAt(i))) return false;
+        }
+        return true;
     }
 
     private static String move(Minecraft mc, String rest) {
