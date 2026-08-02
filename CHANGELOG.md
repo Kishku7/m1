@@ -4,6 +4,46 @@ All notable changes to M1 are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/); this project uses
 `<mod version>+<minecraft family>-<loader>` jar naming.
 
+## [0.16.0] - 2026-08-01
+
+### Added
+- **`sign <x> <y> <z> <text>` -- M1 can now WRITE signs.** It could READ them since 0.15.0, but
+  writing was impossible: `ScreenWatch` auto-dismisses the sign-edit dialog (the grave-site reflex),
+  so a freshly placed sign was killed the tick its editor opened and stayed blank forever. Asked to
+  label a 20-double storage room, the whole job was blocked on this.
+  - Driving the GUI text boxes would be fragile, so the edit is sent as the PACKET it actually is.
+    The sign is opened first, because that is what makes the server accept us as its designated
+    editor (`playerWhoMayEdit`); without it the server silently drops the update.
+  - `ScreenWatch.allowSign(ms)` is a time-boxed grace window -- same shape as the 0.14.3 pause fix --
+    so a deliberate edit survives while an accidental right-click is still auto-cleared. Time-boxed
+    means a failed write cannot leave the reflex disabled.
+  - Lines split on `|`, each clamped to 15 chars so overlong text truncates instead of being
+    silently rejected by the server.
+
+### Notes
+- The packet drifts at the SAME 26.3 boundary as the sign READER, so it reuses
+  `compat.sign_text_slot`: through 26.2 it is
+  `ServerboundSignUpdatePacket(BlockPos, boolean isFrontText, String x4)`; from 26.3 it is a record
+  `(BlockPos pos, List<String> lines, SignTextSlot slot)`. Deobf-confirmed from MC-Java 1.20 /
+  1.21.11 / 26.2 / 26.3-snapshot-6 before writing any code.
+
+## [0.15.2] - 2026-08-01
+
+### Fixed
+- **`agent craft <item> <count>` ignored the count and could consume an entire material stock.**
+  Found by doing a real job: "make about 32 signs". `CraftAction` staged the grid with
+  `RecipeCompat.placeRecipe(..., true)` -- vanilla's `useMaxItems`, the recipe-book shift-click,
+  which fills the grid with as MANY sets as the available ingredients allow. The harvest then
+  crafted all of them in a single round, and `want` was only re-checked BETWEEN rounds, so it acted
+  as a FLOOR ("stop once you have at least N") rather than a limit. Live result: `agent craft
+  birch_sign 33` with 13 sticks staged produced **39 signs** and consumed every stick. Pointed at a
+  well-stocked chest, a single `craft x1` would have eaten the whole stock -- a data-loss-shaped bug,
+  not a cosmetic one.
+  Each round now stages exactly ONE set (`placeRecipe(..., false)`), so `count` actually binds and
+  overshoot is at most `recipe yield - 1`, which is inherent to the recipe (signs come out in 3s).
+  Cost is N rounds instead of 1; a round is a few ticks, which is the right trade for not
+  destroying someone's materials.
+
 ## [0.15.1] - 2026-08-01
 
 ### Fixed

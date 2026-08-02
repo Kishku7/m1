@@ -44,6 +44,8 @@ final class ScreenWatch {
     private static boolean pauseHandled;
     /** Wall-clock deadline until which a deliberate pause is left alone. */
     private static volatile long pauseGraceUntil;
+    /** Wall-clock deadline until which a DELIBERATE sign edit is left alone (see allowSign). */
+    private static volatile long signGraceUntil;
     private static boolean pauseOptionChecked;
     private static BlockPos lastDeathPos;
     private static String lastDeathDim;
@@ -83,6 +85,13 @@ final class ScreenWatch {
         }
         pauseHandled = false;
         if (s instanceof AbstractSignEditScreen) {
+            // A sign edit the CONTROLLER asked for is not the accidental right-click this reflex
+            // exists to clear. Without this grace window M1 could read signs but never WRITE one:
+            // the dialog was killed the tick it opened, the server dropped us as the designated
+            // editor, and every placed sign stayed blank (2026-08-01).
+            if (signGraceUntil > System.currentTimeMillis()) {
+                return;
+            }
             if (!signHandled) {
                 signHandled = true;
                 report("screen: a SIGN-EDIT dialog opened (that right-click hit a sign) --"
@@ -138,6 +147,14 @@ final class ScreenWatch {
      * the pause menu on purpose (graceful quit / options). Time-boxed so a crash or an abandoned
      * plan can never leave the reflex permanently disabled.
      */
+    /**
+     * Suppress the sign-edit reflex for {@code ms} while the controller deliberately writes a sign.
+     * Time-boxed so a failed write can never leave the reflex disabled.
+     */
+    static void allowSign(long ms) {
+        signGraceUntil = System.currentTimeMillis() + ms;
+    }
+
     static void allowPause(long ms) {
         pauseGraceUntil = System.currentTimeMillis() + ms;
     }

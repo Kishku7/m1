@@ -1,5 +1,6 @@
 package com.kishku7.m1;
 
+import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.level.block.entity.SignBlockEntity;
 
@@ -49,6 +50,43 @@ public final class SignCompat {
         //    cog.outl("List<Component> out = new ArrayList<>();")
         //    cog.outl("for (Component c : t.getMessages(false)) out.add(c);")
         //    cog.outl("return out;")
+        //]]]
+        //[[[end]]]
+    }
+
+    /**
+     * Send the sign-edit result to the server -- i.e. actually WRITE a sign.
+     *
+     * <p>M1 could read signs but never write one: `ScreenWatch` auto-dismisses the sign-edit dialog
+     * (the grave-site reflex), so a freshly placed sign just ended up blank. Driving the GUI text
+     * fields would be fragile; the packet IS the sign edit, so we send it directly.
+     *
+     * <p>The packet drifts at the SAME 26.3 boundary as the reader (`compat.sign_text_slot`):
+     * through 26.2 it is `(BlockPos, boolean isFrontText, String x4)`; from 26.3 it is a record
+     * `(BlockPos pos, List<String> lines, SignTextSlot slot)`. Deobf-confirmed from MC-Java.
+     *
+     * <p>The SERVER only accepts this while the player is the sign's designated editor, which
+     * vanilla sets when the sign is placed or its editor is opened -- so open/place the sign first,
+     * and keep ScreenWatch from closing the dialog underneath us.
+     */
+    public static void sendSignUpdate(Minecraft mc, net.minecraft.core.BlockPos pos,
+            boolean front, java.util.List<String> lines) {
+        if (mc.getConnection() == null) {
+            return;
+        }
+        while (lines.size() < 4) {
+            lines.add("");
+        }
+        //[[[cog
+        //import sys; sys.path.insert(0, codegen); import compat
+        //if compat.sign_text_slot(compat.V(mcver)):
+        //    cog.outl("mc.getConnection().send(new net.minecraft.network.protocol.game.ServerboundSignUpdatePacket(")
+        //    cog.outl("        pos, new java.util.ArrayList<>(lines.subList(0, 4)),")
+        //    cog.outl("        front ? net.minecraft.world.level.block.entity.SignTextSlot.FRONT")
+        //    cog.outl("              : net.minecraft.world.level.block.entity.SignTextSlot.BACK));")
+        //else:
+        //    cog.outl("mc.getConnection().send(new net.minecraft.network.protocol.game.ServerboundSignUpdatePacket(")
+        //    cog.outl("        pos, front, lines.get(0), lines.get(1), lines.get(2), lines.get(3)));")
         //]]]
         //[[[end]]]
     }

@@ -22,6 +22,9 @@ import java.util.Locale;
  * grid via {@link RecipeCompat#placeRecipe} (the authoritative recipe-book click), collects the
  * result with {@link CraftHarvest}, and repeats until {@code count} is reached.
  *
+ * <p>Each round stages exactly ONE set of ingredients, so {@code count} is a real limit
+ * rather than a floor -- see the note in state 1.
+ *
  * Grid: works in the vanilla recipe-book menus -- the 2x2 inventory grid or a crafting table
  * (3x3). A 3x3-only recipe fails in the 2x2 with a hint. (The Bank Vault grid is NOT a
  * RecipeBookMenu; the server ignores place-recipe packets for it -- vault = storage source.)
@@ -111,7 +114,18 @@ public final class CraftAction implements MinecraftAction {
                 return StepResult.RUNNING;
             }
             case 1: {
-                RecipeCompat.placeRecipe(mc, menu.containerId, entry, true);
+                // ONE SET PER ROUND -- never "place max" (Master, 2026-08-01).
+                // The boolean is vanilla's `useMaxItems` (the recipe-book shift-click): true stages
+                // as MANY sets as the ingredients allow, and the harvest then crafts the lot in a
+                // single round. `want` is only checked BETWEEN rounds, so it could not cap anything
+                // -- it was a floor, not a limit. Live: `agent craft birch_sign 33` with 13 sticks
+                // staged produced 39 signs and consumed every stick. Pointed at a full chest that
+                // same call would have eaten the whole stock.
+                // Staging one set per round makes `want` actually bind: overshoot is now at most
+                // (recipe yield - 1), which is inherent to the recipe (signs come out in 3s).
+                // Cost: N rounds instead of 1. A round is a few ticks, which is the right trade for
+                // not destroying someone's material stock.
+                RecipeCompat.placeRecipe(mc, menu.containerId, entry, false);
                 placedRounds++;
                 state = 2;
                 wait = 2;   // grid fill + server result need a tick or two

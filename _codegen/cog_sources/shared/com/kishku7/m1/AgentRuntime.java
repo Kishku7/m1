@@ -534,6 +534,14 @@ public final class AgentRuntime {
         return "queued shield (hold " + ticks + "t)";
     }
 
+    /** Queue a sign write (see {@link SignWriteAction} for why this cannot be done inline). */
+    public static String queueSignWrite(net.minecraft.core.BlockPos pos, java.util.List<String> lines) {
+        QUEUE.injectInterrupt(new SignWriteAction(pos, lines));
+        return "queued sign write at (" + pos.getX() + "," + pos.getY() + "," + pos.getZ()
+                + ") = \"" + String.join(" / ", lines).trim()
+                + "\" -- result arrives as an [agent] line; verify with 'read'";
+    }
+
     /** One-line engine status. */
     public static String status() {
         return "agent: tick=" + LOOP.currentTick()

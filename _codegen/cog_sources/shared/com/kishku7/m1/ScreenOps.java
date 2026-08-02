@@ -75,6 +75,9 @@ public final class ScreenOps {
         "  mine area <x1 y1 z1> <x2 y2 z2> [nocollect]   clear a whole BOX as one job: top-down,\n" +
         "                       air gaps skipped free, repositions itself, [agent] progress lines,\n" +
         "                       then walks the drops in (nocollect to skip that).\n" +
+        "  sign <x> <y> <z> <text>   WRITE a sign (split lines with | ). The sign must already be\n" +
+        "                       placed. Queued as an action -- the open and the write must land in\n" +
+        "                       different ticks. Verify with 'read x y z'.\n" +
         "  read [x y z]         READ A SIGN, by coord or crosshair. Reads the block entity, not a ray,\n" +
         "                       so it works on wall signs (a collider ray passes straight through them).\n" +
         "                       'scan sign' also returns each sign's text inline, which is usually faster.\n" +
@@ -149,6 +152,7 @@ public final class ScreenOps {
             case "open":      return openAtCmd(mc, rest);
             case "take":      return takeCmd(rest);
             case "read":      return readCmd(mc, rest);
+            case "sign":      return signCmd(mc, rest);
             case "worlds":
             case "servers":
             case "entries":   return worlds(mc);
@@ -1008,6 +1012,43 @@ public final class ScreenOps {
         if (back.isEmpty()) return front;
         if (front.isEmpty()) return back;
         return front + " // " + back;
+    }
+
+    /** Package accessor so {@link SignWriteAction} can confirm a sign is really there. */
+    static String signTextAtPublic(Minecraft mc, BlockPos bp) {
+        return signTextAt(mc, bp);
+    }
+
+    /**
+     * {@code sign <x> <y> <z> <line1>|<line2>|...} -- WRITE a sign.
+     *
+     * <p>QUEUED as an action on purpose. Doing it inline always failed silently: the right-click
+     * and the update packet left in the SAME tick, so the update reached the server before it had
+     * marked us the sign's designated editor, and a non-editor update is dropped with no error.
+     * A socket command cannot wait for the round-trip -- its handler runs on the render thread, so
+     * sleeping there would block the tick loop that processes the reply. See SignWriteAction.
+     */
+    private static String signCmd(Minecraft mc, String rest) {
+        LocalPlayer p = mc.player;
+        if (p == null || mc.level == null) return "sign: not in world";
+        String[] t = rest.trim().split("\\s+", 4);
+        if (t.length < 4) {
+            return "ERR usage: sign <x> <y> <z> <text>   (split lines with | )";
+        }
+        Integer x = parseInt(t[0]);
+        Integer y = parseInt(t[1]);
+        Integer z = parseInt(t[2]);
+        if (x == null || y == null || z == null) return "ERR usage: sign <x> <y> <z> <text>";
+
+        java.util.List<String> lines = new ArrayList<>();
+        for (String part : t[3].split("\\|", -1)) {
+            String line = part.trim();
+            if (line.length() > 15) line = line.substring(0, 15);
+            lines.add(line);
+            if (lines.size() == 4) break;
+        }
+        return AgentRuntime.queueSignWrite(
+                new BlockPos(x.intValue(), y.intValue(), z.intValue()), lines);
     }
 
     /** {@code read [x y z]} -- sign text at a coordinate, or at the crosshair block. */
