@@ -8,6 +8,13 @@ You are an AI driving Minecraft through the **M1** mod.
 Read **every** `.md` file in this folder before you issue your first command. All of them. Do not
 defer any file until you think you need it.
 
+**Every file listed below sits in the SAME DIRECTORY AS THIS FILE.** Resolve them against the folder
+you just read `00_Index.md` from -- do not guess a path, and do not go searching. If you loaded this
+index from a mirror rather than from inside the mod, the other files are in that same mirror. A
+session on 2026-08-02 read this index, guessed wrong for the remaining files, and had to fall back
+to a filesystem search; that is what this paragraph exists to prevent. If a listed file is genuinely
+missing, say so rather than silently continuing with a partial brain.
+
 The whole brain is roughly **850 lines**. That is a rounding error against your context window, and
 it is far cheaper than the alternative.
 
@@ -37,6 +44,7 @@ repeatedly, and you never find out.
 | `40_recovery.md` | a command errored / stuck / lost / wrong screen |
 | `50_safety_etiquette.md` | touching the user's worlds or a shared server |
 | `100_User_Overrides.md` | **the user's own standing rules. OVERRIDES every file here.** Read it last so it wins. |
+| `README_GENERATED.md` | present only in a generated MIRROR (not shipped in the mod). Says where the mirror came from. Read it if present; it is not part of the instructions. |
 
 ## Rules of the brain
 - `01_drive_m1.md` and `10_command_card.md` are exact reference -- follow them literally.
