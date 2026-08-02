@@ -1,5 +1,5 @@
 # Command card (exact syntax cheat-sheet)
-<!-- Valid as of: M1 v0.15.0 | MC 1.20 - 26.3 | updated 2026-08-01 (bulk mining: mine hold + mine area; attack give-up + tool restore; defend regroup; scan lists EVERY match with facing + paging; sign reading; open by coordinate; take output) -->
+<!-- Valid as of: M1 v0.16.0 | MC 1.20 - 26.3 | updated 2026-08-02 (sign WRITING; m1srv server query; bulk mining: mine hold + mine area; attack give-up + tool restore; defend regroup; scan lists EVERY match with facing + paging; sign reading; open by coordinate; take output) -->
 **Covers:** every M1 command with syntax + a one-line note, so you can reload just the syntax cheaply.
 Concepts behind these live in `01_drive_m1.md`.
 
@@ -19,6 +19,14 @@ OBSERVE
   read [x y z]         read a SIGN, by coord or crosshair. Reads the block entity, so it works on
                        wall signs (a collider ray goes straight through them, which is why sign
                        labels used to be unreadable). 'scan sign' returns every sign's text at once.
+  sign <x> <y> <z> <text>
+                       WRITE a placed sign. Split lines with '|' -- 4 lines max, ~15 chars each
+                       (longer is truncated). e.g. 'sign -80 69 23 Metals + Gems|ingots blocks'.
+                       ALWAYS 'read <x y z>' afterwards to verify: a rejected write still replies OK.
+                       To PLACE one first, hold a sign and see the sign recipe in the Notes below.
+  m1srv <query>        ask the SERVER side (M1-Server, if the server runs it) instead of your client.
+                       Server-authoritative answers your client cannot see. Only works where the
+                       server has M1 installed; harmless to try -- it just reports unavailable.
   open <x> <y> <z>     open/use a container BY COORDINATE -- no aiming, no crosshair. Feed it the
                        coords 'scan' gave you, then 'slots'. Server reach (~4.4 from the eye) still
                        applies; too far and the reply tells you the distance -- walk, then re-issue.
@@ -223,8 +231,15 @@ Notes:
   indices. They auto-open the player inventory if a container is up. Raw `slot`/`slots` stay for
   surgery but you rarely need them now.
 - **A grave/death chest** (chest + armor stand + name sign)? Just `recover`. Do NOT hand-drive it.
-- **Sign-edit dialogs auto-close** -- right-clicking a sign no longer traps you; mine/attack a sign
-  to remove it.
+- **PLACING + WRITING A SIGN (the recipe that actually works, M1 0.16.0+).** Hold a sign, then:
+  `agent sneak on` -> `open <chest x y z>` -> `agent sneak off` -> `sign <sign x y z> L1|L2` ->
+  `read <sign x y z>` to VERIFY. Three traps, each paid for once:
+    * WITHOUT sneak, right-clicking a chest just OPENS it instead of placing the sign.
+    * ONE placement per command round-trip -- two `open` calls back to back hit vanilla's use
+      cooldown and the second is silently ignored.
+    * Do NOT stand where the sign goes: your HEAD occupies (x, y+1, z) and the placement fails.
+  Sign-edit dialogs otherwise auto-close, so right-clicking a sign never traps you; mine/attack a
+  sign to remove it.
 - **On death you auto-respawn** and the death spot is reported (a `DIED at x,y,z` line).
 - `where` now announces `screen OPEN: ...` when a menu is up (movement holds until you `close`).
 - **Async commands** (`move*`/`goto`/`mine`/`craft`) return immediately -- poll `where` / `inv` /

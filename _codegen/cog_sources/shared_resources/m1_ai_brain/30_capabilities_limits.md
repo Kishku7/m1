@@ -1,5 +1,5 @@
 # Capabilities & limits (what M1 can and cannot do)
-<!-- Valid as of: M1 v0.15.0 | MC 1.20 - 26.3 | updated 2026-08-01 (bulk mining; unreachable give-up; enumerate-all scan; sign reading; open by coord; take output) -->
+<!-- Valid as of: M1 v0.16.0 | MC 1.20 - 26.3 | updated 2026-08-02 (sign WRITING; m1srv server query; bulk mining; unreachable give-up; enumerate-all scan; sign reading; open by coord; take output) -->
 **Covers:** an honest boundary list so you do not attempt impossible things or loop on them.
 
 ## CAN
@@ -31,12 +31,18 @@
   facing, distance and any sign text, paged 50 at a time. This is how you survey a storage room or a
   furnace bank -- never walk-and-rescan, it skips things silently (it missed 3 of 16 furnaces live).
 - **Read signs** -- `read [x y z]`, or inline in `scan sign`. Labels on a storage wall are readable.
+- **WRITE signs** (0.16.0) -- `sign <x y z> L1|L2|L3|L4`. You can LABEL a storage room, not just
+read one. Place with sneak + `open`; see the sign recipe in `10_command_card.md` Notes. ALWAYS
+`read` back to verify -- a rejected write still replies OK.
+- **Ask the server** -- `m1srv <query>` returns server-authoritative facts your client cannot see,
+wherever the server also runs M1.
 - **Address containers by COORDINATE** -- `open <x y z>`, so container work no longer depends on aiming.
 - **`take output [radius]`** -- empty every furnace in range, output slot only, in one command.
 - Run slash-commands via `cmd <...>` when cheats/permission are present.
 - `screenshot` a frame; armor auto-equips itself to the best you carry.
 - Queue **autonomous actions** via the `agent` layer; they run in-world and report back async.
-- **Auto-recover from two screens:** a right-clicked SIGN edit dialog is auto-dismissed; on death you
+- **Auto-recover from two screens:** a right-clicked SIGN edit dialog is auto-dismissed (EXCEPT during
+a deliberate `sign` write, which holds it open just long enough to submit the text); on death you
   auto-respawn (and the death spot is reported).
 
 ## CANNOT (current)
