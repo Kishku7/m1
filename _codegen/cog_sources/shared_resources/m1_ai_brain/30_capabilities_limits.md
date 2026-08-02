@@ -48,8 +48,11 @@ a deliberate `sign` write, which holds it open just long enough to submit the te
 ## CANNOT (current)
 - **Fly.** No fly command; a Creative air vantage is not reachable through M1 -- stay grounded.
 - **Run two clients.** Exactly one M1 socket (`127.0.0.1:26000`); one client at a time.
-- **Log the user in / authenticate.** You cannot supply Microsoft credentials; the operator handles
-  launch and auth.
+- **Log the user in / authenticate.** M1 runs INSIDE an already-authenticated client; it cannot
+  supply Microsoft credentials itself. Note this limits M1, NOT necessarily you: an external launcher
+  (one that drives the vendor launcher's own library, reusing the stored session) can start an
+  authenticated client for you, and some environments provide exactly that. Check your environment
+  notes before telling the user you cannot start the game.
 - **Beat the 10 s cap on a single synchronous handler.** Long actions must be the async ones
   (`move`/`mine`/`craft`/agent), which return immediately and run in the background.
 - **Reach a mob it cannot walk to** (in a sealed pit, across a chasm, in the air). It will try the

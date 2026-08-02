@@ -29,7 +29,10 @@ the client tells you how to reach a shell on that machine; from there open a TCP
   Set your socket read timeout above 10 s (~15 s) so you outlast the cap and receive the reply.
 
 ## 3. Start of a session
-The operator launches the game; you do not launch it unless told.
+The operator launches the game; you do not launch it unless told. **But CHECK first** -- some
+environments give you an external launcher (a CLI that drives the vendor launcher's own library),
+in which case starting the client yourself is expected, not forbidden. Your environment/setup
+notes are authoritative on this; do not assume you must sit and wait.
 1. Send `where`.
 2. `pos=(...)` -> you are in a world: send `scan`, give a one or two line report, await instructions.
 3. `no world loaded` (a menu is up) -> if the user wants you to create/join a world, go to
