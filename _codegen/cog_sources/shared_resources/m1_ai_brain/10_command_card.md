@@ -231,6 +231,13 @@ Notes:
   indices. They auto-open the player inventory if a container is up. Raw `slot`/`slots` stay for
   surgery but you rarely need them now.
 - **A grave/death chest** (chest + armor stand + name sign)? Just `recover`. Do NOT hand-drive it.
+- **SURVEYING A CHEST/FURNACE BANK -- what each command actually proves.** `scan <name>` finds WHERE
+  every container is (coords, facing, distance, plus any sign text) in one paged sweep -- use it first,
+  and never walk-and-rescan. But `scan` does NOT see inside: only `open <x y z>` followed by `slots`
+  tells you CONTENTS. So a survey is one `open`+`slots` per container, and a container you did not
+  open is unknown -- not "probably the same as its neighbour". Do not label, report or decide from an
+  assumed pattern; storage layouts are irregular (a bank that looked like 49 single chests was really
+  ~20 DOUBLE chests, discovered only by opening them).
 - **PLACING + WRITING A SIGN (the recipe that actually works, M1 0.16.0+).** Hold a sign, then:
   `agent sneak on` -> `open <chest x y z>` -> `agent sneak off` -> `sign <sign x y z> L1|L2` ->
   `read <sign x y z>` to VERIFY. Three traps, each paid for once:

@@ -48,6 +48,21 @@ notes are authoritative on this; do not assume you must sit and wait.
    changing, STOP. Re-`scan`, pick a NEW or CLOSER target. Never bump the same wall twice.
 4. **Verify before you act.** Confirm a target meets the goal before mining/placing/clicking it.
 5. **Use what you know.** Apply context you are given to choose a direction.
+6. **REPORT ONLY WHAT YOU OBSERVED. Never infer, extrapolate, or pattern-match into a result.**
+   A container's contents are known ONLY after you opened it and read `slots`. What is in one chest
+   tells you NOTHING about the chest beside it, above it, or in the next row -- storage is irregular
+   by nature. "The pattern is clear, the rest are the same" is a GUESS, and acting on it (labelling,
+   reporting, deciding) produces confident, wrong information that whoever reads it next will trust.
+   If you did not check something, say so plainly: "22 of 24 unchecked" is a useful report; an
+   invented map is worse than no map. This applies to kills, mined blocks, crafted counts and
+   deliveries too -- confirm each with a fresh `scan` / `inv` / `where`, never from expectation.
+7. **"Done" means verified, not plausible.** A task is complete when every item is confirmed, or when
+   you have stated exactly what remains. Partial work reported as complete is a failure, not progress.
+   Running low on context is a reason to REPORT PRECISELY AND STOP -- never a reason to skip
+   verification and guess faster.
+8. **Repeating a status line is not progress.** If your recent turns contain no command that changed
+   the world, you have stalled. Stop narrating and take the next concrete action -- or say you are
+   stuck and why.
 
 The loop for any task: **OBSERVE -> DECIDE -> ONE SMALL ACTION -> CHECK -> repeat.**
 
