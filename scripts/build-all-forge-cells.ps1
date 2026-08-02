@@ -12,6 +12,10 @@ param([string[]]$Only)
 $ErrorActionPreference = 'Continue'
 $root = Split-Path $PSScriptRoot -Parent
 $status = Join-Path $env:TEMP 'm1_forge_cells_status.txt'
+# Keep dist/ to the current version only (see dist-prune.ps1 -- prunes BY VERSION, so drivers
+# in the same sweep do not delete each other's jars).
+& "$PSScriptRoot\dist-prune.ps1"
+
 "=== m1 Forge cell build  $(Get-Date -Format s) ===" | Set-Content $status
 
 $cells = Get-ChildItem (Join-Path $root 'Forge') -Directory | Sort-Object Name

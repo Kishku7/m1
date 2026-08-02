@@ -10,6 +10,10 @@ param([string[]]$Only)   # optional: limit to specific cell names
 $ErrorActionPreference = 'Continue'
 $root = Split-Path $PSScriptRoot -Parent
 $status = Join-Path $env:TEMP 'm1_fabric_cog_status.txt'
+# Keep dist/ to the current version only (see dist-prune.ps1 -- prunes BY VERSION, so drivers
+# in the same sweep do not delete each other's jars).
+& "$PSScriptRoot\dist-prune.ps1"
+
 "=== m1 pre-26 Fabric cog build  $(Get-Date -Format s) ===" | Set-Content $status
 
 $cells = Get-ChildItem (Join-Path $root 'Fabric') -Directory | Where-Object { $_.Name -ne '26' } | Sort-Object Name

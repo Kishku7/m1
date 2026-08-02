@@ -1,6 +1,10 @@
 param([string[]]$Versions)
 $ErrorActionPreference="Stop"
 $repo=Split-Path $PSScriptRoot -Parent; $fabric=Join-Path $repo "Fabric\26"; $dist=Join-Path $repo "dist"
+# Keep dist/ to the current version only (see dist-prune.ps1 -- prunes BY VERSION, so drivers
+# in the same sweep do not delete each other's jars).
+& "$PSScriptRoot\dist-prune.ps1"
+
 New-Item -ItemType Directory -Force -Path $dist|Out-Null
 $matrix=[ordered]@{
   "26.1"=@{mc="26.1.2";          api="0.152.1+26.1.2"; loader="0.18.6"; dep=">=26.1- <26.2"; pf="84"}

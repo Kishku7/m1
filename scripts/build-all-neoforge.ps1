@@ -1,6 +1,10 @@
 param([string[]]$Versions)
 $ErrorActionPreference="Stop"
 $repo=Split-Path $PSScriptRoot -Parent; $nf=Join-Path $repo "NeoForge\26"; $dist=Join-Path $repo "dist"
+# Keep dist/ to the current version only (see dist-prune.ps1 -- prunes BY VERSION, so drivers
+# in the same sweep do not delete each other's jars).
+& "$PSScriptRoot\dist-prune.ps1"
+
 New-Item -ItemType Directory -Force -Path $dist|Out-Null
 $matrix=[ordered]@{
   "26.1"=@{mc="26.1.2"; neo="26.1.2.87"; mcRange="[26.1,26.2)"; neoRange="[26.1.0-alpha,)"; pf="84"}
