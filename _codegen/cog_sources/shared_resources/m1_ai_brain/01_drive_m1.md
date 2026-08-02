@@ -162,7 +162,15 @@ On DEATH you auto-respawn and the death spot is reported (`DIED at x,y,z`). `whe
   to `face 0 0`. Compass: yaw 0 = south; dirs `north/south/east/west/ne/nw/se/sw`.
 - **Interact with a block** (bed, button, lever, table): `face <x y z>` at it, confirm with `look`,
   then `place` (place = use/interact).
-- **Leave a world:** never cold-kill it. `pause`, then `click` "Save and Quit to Title".
+- **Leave a world / quit the game -- ALWAYS from inside, via the menus. NEVER cold-kill the process.**
+  Killing risks an unsaved world and, on a server, a dirty disconnect. The sequence:
+  `pause` -> `describe` (READ the menu; do not assume button labels) -> `click` **"Disconnect"** on a
+  server or **"Save and Quit to Title"** in singleplayer -> `describe` -> `click` **"Quit Game"** to
+  exit the client entirely. On a server with players, `say` a goodbye first.
+  **Then VERIFY it actually exited** rather than assuming the click landed. If you end up on an
+  unexpected screen, `describe`, `close`, and retry -- do not escalate to killing the process just
+  because one click missed. An external process kill is a last resort, and if you need one, say so:
+  it means something is broken.
 
 ## 10. Recording (on request only)
 Do not auto-read or auto-load any session log. Read it only when asked to recall past runs. When asked
