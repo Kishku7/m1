@@ -138,7 +138,7 @@ public final class Crafting {
         if (!(mc.hitResult instanceof BlockHitResult bhr) || mc.hitResult.getType() == HitResult.Type.MISS)
             return "place: not looking at a block (look at the ground / target first)";
         InteractionResult r = mc.gameMode.useItemOn(mc.player, InteractionHand.MAIN_HAND, bhr);
-        mc.player.swing(InteractionHand.MAIN_HAND);
+        M1Compat.swingMainHandUse(mc.player);
         String out = "OK place/use -> " + r;
         if (String.valueOf(r).startsWith("Pass")) {
             out += "  (WARNING: Pass = nothing happened -- wrong block under the crosshair,"

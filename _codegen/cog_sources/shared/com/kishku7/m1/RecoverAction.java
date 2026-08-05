@@ -165,7 +165,7 @@ public final class RecoverAction implements MinecraftAction {
                 faceEntity(p, stand);
                 if (standHitCooldown-- <= 0) {
                     mc.gameMode.attack(p, stand);
-                    p.swing(InteractionHand.MAIN_HAND);
+                    M1Compat.swingMainHand(p);
                     standHitCooldown = 8; // two quick hits break a stand; keep hitting till gone
                     if (++standHits > 12) {
                         ctx.report(ReportClass.STATUS, "recover: armor stand will not break; moving on");

@@ -510,7 +510,7 @@ public final class AttackAction implements MinecraftAction {
 
     private void strike(Minecraft mc, LocalPlayer p) {
         mc.gameMode.attack(p, target);
-        p.swing(InteractionHand.MAIN_HAND);
+        M1Compat.swingMainHand(p);
         hits++;
     }
 

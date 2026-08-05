@@ -11,11 +11,12 @@ import net.minecraft.world.item.ItemStack;
 
 /**
  * Leaf action that throws item(s) on the ground -- the Q-key equivalent (session-703a gap: the
- * agent had no way to toss the player head). Drops via {@code LocalPlayer.drop(boolean)}, the
- * vanilla drop-key path (proper serverbound action packet, desync-safe), which only drops the
- * HELD stack -- so non-held sources are first brought to hand: hotbar slots are selected
- * ({@link Crafting#hold}), and main-inv / armor / offhand slots are SWAP-clicked into the
- * selected hotbar slot through the always-available player inventoryMenu.
+ * agent had no way to toss the player head). Drops via {@link DropCompat#drop} (the versioned
+ * wrapper over {@code LocalPlayer.drop(boolean)}), the vanilla drop-key path (proper
+ * serverbound action packet, desync-safe), which only drops the HELD stack -- so non-held
+ * sources are first brought to hand: hotbar slots are selected ({@link Crafting#hold}), and
+ * main-inv / armor / offhand slots are SWAP-clicked into the selected hotbar slot through the
+ * always-available player inventoryMenu.
  *
  * <p>Spec forms (resolved via {@link ItemInfo#resolve}): empty/hand = held stack; hb1-9; inv N;
  * head|chest|legs|feet|offhand; or an item name/id search across all 41 slots. Count: n single
@@ -115,12 +116,12 @@ public final class DropAction implements MinecraftAction {
             return StepResult.FAILED;
         }
         if (count == ALL) {
-            boolean ok = mc.player.drop(true);
+            boolean ok = DropCompat.drop(mc, true);
             ctx.report(ReportClass.STATUS, ok ? "drop: threw the whole stack of " + what
                     : "drop: nothing to drop (held " + what + ")");
             return ok ? StepResult.DONE : StepResult.FAILED;
         }
-        if (mc.player.drop(false)) {
+        if (DropCompat.drop(mc, false)) {
             dropped++;
         }
         if (dropped >= count || mc.player.getMainHandItem().isEmpty()) {

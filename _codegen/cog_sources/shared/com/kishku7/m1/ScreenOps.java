@@ -1116,7 +1116,7 @@ public final class ScreenOps {
         Direction face = nearestFace(eye.x - center.x, eye.y - center.y, eye.z - center.z);
         BlockHitResult hit = new BlockHitResult(center, face, bp, false);
         mc.gameMode.useItemOn(p, InteractionHand.MAIN_HAND, hit);
-        p.swing(InteractionHand.MAIN_HAND);
+        M1Compat.swingMainHandUse(p);
         return "OK " + label + " " + blockShort(mc.level.getBlockState(bp))
                 + " at (" + bp.getX() + "," + bp.getY() + "," + bp.getZ() + ")";
     }

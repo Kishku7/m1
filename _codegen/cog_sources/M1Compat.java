@@ -88,6 +88,23 @@ public final class M1Compat {
         //[[[end]]]
     }
 
+    // 26.3-snapshot-7: LivingEntity.swing(InteractionHand) is GONE -- the replacement takes the
+    // held item's SwingAnimation plus a send-to-self flag. Below 26.3 this is the plain 1-arg call.
+    public static void swingMainHand(LocalPlayer p) {
+        //[[[cog
+        //for ln in compat.swing_main_hand(mcver): cog.outl(ln)
+        //]]]
+        //[[[end]]]
+    }
+
+    // Same, for a USE/PLACE path: vanilla passes the held item's INTERACT animation there
+    // (Minecraft.java L1729), not the attack animation.
+    public static void swingMainHandUse(LocalPlayer p) {
+        //[[[cog
+        //for ln in compat.swing_main_hand_use(mcver): cog.outl(ln)
+        //]]]
+        //[[[end]]]
+    }
     // 1.21.9: PIERCING_WEAPON data component (spear). Absent pre-1.21.9.
     public static boolean isPiercingWeapon(ItemStack s) {
         //[[[cog

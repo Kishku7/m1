@@ -144,14 +144,52 @@ def is_piercing(ver):         # M1Compat.isPiercingWeapon(ItemStack s) -> boolea
         return ["return s.has(net.minecraft.core.component.DataComponents.PIERCING_WEAPON);"]
     return ["return false;"]
 
+def _swing_main(ver, p, kind="attack"):
+    """ONE main-hand swing, as a single Java statement.
+
+    26.3-snapshot-7 REMOVED both the 1-arg swing(InteractionHand) and the 2-arg
+    swing(InteractionHand, boolean); the only remaining form is
+    swing(hand, SwingAnimation, sendToSwingingEntity).
+
+    Two details matter for faithfulness:
+      * sendToSwingingEntity is FALSE. The old 1-arg overload delegated to swing(hand, false)
+        (26.3-snapshot-6 LivingEntity.java L2037-2039), and every client-side vanilla call site in
+        the new API also passes false (Minecraft.java L1637/L1707/L1742/L1754/L1771). The flag is
+        server-side only -- it decides whether the swinging player also receives the broadcast.
+      * the animation follows vanilla's own split: an ATTACK path passes
+        heldItem.getAttackAnimation(), a USE/PLACE path passes heldItem.getInteractAnimation()
+        (Minecraft.java L1675 vs L1729).
+    """
+    getter = "getAttackAnimation" if kind == "attack" else "getInteractAnimation"
+    if swing_anim(V(ver)):
+        return ('%s.swing(InteractionHand.MAIN_HAND, %s.getMainHandItem().%s(), false);'
+                % (p, p, getter))
+    return '%s.swing(InteractionHand.MAIN_HAND);' % p
+
+
+def _piercing_call(ver):
+    """MultiPlayerGameMode.piercingAttack gained a leading SwingAnimation at 26.3-snapshot-7;
+    vanilla passes the same heldItem.getAttackAnimation() it passes to swing()."""
+    if swing_anim(V(ver)):
+        return 'mc.gameMode.piercingAttack(p.getMainHandItem().getAttackAnimation(), pw);'
+    return 'mc.gameMode.piercingAttack(pw);'
+
+
+def swing_main_hand(ver):     # M1Compat.swingMainHand(LocalPlayer p) -- ATTACK-path animation
+    return [_swing_main(ver, "p", "attack")]
+
+
+def swing_main_hand_use(ver): # M1Compat.swingMainHandUse(LocalPlayer p) -- USE/PLACE-path animation
+    return [_swing_main(ver, "p", "interact")]
+
 def try_piercing(ver):        # M1Compat.tryPiercingAttack(Minecraft mc, LocalPlayer p) -> boolean
     if id_rename(V(ver)):
         return ["if (mc.gameMode == null) { return false; }",
                 "net.minecraft.world.item.component.PiercingWeapon pw ="
                 + " p.getMainHandItem().get(net.minecraft.core.component.DataComponents.PIERCING_WEAPON);",
                 "if (pw == null) { return false; }",
-                "mc.gameMode.piercingAttack(pw);",
-                "p.swing(InteractionHand.MAIN_HAND);",
+                _piercing_call(ver),
+                _swing_main(ver, "p"),
                 "return true;"]
     return ["return false;"]
 
@@ -382,6 +420,8 @@ def data_components(v): return v >= (1, 20, 5)    # BlockEntity.saveWithoutMetad
 def value_output(v):    return v >= (1, 21, 6)    # Entity.saveWithoutId takes ValueOutput; CompoundTag below
 def spawn_respawn(v):   return v >= (1, 21, 9)    # ServerLevel.getRespawnData().pos() (RespawnData introduced 1.21.9, getSharedSpawnPos() removed same step); getSharedSpawnPos() below. Boundary corrected 1.21.10->1.21.9 2026-07-20 (was off-by-one; only the 1.21.10 cell had exercised it).
 def sign_text_slot(v):  return v >= (26, 3, 0)  # SignBlockEntity.getFrontText()/getBackText() -> getText(SignTextSlot.FRONT|BACK), AND SignText.getMessages(boolean) Component[] -> List<Component>. BOTH land together at 26.3 (SignTextSlot.java first appears 26.3-snapshot-4; 26.2 still has getFrontText + Component[]). Deobf-confirmed 2026-08-01 from MC-Java 26.2 vs 26.3-snapshot-6.
+def swing_anim(v):      return v >= (26, 3, 0)  # LivingEntity.swing(InteractionHand) and swing(InteractionHand, boolean) REMOVED at 26.3-snapshot-7, replaced by swing(InteractionHand, SwingAnimation, boolean); MultiPlayerGameMode.piercingAttack(PiercingWeapon) -> piercingAttack(SwingAnimation, PiercingWeapon). Deobf-confirmed 2026-08-05 from MC-Java 26.3-snapshot-6 vs 26.3-snapshot-7 LivingEntity.java L2037/L2039 + MultiPlayerGameMode.java L520.
+def drop_void(v):       return v >= (26, 3, 0)  # LocalPlayer.drop(boolean) return type boolean -> void at 26.3-snapshot-7 (the old return was !removeFromSelected(all).isEmpty(); snap-7 replaces it with a swing broadcast). Deobf-confirmed 2026-08-05 from MC-Java 26.3-snapshot-6 vs 26.3-snapshot-7 LocalPlayer.java:323.
 def time_overworld(v):  return v[0] == 26         # Level.getOverworldClockTime() ; getDayTime() below
 def gr_new(v):          return v >= (1, 21, 11)   # world.level.gamerules.GameRules + KEEP_INVENTORY names + get(GameRule)
 def id_ident(v):        return v >= (1, 21, 11)   # resources.Identifier rename (1.21.10 still ResourceLocation)

@@ -4,6 +4,35 @@ All notable changes to M1 are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/); this project uses
 `<mod version>+<minecraft family>-<loader>` jar naming.
 
+## [0.16.1] - 2026-08-05
+
+### Fixed
+- **`LocalPlayer.drop(boolean)` returns `void` from 26.3-snapshot-7** -- a hard compile break for
+  `DropAction`, which read the return value to decide whether anything was actually thrown. New
+  Cog facade `DropCompat.drop(Minecraft, boolean)` (predicate `compat.drop_void`) restores the
+  old contract by asking the SAME question vanilla asks, one instruction earlier: the pre-snap-7
+  return was `!getInventory().removeFromSelected(all).isEmpty()`, so the facade inspects the
+  main-hand stack BEFORE the call. Semantically identical, not an approximation. Through
+  snapshot-6 the facade compiles down to the plain `return mc.player.drop(all);`. Cog rather than
+  reflection because the pre-26 Fabric cells run an INTERMEDIARY runtime, where a mojmap-name
+  lookup misses entirely.
+
+### Changed
+- **Fabric 26.3 cell moved to MC 26.3-snapshot-7** (from snapshot-6): fabric-api
+  `0.156.1+26.3` -> `0.156.2+26.3`, resource `pack_format` `94` -> `95`.
+- **The 26.3 jar's MC dependency is now SNAPSHOT-EXCLUSIVE**, `>=26.3-alpha.7 <26.3-alpha.8`
+  (was the line-wide `>=26.3- <26.4`). Two independent reasons it can no longer claim the whole
+  26.3 line: every 26.3 snapshot bumps `pack_format` by one, and the `drop()` signature above
+  differs across snapshots within the line. This matches how every other 26.3 mod cell is pinned.
+- `mod_version` 0.16.0 -> 0.16.1. Only the Fabric 26.3 cell was rebuilt.
+
+### Notes
+- The other three snapshot-7 breaking surfaces do not touch M1: the `Prediction` argument added to
+  `LivingEntity.drop(ItemStack, boolean)` / `Inventory.placeItemBackInInventory` (M1 calls
+  neither -- its drop path is the client-side `LocalPlayer.drop`), the
+  `InteractionResult.SwingSource` `CLIENT`/`SERVER` -> `PREDICTED`/`SERVER_ONLY` rename,
+  and the 32 new concrete slab/stair blocks plus the filled-map colour removals.
+
 ## [0.16.0] - 2026-08-01
 
 ### Added
