@@ -31,3 +31,17 @@ Write-Host "M1 NeoForge builds complete."
 $syncScript=Join-Path $repo "scripts\sync-aibrain.ps1"
 if(Test-Path $syncScript){ try{ & $syncScript }catch{ Write-Warning "sync-aibrain failed: $_" } }
 
+# ---- VERSION PARITY GATE (2026-08-25) ------------------------------------------------------
+# A check that is never RUN is not a check. The 0.17.0 drift shipped while every one of the 34
+# gradle.properties agreed on 0.17.0 -- the JARS were what disagreed, so check-versions.ps1 reads
+# the jars. Wired into every build driver here so it cannot be "available but never invoked",
+# which is the same failure mode one layer up. Non-fatal: a single-loader build is a legitimate
+# mid-campaign state, so this RECORDS and WARNS rather than failing the build.
+$__vc = Join-Path $PSScriptRoot 'check-versions.ps1'
+if (Test-Path $__vc) {
+  $__out = & $__vc -Quiet 2>&1
+  $__ok  = ($LASTEXITCODE -eq 0)
+  $__msg = if ($__ok) { "VERSION CHECK: PASS" } else { "VERSION CHECK: FAIL`n$($__out -join "`n")" }
+  Write-Host $__msg
+  if (-not $__ok) { Write-Warning "VERSION PARITY FAIL -- jars do not all advertise the same version" }
+}
