@@ -50,8 +50,25 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/); this pr
   cells, the exact-single range on the DATA major for Forge 1.21.10 (88) and 1.21.11 (94), and the
   `${packFormat}` range template on both 26 cells. The older "Forge 1.21.10/1.21.11 stale
   pack_format" follow-up is closed.
-- NOT smoketested. The Forge/NeoForge cells now execute code paths they have never executed;
-  every cell needs a boot smoketest before any compat claim (`minecraft/smoketest.md`).
+- **Smoketested: 13/13 PASS, every PNG eyeballed** (Raider `Client_Tests`, 2026-08-25). Tier =
+  CRITICAL (1.20.1, 1.21.1, 1.21.11, 26.1.2 on all applicable loaders -- the publish gate),
+  EXTENDED with Forge/1.20.6 and NeoForge/1.20.2 so that all ELEVEN distinct entrypoint shapes
+  are covered, since the entrypoints are what this release actually changed. Every frame is a
+  real in-world render, and 12 of the 13 show a live block-outline at the crosshair -- direct
+  evidence that `GameRenderer.pick()` is running and `hitResult` is not stale, which is the
+  surface the ScreenWatch change touches. (The exception, NeoForge 1.20.2, spawned inside a
+  leaf canopy, so there is no valid pick target; the frame is otherwise a clean in-world
+  render.)
+- **Behaviour evidence for the parity fix, observed on a real client:** Forge 1.21.1 emitted
+  BOTH a DamageWatch `[alert] took 20.0 damage (health 20.0 -> 0.0) -- DEAD` report and a
+  ScreenWatch death report, and NeoForge 26.1.2 emitted the DamageWatch one. Those strings can
+  only be produced by `DamageWatch` / `ScreenWatch`, which are reached only through
+  `AgentRuntime.tick` -- the call these entrypoints did not make before 0.17.0. All four probed
+  cells also auto-respawned with nobody clicking Respawn.
+- **What is NOT proven:** a repeatable two-directional behaviour gate. Three attempts each
+  scored wrong in an instructive way -- see `minecraft/m1.md` -- and the one that ends green has
+  never been shown to go red, so it is not evidence. The COMPLETE tier (every MC version inside
+  every jar's claimed range) has also not been run; this is CRITICAL + shape completion.
 ## [0.16.1] - 2026-08-05
 
 ### Fixed
