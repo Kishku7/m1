@@ -19,8 +19,8 @@ dependencies {
 
 processResources {
     def packFormat = (System.getenv("PACK_FORMAT") ?: "88")
-    inputs.properties(["version": project.version, "packFormat": packFormat])
-    filesMatching("fabric.mod.json") { expand "version": project.version, "mcDep": project.mc_dep }
+    inputs.properties(["version": project.mod_version, "packFormat": packFormat])
+    filesMatching("fabric.mod.json") { expand "version": project.mod_version, "mcDep": project.mc_dep }
     // 26.x resource pack_format is > 81, so the strict datapack codec DEMANDS min_format/max_format;
     // a plain int FATALs NeoForge dedicated-server datapack load. Ship the exact-single range form,
     // value injected per 26.X by build-all (PACK_FORMAT env). See Memory/knowledge/pack-formats.md.
