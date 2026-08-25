@@ -4,7 +4,11 @@ import com.kishku7.m1.CraftHarvest;
 import com.kishku7.m1.M1Server;
 import com.kishku7.m1.MineControl;
 import com.kishku7.m1.MoveControl;
+import com.kishku7.m1.AgentRuntime;
+import com.kishku7.m1.DamageWatch;
+import com.kishku7.m1.HungerWatch;
 import com.kishku7.m1.PickupUpgrade;
+import com.kishku7.m1.VaultNet;
 import net.minecraft.client.Minecraft;
 import net.minecraftforge.api.distmarker.Dist;
 import com.kishku7.m1.M1SrvNet;
@@ -51,19 +55,28 @@ public class M1Forge {
         if (mc == null) {
             return;
         }
-        // The heavy-feature ticks (move/mine/craft/upgrade) are no-ops in the pre-26 core build,
-        // but the registration is kept identical to the Fabric/NeoForge glue so re-enabling a
-        // feature later only requires filling in the corresponding class.
+        // Same per-tick chain as the Fabric client entrypoint -- keep the two in step. Before
+        // 2026-08-25 this glue stopped after PickupUpgrade, so on every Forge/NeoForge cell the
+        // agent loop never stepped (queued multi-tick actions froze), ScreenWatch never ran (no
+        // death auto-respawn, no sign-dialog dismissal) and damage/hunger reflexes were dead --
+        // the mod answered instantaneous verbs and nothing else.
         MoveControl.tick(mc);
         MineControl.tick(mc);
         CraftHarvest.tick(mc);
         PickupUpgrade.tick(mc);
+        AgentRuntime.tick(mc);
+        DamageWatch.tick(mc);
+        HungerWatch.tick(mc);
         M1SrvNet.tick(mc);
     }
 
     // M1-Server system-chat replies captured via the shared facade; no-op if M1-Server absent.
     private void onSystemChat(ClientChatReceivedEvent event) {
-        M1SrvNet.onChatMessage(event.getMessage());
+        if (event.getMessage() != null) {
+            String s = event.getMessage().getString();
+            VaultNet.onSystemLine(s);
+            M1SrvNet.onSystemLine(s);
+        }
     }
 
     // Player chat relay for M1's master/ChatWatch feature (2026-07-31 backport parity).

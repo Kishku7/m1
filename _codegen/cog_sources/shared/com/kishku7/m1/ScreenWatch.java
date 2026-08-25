@@ -22,20 +22,23 @@ import net.minecraft.core.BlockPos;
  *    needs to edit a sign; the dismissal is reported so the AI knows what it right-clicked.
  *  - DEATH SCREEN: auto-click Respawn ("rez self"), record the death position + dimension (the
  *    seed of the future corpse-run feature) and report both.
- *  - PAUSE SCREEN is AUTO-DISMISSED. Vanilla's "Pause on Lost Focus" opens the ESC pause menu the
- *    instant the client window loses OS focus -- which an unattended/automated M1 session does
- *    constantly. While that screen is open, {@code Minecraft.runTick} skips {@code
- *    GameRenderer.pick()} entirely, so {@code mc.hitResult} goes stale: any aim primitive
- *    (LookAction, SleepAction's FACE step, {@code ScreenOps.face}) can set the player's yaw/pitch
- *    all it wants and the crosshair-target never updates to match, so every "am I looking at the
- *    bed yet" check keeps reading the LAST real pick from before the pause -- silent, retries
- *    exhaust, "not looking at a block". A human clicking back into the window (or the operator
- *    reaching over) closes the pause screen and resumes picking, which is why it "just worked"
- *    manually. Root-caused via {@code hitResult}/{@code GameRenderer.pick} skip-on-screen
- *    behavior, not assumed. Also disable the underlying option (see {@link
+ *  - PAUSE SCREEN opened by LOST WINDOW FOCUS is AUTO-DISMISSED. Vanilla's "Pause on Lost Focus"
+ *    opens the ESC pause menu the instant the client window loses OS focus -- which an
+ *    unattended/automated M1 session does constantly. While that screen is open, {@code
+ *    Minecraft.runTick} skips {@code GameRenderer.pick()} entirely, so {@code mc.hitResult} goes
+ *    stale: any aim primitive (LookAction, SleepAction's FACE step, {@code ScreenOps.face}) can
+ *    set the player's yaw/pitch all it wants and the crosshair-target never updates to match, so
+ *    every "am I looking at the bed yet" check keeps reading the LAST real pick from before the
+ *    pause -- silent, retries exhaust, "not looking at a block". A human clicking back into the
+ *    window (or the operator reaching over) closes the pause screen and resumes picking, which is
+ *    why it "just worked" manually. Root-caused via {@code hitResult}/{@code GameRenderer.pick}
+ *    skip-on-screen behavior, not assumed. Also disable the underlying option (see {@link
  *    #disablePauseOnLostFocus}) so the screen stops trying to open in the first place; this reflex
- *    is the backstop for any other path that can still summon it (e.g. the operator manually
- *    hitting Escape mid-session).
+ *    is the backstop for any other path that can still summon it.
+ *  - A PAUSE SCREEN the OPERATOR opened is LEFT ALONE (Master, 2026-08-25). It used to be eaten
+ *    with all the rest: with M1 loaded, pressing Escape produced a menu that vanished on the next
+ *    client tick (sometimes before it ever drew a frame), so the game could not be paused by hand
+ *    at all. See {@link #tick} for how the two are told apart.
  */
 final class ScreenWatch {
 
@@ -46,6 +49,11 @@ final class ScreenWatch {
     private static volatile long pauseGraceUntil;
     /** Wall-clock deadline until which a DELIBERATE sign edit is left alone (see allowSign). */
     private static volatile long signGraceUntil;
+    /**
+     * The PauseScreen INSTANCE judged operator-owned (Escape arrived on a focused window). Latched
+     * so the reflex cannot eat it later, once the operator alt-tabs away and focus goes false.
+     */
+    private static Screen operatorPause;
     private static boolean pauseOptionChecked;
     private static BlockPos lastDeathPos;
     private static String lastDeathDim;
@@ -63,6 +71,7 @@ final class ScreenWatch {
             signHandled = false;
             deathHandled = false;
             pauseHandled = false;
+            operatorPause = null;
             return;
         }
         if (s instanceof PauseScreen) {
@@ -75,6 +84,29 @@ final class ScreenWatch {
             if (pauseGraceUntil > System.currentTimeMillis()) {
                 return;   // deliberate: leave it up so the caller can describe + click it
             }
+            // A pause the OPERATOR asked for is not it either (Master, 2026-08-25). Vanilla has
+            // exactly two ways to summon this screen, and WINDOW FOCUS separates them cleanly:
+            //   * lost focus -- GameRenderer.render only calls pauseGame() while
+            //     !minecraft.isWindowActive() && options.pauseOnLostFocus, after 500ms unfocused
+            //     (1.20.1 GameRenderer L1059-1064; unchanged 1.20 -> 26.3).
+            //   * Escape -- KeyboardHandler key 256 -> pauseGame() (1.20.1 L420-423). A key press
+            //     only reaches a FOCUSED window, so the operator's Escape is always focused.
+            // Both call pauseGame(false), so the PauseScreen(showsPauseMenu) flag canNOT tell them
+            // apart -- focus is the discriminator, read from the decompiled sources, not assumed.
+            // Latched to the screen INSTANCE below so that alt-tabbing away from a menu the
+            // operator opened does not make it disappear behind him.
+            if (s == operatorPause) {
+                return;
+            }
+            if (mc.isWindowActive()) {
+                operatorPause = s;
+                if (!pauseHandled) {
+                    pauseHandled = true;
+                    report("screen: PAUSE menu opened by the OPERATOR (Escape, window focused) --"
+                            + " left up. Aim/pick is stalled until it is closed");
+                }
+                return;
+            }
             if (!pauseHandled) {
                 pauseHandled = true;
                 report("screen: PAUSE menu opened (window lost focus) -- auto-dismissed."
@@ -84,6 +116,7 @@ final class ScreenWatch {
             return;
         }
         pauseHandled = false;
+        operatorPause = null;
         if (s instanceof AbstractSignEditScreen) {
             // A sign edit the CONTROLLER asked for is not the accidental right-click this reflex
             // exists to clear. Without this grace window M1 could read signs but never WRITE one:
@@ -143,11 +176,6 @@ final class ScreenWatch {
     }
 
     /**
-     * Suppress the PauseScreen reflex for {@code ms} milliseconds because the CONTROLLER is opening
-     * the pause menu on purpose (graceful quit / options). Time-boxed so a crash or an abandoned
-     * plan can never leave the reflex permanently disabled.
-     */
-    /**
      * Suppress the sign-edit reflex for {@code ms} while the controller deliberately writes a sign.
      * Time-boxed so a failed write can never leave the reflex disabled.
      */
@@ -155,6 +183,12 @@ final class ScreenWatch {
         signGraceUntil = System.currentTimeMillis() + ms;
     }
 
+    /**
+     * Suppress the PauseScreen reflex for {@code ms} milliseconds because the CONTROLLER is opening
+     * the pause menu on purpose (graceful quit / options). Time-boxed so a crash or an abandoned
+     * plan can never leave the reflex permanently disabled. Does NOT affect an OPERATOR pause --
+     * that is decided by window focus in {@link #tick} and needs no grace window.
+     */
     static void allowPause(long ms) {
         pauseGraceUntil = System.currentTimeMillis() + ms;
     }

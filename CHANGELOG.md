@@ -4,6 +4,54 @@ All notable changes to M1 are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/); this project uses
 `<mod version>+<minecraft family>-<loader>` jar naming.
 
+## [0.17.0] - 2026-08-25
+
+### Fixed
+- **Pressing Escape with M1 loaded no longer dismisses the pause menu.** `ScreenWatch`'s PAUSE
+  reflex (added 0.15.x for the unattended aim/pick stall) killed EVERY `PauseScreen` that was not
+  inside the deliberate `pause`-verb grace window -- including the one the operator opened by hand,
+  one client tick later, sometimes before it drew a frame. The reflex now tells the two apart by
+  WINDOW FOCUS, which is exact rather than heuristic: vanilla can only summon that screen two ways,
+  and they sit on opposite sides of the focus flag. `GameRenderer.render` opens it only while
+  `!minecraft.isWindowActive() && options.pauseOnLostFocus`, after 500ms unfocused (1.20.1
+  `GameRenderer` L1059-1064); `KeyboardHandler` opens it on key 256, and a key press only reaches a
+  FOCUSED window (L420-423). Both call `pauseGame(false)`, so the `PauseScreen(showsPauseMenu)` flag
+  canNOT discriminate -- read out of the decompiled sources, not assumed, and re-checked present and
+  unchanged in 1.20, 1.20.6, 1.21, 1.21.5, 1.21.9, 1.21.11, 26.1, 26.2 and 26.3-snapshot-7. A pause
+  seen while the window is focused is latched to that screen INSTANCE, so alt-tabbing away from a
+  menu the operator opened does not make it vanish behind him. The lost-focus reflex is unchanged.
+
+- **The agent layer never ran on ANY Forge or NeoForge cell.** The loader glue's client-tick handler
+  stopped after `PickupUpgrade.tick`, so `AgentRuntime.tick` -- and with it the agent loop
+  (`ActionQueue`, every queued multi-tick action: attack/defend/follow/mine-area/recover/craft/sleep)
+  and `ScreenWatch` (death auto-respawn, sign-dialog dismissal, the pause reflex) -- plus
+  `DamageWatch.tick` and `HungerWatch.tick` were dead on all 24 non-Fabric cells. Only the two
+  Fabric client entrypoints ever called them. The glue carried a comment claiming it was "kept
+  identical to the Fabric glue"; it had not been since the agent layer landed. All nine loader
+  entrypoint masters now run the same eight-call chain, in the same order, as the Fabric client.
+
+- **`M1SrvNet.tick` was missing entirely from the `neoforge_early` shape** (NeoForge 1.20.2, 1.20.3,
+  1.20.4), so the `/m1srv` server-query backchannel could never complete a round trip there.
+
+- **`VaultNet.onSystemLine` was not fed on Forge or NeoForge** (except the `neoforge_26` shape):
+  the system-chat handler forwarded only to `M1SrvNet`, so Bank Vault's `/bank api` replies -- the
+  async `[bv]` report path behind every multiplayer `vault` verb -- never arrived. The handler now
+  feeds both, matching the Fabric `ClientReceiveMessageEvents.GAME` handler.
+
+### Changed
+- `mod_version` stamped **0.17.0 in all 34 cells**. 0.16.1 changed shared code that every cell
+  compiles but bumped only `Fabric/26`, leaving 33 cells stamped 0.16.0 over 0.16.1 sources -- the
+  same "shipped code under an unchanged version name" trap the project hit once before. Minor
+  rather than patch because the Forge/NeoForge jars gain the whole agent layer.
+
+### Notes
+- `pack_format` was audited across all 34 cells against `Memory/knowledge/pack-formats.md` and is
+  fully compliant: plain int at N <= 64, no `pack.mcmeta` on the Fabric/NeoForge 1.21.9-1.21.11
+  cells, the exact-single range on the DATA major for Forge 1.21.10 (88) and 1.21.11 (94), and the
+  `${packFormat}` range template on both 26 cells. The older "Forge 1.21.10/1.21.11 stale
+  pack_format" follow-up is closed.
+- NOT smoketested. The Forge/NeoForge cells now execute code paths they have never executed;
+  every cell needs a boot smoketest before any compat claim (`minecraft/smoketest.md`).
 ## [0.16.1] - 2026-08-05
 
 ### Fixed

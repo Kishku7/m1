@@ -5,6 +5,9 @@ import com.kishku7.m1.M1Server;
 import com.kishku7.m1.M1SrvNet;
 import com.kishku7.m1.MineControl;
 import com.kishku7.m1.MoveControl;
+import com.kishku7.m1.AgentRuntime;
+import com.kishku7.m1.DamageWatch;
+import com.kishku7.m1.HungerWatch;
 import com.kishku7.m1.PickupUpgrade;
 import com.kishku7.m1.VaultNet;
 import net.minecraft.client.Minecraft;
@@ -40,6 +43,9 @@ public class M1NeoForge {
         MineControl.tick(mc);
         CraftHarvest.tick(mc);
         PickupUpgrade.tick(mc);
+        AgentRuntime.tick(mc);
+        DamageWatch.tick(mc);
+        HungerWatch.tick(mc);
         M1SrvNet.tick(mc);
     }
 
