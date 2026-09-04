@@ -4,6 +4,20 @@ All notable changes to M1 are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/); this project uses
 `<mod version>+<minecraft family>-<loader>` jar naming.
 
+## [0.17.2] - 2026-09-04
+
+### Changed
+- **The 26.3 target moves again, from `26.3-pre-1` to `26.3-pre-2`**, which shipped the same day
+  0.17.1 was built. Same reasoning as 0.17.1: the pin names one exact build, so it has to be
+  advanced deliberately, and a driver that cannot be installed on the current build is a client
+  cell that cannot exist. `pack_format` is unchanged at 97 (read from 26.3-pre-2's own
+  `version.json`); fabric-api moves to 0.159.4+26.3.
+- **No code change was needed.** The 26.3-pre-1 to pre-2 source diff was checked against every
+  surface M1 uses: `LivingEntity.drop` and `MultiPlayerGameMode.dropItem` are both unchanged, so
+  the 0.17.1 drop path holds, and M1 touches none of `InputConstants.grabMouse` (which gained
+  coordinates), the removed `KeyboardHandler` IME-candidates API, or
+  `ClientLevel.addBreakingBlockEffect`.
+
 ## [0.17.1] - 2026-09-04
 
 ### Changed
