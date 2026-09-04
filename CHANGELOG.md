@@ -4,6 +4,18 @@ All notable changes to M1 are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/); this project uses
 `<mod version>+<minecraft family>-<loader>` jar naming.
 
+## [0.17.1] - 2026-09-04
+
+### Changed
+- **The 26.3 target moves from `26.3-snapshot-7` to `26.3-pre-1`.** M1 pins its 26.3 jar to one
+  exact build rather than a range, because `pack_format` has moved on nearly every 26.3 build
+  (89, 90, 91, 92, 93, 94, 95, then 97 at pre-1) and a jar carries exactly one. That pin makes the
+  target something that has to be advanced deliberately, and it had fallen a build behind: the
+  driver could not be installed on 26.3-pre-1 at all, so no 26.3-pre-1 client cell could exist and
+  nothing could be tested there. `pack_format` 97 was read out of the 26.3-pre-1 client jar's own
+  `version.json` (`resource_major`), not extrapolated from the snapshot series.
+  Note that 26.3-pre-2 has since shipped and this jar does not cover it either.
+
 ## [0.17.0] - 2026-08-25
 
 ### Fixed

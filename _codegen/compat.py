@@ -21,6 +21,39 @@ def V(ver):
         parts.append(0)   # pad so "1.21" -> (1,21,0); (1,21) >= (1,21,0) is False otherwise
     return tuple(parts)
 
+def VK(ver):
+    """Version key that KEEPS the pre-release channel, for gates that fall between two builds of
+    the same MC version. V() cannot express those: it splits on the first '-', so 26.3-snapshot-7
+    and 26.3-pre-1 both parse to (26, 3, 0) and no predicate can tell them apart. That is the same
+    trap the client-test harness hit in bv_assert (its vkey() fix, 2026-08-04); this is the codegen
+    brain's copy of it.
+
+    Returns (major, minor, patch, channel_rank, channel_num) where a RELEASE sorts above every
+    pre-release of the same number: snapshot/alpha < pre < rc < release.
+      '26.2'            -> (26, 2, 0, 3, 0)
+      '26.3-snapshot-7' -> (26, 3, 0, 0, 7)
+      '26.3-pre-1'      -> (26, 3, 0, 1, 1)
+    Prefer V() for ordinary boundaries; reach for VK() only when a gate is genuinely between two
+    builds of one version, and say which two in the comment.
+    """
+    core, _, suffix = ver.partition("-")
+    parts = [int(x) for x in core.split(".")]
+    while len(parts) < 3:
+        parts.append(0)
+    rank, num = 3, 0
+    if suffix:
+        s = suffix.lower()
+        for name, r in (("snapshot", 0), ("alpha", 0), ("pre", 1), ("rc", 2)):
+            if s.startswith(name):
+                rank = r
+                digits = "".join(c for c in s[len(name):] if c.isdigit())
+                num = int(digits) if digits else 0
+                break
+        else:
+            rank = 0   # an unrecognised suffix is a pre-release of some kind, never a release
+    return tuple(parts) + (rank, num)
+
+
 # ---- drift boundaries (verified this session unless marked TODO) ----
 def is26(v):            return v[0] == 26
 def gui_screen(v):      return v >= (26, 2)          # 26.2 moved screen/setScreen onto Minecraft.gui
@@ -421,7 +454,8 @@ def value_output(v):    return v >= (1, 21, 6)    # Entity.saveWithoutId takes V
 def spawn_respawn(v):   return v >= (1, 21, 9)    # ServerLevel.getRespawnData().pos() (RespawnData introduced 1.21.9, getSharedSpawnPos() removed same step); getSharedSpawnPos() below. Boundary corrected 1.21.10->1.21.9 2026-07-20 (was off-by-one; only the 1.21.10 cell had exercised it).
 def sign_text_slot(v):  return v >= (26, 3, 0)  # SignBlockEntity.getFrontText()/getBackText() -> getText(SignTextSlot.FRONT|BACK), AND SignText.getMessages(boolean) Component[] -> List<Component>. BOTH land together at 26.3 (SignTextSlot.java first appears 26.3-snapshot-4; 26.2 still has getFrontText + Component[]). Deobf-confirmed 2026-08-01 from MC-Java 26.2 vs 26.3-snapshot-6.
 def swing_anim(v):      return v >= (26, 3, 0)  # LivingEntity.swing(InteractionHand) and swing(InteractionHand, boolean) REMOVED at 26.3-snapshot-7, replaced by swing(InteractionHand, SwingAnimation, boolean); MultiPlayerGameMode.piercingAttack(PiercingWeapon) -> piercingAttack(SwingAnimation, PiercingWeapon). Deobf-confirmed 2026-08-05 from MC-Java 26.3-snapshot-6 vs 26.3-snapshot-7 LivingEntity.java L2037/L2039 + MultiPlayerGameMode.java L520.
-def drop_void(v):       return v >= (26, 3, 0)  # LocalPlayer.drop(boolean) return type boolean -> void at 26.3-snapshot-7 (the old return was !removeFromSelected(all).isEmpty(); snap-7 replaces it with a swing broadcast). Deobf-confirmed 2026-08-05 from MC-Java 26.3-snapshot-6 vs 26.3-snapshot-7 LocalPlayer.java:323.
+def drop_gamemode(ver): return VK(ver) >= (26, 3, 0, 1, 1)  # 26.3-pre-1 REMOVED LocalPlayer.drop(boolean) outright: LivingEntity.drop is now drop(ItemStack, boolean, Prediction) and the drop-KEY path moved to MultiPlayerGameMode.dropItem(LocalPlayer, boolean). Read off the vanilla caller in each tree (Minecraft.java keyDrop block): 26.1.2/26.2 use player.drop(ctrl) and branch on its boolean; 26.3-snapshot-7 calls player.drop(ctrl) and ignores it; 26.3-pre-1 calls gameMode.dropItem(player, ctrl). Needs VK, not V -- snapshot-7 and pre-1 are the same V() tuple.
+def drop_void(ver):     return VK(ver) >= (26, 3, 0, 0, 7)  # LocalPlayer.drop(boolean) return type boolean -> void at 26.3-snapshot-7. TIGHTENED 2026-09-04 from V()>=(26,3,0), which also claimed snapshot-1..6 where drop() still returned boolean -- latent, never bit because the 26.3 row has only ever pinned snapshot-7 and now pre-1. (the old return was !removeFromSelected(all).isEmpty(); snap-7 replaces it with a swing broadcast). Deobf-confirmed 2026-08-05 from MC-Java 26.3-snapshot-6 vs 26.3-snapshot-7 LocalPlayer.java:323.
 def time_overworld(v):  return v[0] == 26         # Level.getOverworldClockTime() ; getDayTime() below
 def gr_new(v):          return v >= (1, 21, 11)   # world.level.gamerules.GameRules + KEEP_INVENTORY names + get(GameRule)
 def id_ident(v):        return v >= (1, 21, 11)   # resources.Identifier rename (1.21.10 still ResourceLocation)

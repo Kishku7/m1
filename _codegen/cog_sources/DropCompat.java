@@ -40,8 +40,15 @@ public final class DropCompat {
     public static boolean drop(Minecraft mc, boolean all) {
         //[[[cog
         //import sys; sys.path.insert(0, codegen); import compat
-        //if compat.drop_void(compat.V(mcver)):
-        //    cog.outl("// 26.3-snapshot-7+: drop() returns void -- ask the emptiness question first.")
+        //if compat.drop_gamemode(mcver):
+        //    cog.outl("// 26.3-pre-1+: LocalPlayer.drop(boolean) is GONE. LivingEntity.drop is now")
+        //    cog.outl("// drop(ItemStack, boolean, Prediction), and the drop-KEY path vanilla itself uses")
+        //    cog.outl("// moved to MultiPlayerGameMode.dropItem -- Minecraft.java keyDrop block, 26.3-pre-1.")
+        //    cog.outl("boolean threw = !mc.player.getMainHandItem().isEmpty();")
+        //    cog.outl("mc.gameMode.dropItem(mc.player, all);")
+        //    cog.outl("return threw;")
+        //elif compat.drop_void(mcver):
+        //    cog.outl("// 26.3-snapshot-7..pre: drop() returns void -- ask the emptiness question first.")
         //    cog.outl("boolean threw = !mc.player.getMainHandItem().isEmpty();")
         //    cog.outl("mc.player.drop(all);")
         //    cog.outl("return threw;")
