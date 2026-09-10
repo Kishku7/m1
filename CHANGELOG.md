@@ -27,12 +27,26 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/); this pr
   what `isNonRecoverable` admits, so an exception thrown from a task on the main loop LOGS under
   the FATAL marker and the game keeps running. A run that would have crashed on a pre-release
   comes back green on rc-1. Read the log, not the exit code.
-- fabric-api has no build *labelled* `26.3-rc-1` on Modrinth -- the newest on the line is
-  `0.160.2+26.3`, listed against `26.3-pre-3`. That listing is metadata, not the gate: the jar's
-  own predicate is `depends.minecraft = "~26.3-"`, which admits every 26.3 prerelease, rc-1
-  included, so the API installs and the client cell is provisionable. Read the predicate out of
-  the jar, never the Modrinth label. M1's own dependency is a floor (`fabric-api >=0.145.0`)
-  and is unaffected either way. This build has not been smoketested yet.
+- **fabric-api must be `0.160.3+26.3` or newer on rc-1, and this is a hard requirement, not a
+  preference.** Earlier builds on the line install and then crash: every 26.3 fabric-api declares
+  `depends.minecraft = "~26.3-"`, which cannot tell one prerelease from another, while
+  `fabric-renderer-api-v1`'s `LevelExtractorMixin` wraps `lambda$getViewBlockingState$1` -- a lambda
+  rc-1 deleted when it rewrote `getViewBlockingState`. Running `0.160.2+26.3` (built for pre-3) on
+  rc-1 kills the client during `Minecraft.<init>` with `Critical injection failure ... could not find
+  any targets`. M1 is not implicated: its own dependency is a floor (`fabric-api >=0.145.0`) and the
+  jar loads fine. Worth knowing that the DEDICATED SERVER boots clean with the bad API, because the
+  failing mixin is client-only.
+
+### Verified
+- Fresh `Fabric/26.3-rc-1` harness cells built on Raider (server + client), M1 the only mod besides
+  fabric-api. **Server:** `BOOT PASS`, log reads `Starting minecraft server version 26.3 Release
+  Candidate 1`, `m1 0.17.3` in the loaded mod list, `Done (0.202s)`, console probe answered, clean
+  save and stop, no mod-attributable errors. **Client:** `CELL PASS` -- M1 opened its socket, drove
+  into the shared seeded world, ran its gamerule/weather/tp sequence and captured a 787 KB
+  1280x720 render, which was EYEBALLED (real terrain, hotbar, and M1's own commands echoed in chat).
+- That run is also what confirms the `26.3-rc.1` dependency predicate: it was written from the
+  `26.3-pre-2 -> 26.3-pre.2` precedent rather than measured, and fabric-loader accepted the jar on
+  both sides, so the normalization holds.
 
 ## [0.17.2] - 2026-09-04
 
