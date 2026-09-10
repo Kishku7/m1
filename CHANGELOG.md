@@ -4,6 +4,36 @@ All notable changes to M1 are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/); this project uses
 `<mod version>+<minecraft family>-<loader>` jar naming.
 
+## [0.17.3] - 2026-09-10
+
+### Changed
+- **The 26.3 target moves from `26.3-pre-2` to `26.3-rc-1`.** pre-3 is skipped: it shipped on
+  09-09 and rc-1 landed the next morning, so re-pinning twice in two days would have bought
+  nothing. Same reasoning as 0.17.1 and 0.17.2 -- the pin names one exact build, so it gets
+  advanced deliberately rather than left to a range. `pack_format` stays at **97**; rc-1's own
+  `version.json` still reads resource 97.1 / data 121.0, the first 26.3 build in a while that
+  did not move it. fabric-loader moves 0.19.3 -> 0.19.5.
+- **No code change was needed.** The pre-3 to rc-1 source diff is 14 text files with nothing
+  added, removed, or binary-changed, and M1 names none of the six symbols it touches:
+  `LivingEntity.blockUsingItem` and `blockedByItem` (both gained a `fullyBlocked` flag, and a
+  fully blocked hit no longer knocks the attacker back), `BlockPredicate.willMatchBlockEntity`,
+  `LevelExtractor.getViewBlockingState` (rewritten off `Level.findBlocksIn`), `ChunkMap`'s
+  chunk-load-failure path, `BlockableEventLoop`'s task-exception rethrow, and
+  `ClientCommonPacketListenerImpl.onPacketError`.
+
+### Notes
+- One rc-1 behaviour change is worth knowing when reading a test log rather than a jar:
+  `SharedConstants.CRASH_EAGERLY` flips to `false` and `BlockableEventLoop` now rethrows only
+  what `isNonRecoverable` admits, so an exception thrown from a task on the main loop LOGS under
+  the FATAL marker and the game keeps running. A run that would have crashed on a pre-release
+  comes back green on rc-1. Read the log, not the exit code.
+- fabric-api has no build *labelled* `26.3-rc-1` on Modrinth -- the newest on the line is
+  `0.160.2+26.3`, listed against `26.3-pre-3`. That listing is metadata, not the gate: the jar's
+  own predicate is `depends.minecraft = "~26.3-"`, which admits every 26.3 prerelease, rc-1
+  included, so the API installs and the client cell is provisionable. Read the predicate out of
+  the jar, never the Modrinth label. M1's own dependency is a floor (`fabric-api >=0.145.0`)
+  and is unaffected either way. This build has not been smoketested yet.
+
 ## [0.17.2] - 2026-09-04
 
 ### Changed
