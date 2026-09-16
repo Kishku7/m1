@@ -9,6 +9,7 @@ New-Item -ItemType Directory -Force -Path $dist|Out-Null
 $matrix=[ordered]@{
   "26.1"=@{mc="26.1.2"; neo="26.1.2.87"; mcRange="[26.1,26.2)"; neoRange="[26.1.0-alpha,)"; pf="84"}
   "26.2"=@{mc="26.2";   neo="26.2.0.35-beta";  mcRange="[26.2,26.3)"; neoRange="[26.2.0-alpha,)"; pf="88"}
+  "26.3"=@{mc="26.3";   neo="26.3.0.1-beta";   mcRange="[26.3,26.4)"; neoRange="[26.3.0-alpha,)"; pf="97"}
 }
 if(-not $Versions -or $Versions.Count -eq 0){$Versions=@($matrix.Keys)}
 $modver=(Select-String -Path (Join-Path $nf "gradle.properties") -Pattern '^mod_version=(.+)$').Matches[0].Groups[1].Value

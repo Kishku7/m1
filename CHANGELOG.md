@@ -4,6 +4,26 @@ All notable changes to M1 are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/); this project uses
 `<mod version>+<minecraft family>-<loader>` jar naming.
 
+## [0.17.4] - 2026-09-16
+
+Minecraft 26.3 went stable on 15 September. The 26.3 jars shipped before this release declared
+`minecraft: "26.3-rc.1"` and so could not load on it at all -- which mattered more than usual,
+because M1 is the driver the client-render harness uses: with M1 absent, every 26.3 client cell was
+untestable for every mod, not just for M1.
+
+### Changed
+
+- **The Fabric 26.3 jar takes the ordinary closed range `>=26.3- <26.4`** in place of the exclusive
+  single-build pin the 26.3 pre-release ladder forced, and builds against fabric-api 0.160.6+26.3.
+  `pack_format` is unchanged at 97.
+
+### Added
+
+- **A NeoForge 26.3 cell** (neo 26.3.0.1-beta, mc range `[26.3,26.4)`). NeoForge only published a
+  26.3 loader this week; until then the line was Fabric-only. Building it needs ModDevGradle
+  **2.0.147** -- 2.0.140 cannot build NeoForge 26.3 at all, it fails recompiling Minecraft's own
+  sources before any mod code is compiled.
+
 ## [0.17.3] - 2026-09-10
 
 ### Changed
