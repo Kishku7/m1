@@ -4,6 +4,37 @@ All notable changes to M1 are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/); this project uses
 `<mod version>+<minecraft family>-<loader>` jar naming.
 
+## [0.17.5] - 2026-09-17
+
+A loader and API currency pass across the whole matrix. **No M1 code changed**; every cell was
+rebuilt against a newer loader or a newer fabric-api, because a pin that is behind means the jars
+players run were never the jars we tested.
+
+The drift had accumulated quietly and further than anyone had noticed -- the 26.2 NeoForge pin was
+still a *beta* from 53 builds earlier, and the 26.1 Fabric loader was 0.18.6 against a current
+0.19.5. Nothing was broken by it: the declared ranges are deliberately wider than the build pins
+(`[26.3.0-alpha,)`, `fabric-api: *`), so every published jar loaded on the newer loaders regardless.
+What drifted was the coverage, not the compatibility.
+
+### Changed
+
+- **NeoForge:** 26.1 `26.1.2.87` -> **`26.1.2.109`**, 26.2 `26.2.0.35-beta` -> **`26.2.0.88`**
+  (off the beta channel entirely), 26.3 `26.3.0.1-beta` -> **`26.3.0.4-beta`**. Pre-26 cells:
+  1.20.6 `20.6.141`, 1.21.5 `21.5.98`, 1.21.8 `21.8.54`, 1.21.11 `21.11.45`, and the NeoForge 1.20.1
+  cell's Forge jar to `47.4.23`.
+- **Fabric:** loader 26.1 and 26.2 both to **0.19.5**; fabric-api 26.1 `0.155.3+26.1.2`, 26.2
+  `0.160.0+26.2`, 26.3 `0.160.7+26.3`, 1.21 `0.102.0+1.21`, 1.21.11 `0.141.6+1.21.11`.
+- **Forge:** 1.20.1 `47.4.23`, 1.20.2 `48.1.0`, 1.20.4 `49.2.9`, 1.20.6 `50.2.10`, 1.21.4 `54.1.18`,
+  1.21.5 `55.1.13`, 1.21.8 `58.1.22`, 1.21.10 `60.1.15`.
+
+### Known
+
+- **Forge 1.21.11 stays at `61.1.0`.** Newer builds on that line cannot be built here at all:
+  ForgeGradle 6 throws `duplicate entry: mcp/client/Start.class` while assembling the mapped
+  artifact, and `61.1.0` only succeeds because its artifact was derived months ago and is still
+  cached. The published userdev bundles are not at fault -- they carry no duplicate. The jar
+  declares `[61,)` with an open upper bound, so this affects what was tested, not what loads.
+
 ## [0.17.4] - 2026-09-16
 
 Minecraft 26.3 went stable on 15 September. The 26.3 jars shipped before this release declared

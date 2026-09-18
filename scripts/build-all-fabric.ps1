@@ -7,9 +7,9 @@ $repo=Split-Path $PSScriptRoot -Parent; $fabric=Join-Path $repo "Fabric\26"; $di
 
 New-Item -ItemType Directory -Force -Path $dist|Out-Null
 $matrix=[ordered]@{
-  "26.1"=@{mc="26.1.2";          api="0.152.1+26.1.2"; loader="0.18.6"; dep=">=26.1- <26.2"; pf="84"}
-  "26.2"=@{mc="26.2";            api="0.152.1+26.2";   loader="0.19.3"; dep=">=26.2- <26.3"; pf="88"}
-  "26.3"=@{mc="26.3";            api="0.160.6+26.3";   loader="0.19.5"; dep=">=26.3- <26.4"; pf="97"}
+  "26.1"=@{mc="26.1.2";          api="0.155.3+26.1.2"; loader="0.19.5"; dep=">=26.1- <26.2"; pf="84"}
+  "26.2"=@{mc="26.2";            api="0.160.0+26.2";   loader="0.19.5"; dep=">=26.2- <26.3"; pf="88"}
+  "26.3"=@{mc="26.3";            api="0.160.7+26.3";   loader="0.19.5"; dep=">=26.3- <26.4"; pf="97"}
 }
 if(-not $Versions -or $Versions.Count -eq 0){$Versions=@($matrix.Keys)}
 $modver=(Select-String -Path (Join-Path $fabric "gradle.properties") -Pattern '^mod_version=(.+)$').Matches[0].Groups[1].Value
