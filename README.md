@@ -28,7 +28,7 @@ LegacyFabric/<ver>/               per-version cell: build.gradle, gradle.propert
 # 1) generate the cog'd source tree
 pwsh scripts/cog-gen.ps1 -Cell "LegacyFabric/1.8.9" -McVer 1.8.9
 # 2) build (loom needs a JDK21 build JVM; output is Java-8 bytecode)
-../modern-resources/gradlew.bat -p LegacyFabric/1.8.9 build
+../../modern-resources/gradlew.bat -p LegacyFabric/1.8.9 build
 ```
 
 The jar lands in `LegacyFabric/1.8.9/build/libs/`. Run it on a **real 1.8.9 client** (Legacy
