@@ -59,6 +59,12 @@ Restart Claude Desktop. You get three tools -- `send_command`, `listen` (streams
 reports your position, and you are driving Minecraft from chat. (The full command grammar + wire
 protocol are on the [landing page](https://github.com/Kishku7/m1/tree/main).)
 
+> **Three tools is correct, and it is all there is.** Every in-game action is a text command sent
+> through `send_command`. If your model says it "doesn't have the tools", it has not been told the
+> commands: tell it to send `help` first (full command list), then `describe` (reads the current
+> screen). Local models and MCP clients that don't pass the server's instructions to the model need
+> this in their system prompt.
+
 > Bridge on a different machine than Claude Desktop? Set `BIND_HOST=0.0.0.0` and use that machine's
 > LAN address in the URL. There is **no authentication** -- trusted network only.
 

@@ -13,7 +13,11 @@ export function createMcpServer(telnet: TelnetClient): McpServer {
         "Bridges a newline-delimited TCP text socket (e.g. the M1 Minecraft mod on " +
         "localhost:26000) to you. Use send_command to send one line and read the reply. " +
         "Use listen to poll for asynchronous output and to keep the connection warm. " +
-        "Use connection_status to check whether the target socket is connected and ready.",
+        "Use connection_status to check whether the target socket is connected and ready. " +
+        "Three tools is all there is: every action in the target is a text command sent " +
+        "through send_command. Start by sending the target's own help command to learn " +
+        "them. For M1: send `help` for the full command list, `describe` to read the " +
+        "current screen, and `START` for the path to M1's AI guide.",
     },
   );
 
@@ -25,9 +29,10 @@ export function createMcpServer(telnet: TelnetClient): McpServer {
         "Write one command line to the target socket and return its reply. If a reply " +
         "sentinel is configured (e.g. M1's <<END) the reply is read exactly up to it; " +
         "otherwise it is collected until the socket goes quiet. Errors if the target is " +
-        "not connected/ready.",
+        "not connected/ready. This is how you act in the target: if you do not know its " +
+        "commands yet, send `help` first (for M1, then `describe`).",
       inputSchema: {
-        command: z.string().describe("The command line to send (a trailing newline is added automatically)."),
+        command:z.string().describe("The command line to send (a trailing newline is added automatically)."),
         timeout_ms: z
           .number()
           .int()
