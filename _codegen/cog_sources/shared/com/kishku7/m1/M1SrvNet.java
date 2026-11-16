@@ -94,12 +94,7 @@ public final class M1SrvNet {
      * ClientSuggestionProvider from 26 on) but doesn't affect this lookup.
      */
     private static boolean serverSupportsM1Srv(Minecraft mc) {
-        try {
-            var dispatcher = mc.getConnection().getCommands();
-            return dispatcher != null && dispatcher.getRoot().getChild("m1srv") != null;
-        } catch (Throwable t) {
-            return false;
-        }
+        return M1Compat.hasCommandRoot(mc, "m1srv");
     }
 
     /** Call from the client tick loop. On the not-connected -> connected edge, auto-grab the essentials

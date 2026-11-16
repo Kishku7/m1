@@ -48,14 +48,14 @@ public final class M1SrvCommand {
         q.then(argLeaf("advancement", "advancement", Queries::advancement));
         q.then(Commands.literal("locate")
                 .then(Commands.literal("structure")
-                        .then(Commands.argument("id", StringArgumentType.greedyString())
+                        .then(Commands.argument("id", CommandCompat.greedyString())
                                 .executes(ctx -> run(ctx, "locate_structure", "locate",
                                         s -> Queries.locateStructure(s, StringArgumentType.getString(ctx, "id"))))))
                 .then(Commands.literal("biome")
-                        .then(Commands.argument("id", StringArgumentType.greedyString())
+                        .then(Commands.argument("id", CommandCompat.greedyString())
                                 .executes(ctx -> run(ctx, "locate_biome", "locate",
                                         s -> Queries.locateBiome(s, StringArgumentType.getString(ctx, "id")))))));
-        return Commands.literal("m1srv").requires(src -> true).then(q);
+        return Commands.literal("m1srv").requires(CommandCompat.anyoneCanUse()).then(q);
     }
 
     /** A no-argument query leaf gated by {@code featureKey}. */
@@ -67,7 +67,7 @@ public final class M1SrvCommand {
     /** A query leaf that takes a single greedy-string id argument (e.g. {@code recipe <id>}). */
     private static LiteralArgumentBuilder<CommandSourceStack> argLeaf(
             String name, String featureKey, java.util.function.BiFunction<CommandSourceStack, String, String> handler) {
-        return Commands.literal(name).then(Commands.argument("id", StringArgumentType.greedyString())
+        return Commands.literal(name).then(Commands.argument("id", CommandCompat.greedyString())
                 .executes(ctx -> run(ctx, name, featureKey,
                         s -> handler.apply(s, StringArgumentType.getString(ctx, "id")))));
     }

@@ -4,6 +4,12 @@ All notable changes to M1 are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/); this project uses
 `<mod version>+<minecraft family>-<loader>` jar naming.
 
+## [0.18.0] - 2026-11-16
+
+- New: Fabric support for Minecraft 26.4-snapshot-8, built for that exact pre-release build only. Built so the
+  Chunksmith 26.4 port can be driven into a world; NeoForge has no 26.4 build yet, so there is no NeoForge jar.
+  Other cells are unchanged.
+
 ## [0.17.5] - 2026-09-17
 
 A loader and API currency pass across the whole matrix. **No M1 code changed**; every cell was

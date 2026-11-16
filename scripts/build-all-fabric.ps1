@@ -10,6 +10,8 @@ $matrix=[ordered]@{
   "26.1"=@{mc="26.1.2";          api="0.155.3+26.1.2"; loader="0.19.5"; dep=">=26.1- <26.2"; pf="84"}
   "26.2"=@{mc="26.2";            api="0.160.0+26.2";   loader="0.19.5"; dep=">=26.2- <26.3"; pf="88"}
   "26.3"=@{mc="26.3";            api="0.160.7+26.3";   loader="0.19.5"; dep=">=26.3- <26.4"; pf="97"}
+  # 26.4 is still in snapshots: exclusive pin. pf from 26.4-snapshot-8's own resources/version.json (resource_major 103).
+  "26.4"=@{mc="26.4-snapshot-8"; api="0.166.2+26.4";   loader="0.19.5"; dep="26.4-alpha.8"; pf="103"}
 }
 if(-not $Versions -or $Versions.Count -eq 0){$Versions=@($matrix.Keys)}
 $modver=(Select-String -Path (Join-Path $fabric "gradle.properties") -Pattern '^mod_version=(.+)$').Matches[0].Groups[1].Value

@@ -125,7 +125,12 @@ def container_click(ver):     # ContainerCompat.click(mc, containerId, slot, but
 def screen_click(ver):        # ScreenClickCompat.clickAt(Screen s, double x, double y) -> boolean
     if mouse_event(V(ver)):
         btn = 1 if mouse_btn_base1(V(ver)) else 0
-        return ["MouseButtonEvent ev = new MouseButtonEvent(x, y, new MouseButtonInfo(" + str(btn) + ", 0));",
+        pre = []
+        if mouse_input_type(V(ver)):
+            # 26.4: AbstractWidget.isMouseOver also requires getLastInputType().isMouse(); a synthetic
+            # click never goes through MouseHandler, so the type stays NONE and every widget ignores it.
+            pre = ["net.minecraft.client.Minecraft.getInstance().setLastInputType(net.minecraft.client.InputType.MOUSE);"]
+        return pre + ["MouseButtonEvent ev = new MouseButtonEvent(x, y, new MouseButtonInfo(" + str(btn) + ", 0));",
                 "boolean handled = s.mouseClicked(ev, false);",
                 "s.mouseReleased(ev);",
                 "return handled;"]
@@ -599,3 +604,43 @@ if __name__ == "__main__":
         print("  piercing :", is_piercing(ver)[0])
         print("  button   :", press_button(ver)[0])
         print("  ingr     :", rc_ingredient_ids(ver)[1])
+
+
+# ---- 26.4 (snapshot-8) drift. Read off MC-Java\diffs\family-26\26.3_vs_26.4-snapshot-8.struct.md ------------
+def cmd_serializable(v): return v >= (26, 4)         # 26.4: every command argument / suggestion / requires() must be serialisable (Commands.<init> throws otherwise)
+def mouse_input_type(v): return v >= (26, 4)         # AbstractWidget.isMouseOver gained getLastInputType().isMouse(); default NONE ignores synthetic clicks
+def widget_visible_accessor(v): return v >= (26, 4)  # AbstractWidget.visible became protected; isVisible() is the public read
+
+def widget_visible(ver):      # M1Compat.widgetVisible(AbstractWidget w) -> boolean
+    return ["return w.isVisible();"] if widget_visible_accessor(V(ver)) else ["return w.visible;"]
+
+def command_root_present(ver):  # M1Compat.hasCommandRoot(Minecraft mc, String name) -> boolean
+    if cmd_serializable(V(ver)):
+        return [
+            "try {",
+            "    net.minecraft.commands.SuggestionBox box = mc.getConnection().commandSuggestions();",
+            "    com.google.gson.JsonElement rep = box == null ? null : box.dumpReport();",
+            "    return rep != null && rep.isJsonObject() && rep.getAsJsonObject().has(\"children\")",
+            "            && rep.getAsJsonObject().getAsJsonObject(\"children\").has(name);",
+            "} catch (Throwable t) {",
+            "    return false;",
+            "}",
+        ]
+    return [
+        "try {",
+        "    var dispatcher = mc.getConnection().getCommands();",
+        "    return dispatcher != null && dispatcher.getRoot().getChild(name) != null;",
+        "} catch (Throwable t) {",
+        "    return false;",
+        "}",
+    ]
+
+def greedy_string(ver):       # M1Compat.greedyString() -> ArgumentType<String>
+    if cmd_serializable(V(ver)):
+        return ["return net.minecraft.commands.arguments.StringArgument.greedyString();"]
+    return ["return com.mojang.brigadier.arguments.StringArgumentType.greedyString();"]
+
+def anyone_can_use(ver):      # M1Compat.anyoneCanUse() -> Predicate<CommandSourceStack>
+    if cmd_serializable(V(ver)):
+        return ["return net.minecraft.server.permissions.PermissionProviderCheck.ALWAYS_PASS.<net.minecraft.commands.CommandSourceStack>cast();"]
+    return ["return src -> true;"]

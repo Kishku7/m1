@@ -244,7 +244,7 @@ public final class ScreenOps {
              .append(" \"").append(msg).append("\"")
              .append(" pos=(").append(w.getX()).append(",").append(w.getY()).append(")")
              .append(" size=").append(w.getWidth()).append("x").append(w.getHeight())
-             .append(" ").append(w.visible ? "V" : "-").append(w.active ? "A" : "-").append(w.isFocused() ? "F" : "-");
+             .append(" ").append(M1Compat.widgetVisible(w) ? "V" : "-").append(w.active ? "A" : "-").append(w.isFocused() ? "F" : "-");
             if (w instanceof EditBox eb) b.append(" value=\"").append(eb.getValue()).append("\"");
             // Associate a descriptive label so a controller can act on ambiguous controls without a
             // hard-coded layout: a control's PURPOSE is usually the text to its LEFT (same row), else

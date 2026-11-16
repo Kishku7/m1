@@ -154,7 +154,14 @@ final class PlayerNodeEvaluator {
         return NONE;
     }
 
-    /** Classify the body cell at (x,y,z). */
+    /**
+     * Classify the body cell at (x,y,z).
+     *
+     * <p>The deprecation suppression is narrow and deliberate: MC 26.4 marked FluidTags.WATER and LAVA
+     * {@code @Deprecated} without naming a replacement; the tags still resolve, and an older cell
+     * has no other spelling of "is this fluid water/lava".
+     */
+    @SuppressWarnings("deprecation")
     private static int cell(Level lvl, BlockPos.MutableBlockPos m, int x, int y, int z) {
         BlockState s = lvl.getBlockState(m.set(x, y, z));
         if (s.isAir()) {
@@ -193,7 +200,9 @@ final class PlayerNodeEvaluator {
     /**
      * Standable top surface of the block UNDER feet cell (x,y-1,z): 0..1, or -1 if not standable.
      * Lava is standable only with lava-walk; magma only with fire res; cactus/campfires never.
+     * Deprecation suppressed for FluidTags.LAVA: see {@link #cell}.
      */
+    @SuppressWarnings("deprecation")
     private static double floorTop(Level lvl, BlockPos.MutableBlockPos m, int x, int y, int z) {
         BlockState s = lvl.getBlockState(m.set(x, y - 1, z));
         if (s.getFluidState().is(FluidTags.LAVA)) {

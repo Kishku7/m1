@@ -215,4 +215,20 @@ public final class M1Compat {
         //]]]
         //[[[end]]]
     }
+
+    // 26.4: AbstractWidget.visible is protected; isVisible() is the public read.
+    public static boolean widgetVisible(net.minecraft.client.gui.components.AbstractWidget w) {
+        //[[[cog
+        //for ln in compat.widget_visible(mcver): cog.outl(ln)
+        //]]]
+        //[[[end]]]
+    }
+
+    // 26.4: the client's command tree moved from ClientPacketListener.getCommands() to commandSuggestions().
+    public static boolean hasCommandRoot(Minecraft mc, String name) {
+        //[[[cog
+        //for ln in compat.command_root_present(mcver): cog.outl(ln)
+        //]]]
+        //[[[end]]]
+    }
 }
