@@ -4,6 +4,11 @@ All notable changes to M1 are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/); this project uses
 `<mod version>+<minecraft family>-<loader>` jar naming.
 
+## [0.18.1] - 2026-11-17
+
+- Fabric 26.4 build re-pinned from Minecraft 26.4-snapshot-8 to 26.4-snapshot-10. Snapshot builds load only on the
+  exact version they were made for, so 0.18.0 does not run on snapshot-9 or snapshot-10. No other change.
+
 ## [0.18.0] - 2026-11-16
 
 - New: Fabric support for Minecraft 26.4-snapshot-8, built for that exact pre-release build only. Built so the
