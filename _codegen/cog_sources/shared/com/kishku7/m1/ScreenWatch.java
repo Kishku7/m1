@@ -98,7 +98,14 @@ final class ScreenWatch {
             if (s == operatorPause) {
                 return;
             }
-            if (mc.isWindowActive()) {
+            // 0.19.1: window focus alone is NOT a safe discriminator. Live bug (reported 2026-11-19):
+            // Escape in a focused client was reported "window lost focus" and eaten every time, because
+            // Window.isFocused() answered false there. The lost-focus path can only open this screen while
+            // options.pauseOnLostFocus is true, and disablePauseOnLostFocus turns that off at startup --
+            // so with the option off, nothing but the operator (or a controller grace window, handled
+            // above) can have opened it: leave it alone.
+            boolean lostFocusPathArmed = mc.options != null && mc.options.pauseOnLostFocus;
+            if (mc.isWindowActive() || !lostFocusPathArmed) {
                 operatorPause = s;
                 if (!pauseHandled) {
                     pauseHandled = true;

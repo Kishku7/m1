@@ -489,6 +489,10 @@ def q_spawn(ver):
             "        BlockPos pos = %s;" % pos,
             '        return pos.getX() + "," + pos.getY() + "," + pos.getZ();']
 
+def day_clock(ver):
+    return ["return lvl.getOverworldClockTime();"] if time_overworld(V(ver)) else ["return lvl.getDayTime();"]
+
+
 def q_time(ver):
     clock = "lvl.getOverworldClockTime()" if time_overworld(V(ver)) else "lvl.getDayTime()"
     return ["        ServerLevel lvl = level(src);",

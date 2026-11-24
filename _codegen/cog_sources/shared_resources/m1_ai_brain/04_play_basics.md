@@ -31,6 +31,7 @@ open sky, and from `VISIBLE` where the trees / water / animals are. Set one conc
 - No fly: everything is ground-level traversal (`30_capabilities_limits.md`).
 - Armor auto-upgrades itself; `equip all` wears everything else in one command.
 - On `blocked`/`timeout`/`boxed in`, re-scan and pick a new or closer target (`40_recovery.md`).
-- `sleep` skips the night in one command (finds a bed or deploys a sleeping bag).
+- `sleep` skips the night in one command (finds a bed or deploys a sleeping bag). Every reply ends with a
+  `[time] ...` line that tells you the time of day and whether beds work now -- no need to ask (`01_drive_m1.md`, Sleep).
 
 When you have stable food, stone/iron tools, and a safe base, move to `05_play_advanced.md`.

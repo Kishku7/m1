@@ -146,6 +146,14 @@ public final class M1Compat {
         //[[[end]]]
     }
 
+    // 26.x: Level.getOverworldClockTime(); pre-26: Level.getDayTime(). Total ticks of the overworld day clock.
+    public static long dayClock(net.minecraft.world.level.Level lvl) {
+        //[[[cog
+        //for ln in compat.day_clock(mcver): cog.outl(ln)
+        //]]]
+        //[[[end]]]
+    }
+
     // 1.21.2 EQUIPPABLE component vs pre LivingEntity.getEquipmentSlotForItem.
     public static EquipmentSlot equipSlot(Minecraft mc, ItemStack s) {
         //[[[cog

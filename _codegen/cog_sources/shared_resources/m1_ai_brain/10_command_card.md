@@ -59,7 +59,8 @@ MOVE (async -- returns at once, poll `where`)
   move <dir> <n>       move n blocks in a compass dir (north/south/east/west/ne/nw/se/sw)
   face <dir|up|down|x y z>  aim the camera (resting view = face 0 0; yaw 0 = south)
   sleep                ONE-SHOT composite: find a usable bed nearby, walk BESIDE it, sleep in it.
-                       Fails with a reason (daytime / none found / unreachable / no effect)
+                       Fails with a reason (daytime / none found / unreachable / no effect).
+                       The `[time]` line on every reply (below) says whether beds work right now.
   nav [own|vanilla|status]  pathfinder engine toggle. OWN is default: opens gates/doors itself,
                        walks rails and stairs, 16-block segmented paths to ANY distance
   stop                 cancel movement, mining, AND any queued agent plan (attack/follow)

@@ -4,6 +4,30 @@ All notable changes to M1 are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/); this project uses
 `<mod version>+<minecraft family>-<loader>` jar naming.
 
+## [0.19.2] - 2026-11-24 (26.4 cell only)
+
+- Rebuilt the Fabric 26.4 jar for Minecraft 26.4 pre-release 1 (it was pinned to 26.4-snapshot-10). No source change; the jar
+  accepts 26.4-pre.1 only, like every pre-release build of a new line.
+
+## [0.19.1] - 2026-11-19
+
+- Fix: pressing Escape in a client with M1 loaded could still close the pause menu at once. M1 judged whether the
+  operator or an unfocused window had opened the menu by asking the game if the window was focused, and on some
+  systems that answer is "no" even while the operator is typing. M1 turns off the game's "Pause on Lost Focus"
+  option at startup, so an unfocused window can no longer open the menu; when that option is off, the pause menu is now
+  always left alone.
+
+## [0.19.0] - 2026-11-19
+
+- Never published on its own; 0.19.1 is the first release that carries it. Every cell is rebuilt for 0.19.1.
+- New: every reply on the control socket now ends with a `[time]` line carrying the in-game time (day number, tick of
+  day, a 24-hour clock, whether beds can be used right now, and how many ticks until they can), so a driving AI knows
+  the time without asking and can run a bed routine. The line is left out when no world is loaded and on the
+  `start`, `raw` and `help` replies.
+- New: a pushed `[time]` event arrives the moment beds become usable (night or thunder) and again when they stop being
+  usable (morning), so an idle `listen` loop learns about dusk and dawn.
+- AI_Brain docs: the command card and the play-basics file explain the `[time]` line and the two events.
+
 ## [0.18.1] - 2026-11-17
 
 - Fabric 26.4 build re-pinned from Minecraft 26.4-snapshot-8 to 26.4-snapshot-10. Snapshot builds load only on the

@@ -139,6 +139,8 @@ public final class M1Server {
                 if (!ups.isEmpty()) { out.write(ups); out.write("\n"); }
                 String agentReports = AgentRuntime.drainReports();
                 if (!agentReports.isEmpty()) { out.write(agentReports); out.write("\n"); }
+                String timeEv = TimeInfo.drainEvents();
+                if (!timeEv.isEmpty()) { out.write(timeEv); out.write("\n"); }
                 out.write(resp);
                 if (!resp.endsWith("\n")) out.write("\n");
 
@@ -149,6 +151,12 @@ public final class M1Server {
                     out.write("--- now ---\n");
                     out.write(now);
                     if (!now.endsWith("\n")) out.write("\n");
+                }
+
+                // Every reply ends with the in-game time (empty when no world), except the protocol replies.
+                if (!verb.equals("start") && !verb.equals("raw") && !verb.equals("help")) {
+                    String tl = TimeInfo.line();
+                    if (!tl.isEmpty()) { out.write(tl); out.write("\n"); }
                 }
 
                 if (raw) out.write(END);
@@ -176,6 +184,8 @@ public final class M1Server {
         if (!ups.isEmpty()) { out.write(ups); out.write("\n"); any = true; }
         String ag = AgentRuntime.drainReports();
         if (!ag.isEmpty()) { out.write(ag); out.write("\n"); any = true; }
+        String te = TimeInfo.drainEvents();
+        if (!te.isEmpty()) { out.write(te); out.write("\n"); any = true; }
         if (any) out.flush();
     }
 

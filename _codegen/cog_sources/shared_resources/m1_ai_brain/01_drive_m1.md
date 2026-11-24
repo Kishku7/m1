@@ -22,7 +22,7 @@ the client tells you how to reach a shell on that machine; from there open a TCP
   can straddle two replies; if you drop the leftover you desync.
 - After a `click` / `type`, the reply also has a `--- now ---` block: a fresh `describe` of the
   screen you landed on. Read it -- that is your confirmation of where you are.
-- Unsolicited event lines are PUSHED even with no command pending (the server flushes within ~200 ms, so a bare `listen`/read receives them): `[alert] ...` (you took damage -- section 8a), `[agent] ...` (agent progress), `[auto-upgrade] ...` (armor, section 8). They may also ride on a later command reply.
+- Unsolicited event lines are PUSHED even with no command pending (the server flushes within ~200 ms, so a bare `listen`/read receives them): `[alert] ...` (you took damage -- section 8a), `[agent] ...` (agent progress), `[auto-upgrade] ...` (armor, section 8), `[time] ...` (beds just became usable / stopped being usable -- see Sleep). They may also ride on a later command reply.
 - Each command has a **10-second execution cap** (time M1 waits for that command's handler on the
   game's main thread; overrun -> `ERR exec: ... TimeoutException`). It is NOT a limit on async
   actions: `move`/`moveto`/`goto`/`mine`/`craft` return immediately and run in the background.
@@ -131,6 +131,15 @@ You rarely need slot surgery -- these take NAMES and human slot words, and the m
 `sleep` is one verb: it finds a usable bed nearby, walks BESIDE it (never onto it), and sleeps -- or,
 if no bed and you carry a Travelers-Backpack sleeping bag, deploys the bag. It reports a concrete
 reason on failure (daytime, none found, unreachable). Do not hand-drive beds with face+place anymore.
+
+**You always know the time -- no need to ask.** Every reply (except `start`, `raw` and `help`) ends with one line:
+`[time] day 725 tick 7956 (13:12) beds in 4586t (3m49s)` -- day number, tick of the day (0 = 06:00), a 24-hour
+clock, and whether a bed works. At night or in a thunderstorm it reads `beds OK now (night, 9459t left)`; 20 ticks
+= 1 second. In another dimension it adds `[in minecraft:the_nether; overworld clock]` -- beds explode there, so do
+not sleep. The same `[time]` text is also PUSHED once when beds become usable ("beds are usable now") and once when
+they stop ("beds are no longer usable"), so a `listen` loop hears dusk and dawn. The line is absent when no world is
+loaded. A bed routine, then: when a reply says `beds OK now` and you are safe and near a bed, run `sleep`; if it says
+`beds in Nt`, keep working and plan to be near your bed before then.
 
 ### Grave recovery
 `recover` handles a death grave-site (chest + armor stand on top + a name sign) in one command: it
