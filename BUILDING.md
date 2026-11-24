@@ -1,4 +1,4 @@
-# M1 -- Build & Setup Guide (`minecraft-1.20-26.3` branch)
+# M1 -- Build & Setup Guide
 
 This branch is the unified source tree for **M1 -- Machine One AI Interface**: one shared codebase
 that builds every shipped jar -- Fabric, NeoForge, and Forge -- across Minecraft 1.20 - 26.x.
@@ -11,7 +11,7 @@ that builds every shipped jar -- Fabric, NeoForge, and Forge -- across Minecraft
 ## Setup -- install M1 and drive it from Claude Desktop
 
 Three pieces: **(1)** the M1 mod in your game, **(2)** the **MCP-Minecraft** bridge (this repo, under
-[`mcp-minecraft/`](https://github.com/Kishku7/m1/tree/minecraft-1.20-26.3/mcp-minecraft)), **(3)** an
+[`mcp-minecraft/`](https://github.com/Kishku7/m1/tree/main/mcp-minecraft)), **(3)** an
 MCP client (e.g. Claude Desktop) pointed at the bridge.
 
 **1. Install the mod.** Get the jar for your loader + MC version (a release, or build it -- below) and
@@ -38,7 +38,7 @@ DISCARD_CONNECT_BANNER=true
 
 Start it with `npm start`. It auto-connects when the game socket opens and reconnects if the game
 restarts, so start order does not matter. It prints its endpoint (default `http://localhost:26001/mcp`)
-and a `/health` URL. Full options + running as a service: [`mcp-minecraft/README.md`](https://github.com/Kishku7/m1/tree/minecraft-1.20-26.3/mcp-minecraft).
+and a `/health` URL. Full options + running as a service: [`mcp-minecraft/README.md`](https://github.com/Kishku7/m1/tree/main/mcp-minecraft).
 
 **3. Add it to Claude Desktop.** Edit `claude_desktop_config.json` (Settings -> Developer -> Edit
 Config). The bridge serves Streamable HTTP, so bridge it with `mcp-remote`:

@@ -9,9 +9,9 @@ operate Minecraft entirely by typing. No GUI mouse/keyboard is required and noth
 
 Ships as a **Fabric, NeoForge, and Forge** mod spanning **Minecraft 1.20 through 26.x**, as a client agent plus an optional server-side `/m1srv` command (needs neither side present).
 
-**[Source code / build & setup guide](https://github.com/Kishku7/m1 (build guide: `BUILDING.md`))** | **[Report an issue / get support](https://github.com/Kishku7/mod_support/issues)**
+**[Source code / build & setup guide](https://github.com/Kishku7/m1/blob/main/BUILDING.md)** | **[Report an issue / get support](https://github.com/Kishku7/mod_support/issues)**
 
-> **New here? Read [the AI_Brain (`00_Index.md`)](https://github.com/Kishku7/m1 (build guide: `BUILDING.md`)/_codegen/cog_sources/shared_resources/m1_ai_brain) first.** That is the file an AI agent
+> **New here? Read [the AI_Brain (`00_Index.md`)](https://github.com/Kishku7/m1/tree/main/_codegen/cog_sources/shared_resources/m1_ai_brain) first.** That is the file an AI agent
 > is expected to load before a play session. This README is the reference manual behind it.
 
 ---
@@ -60,8 +60,7 @@ instance's `mods/` folder, launch a world, and on load M1 opens its text socket 
 
 To drive it from **Claude Desktop** (or any MCP client) you also run the small **MCP-Minecraft**
 bridge shipped in the source repo. **Full step-by-step setup -- install, the bridge, and the Claude
-Desktop wiring -- is in the [build & setup guide on the `minecraft-1.20-26.3`
-branch](https://github.com/Kishku7/m1 (build guide: `BUILDING.md`)).**
+Desktop wiring -- is in the [build & setup guide](https://github.com/Kishku7/m1/blob/main/BUILDING.md).**
 
 ## 3. Connecting
 
@@ -148,7 +147,7 @@ loopback-only by design.
 
 ## 4. The AI_Brain
 
-[the AI_Brain (`00_Index.md`)](https://github.com/Kishku7/m1 (build guide: `BUILDING.md`)/_codegen/cog_sources/shared_resources/m1_ai_brain) (in this branch) is the **standing brief an AI reads in
+[the AI_Brain (`00_Index.md`)](https://github.com/Kishku7/m1/tree/main/_codegen/cog_sources/shared_resources/m1_ai_brain) (in this branch) is the **standing brief an AI reads in
 before a session.** It is deliberately on `main` so it travels with every branch and version, and
 so any operator can read it. It is portable -- it contains the transferable rules, not any one
 machine's launch/control specifics (those stay in internal infra docs).
@@ -568,6 +567,6 @@ craft grids exist only while a screen is open, so they appear in `slots`, never 
 ## Repo & building
 
 Source, setup steps, and full build instructions live on the
-**[`minecraft-1.20-26.3` build & setup branch](https://github.com/Kishku7/m1 (build guide: `BUILDING.md`))**
+**[Build & setup guide](https://github.com/Kishku7/m1/blob/main/BUILDING.md)**
 (mod + bridge setup, toolchain per loader, the version-coverage matrix, and how the code generation
 works). Internal tooling; all rights reserved (ARR).
